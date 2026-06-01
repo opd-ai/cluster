@@ -26,12 +26,12 @@ A reproducible, extensible 2→X device cluster for self-hosted training and inf
 
 ## Phase 2 — Cluster Formation & Networking
 
-- [ ] **2.1 Choose control plane.** Default to **k3s** (single binary, light footprint); document Nomad as alternative. Macs join as "external workers" via `launchd` jobs running our Go agents, *not* k3s nodes.
-- [ ] **2.2 Control-plane install.** Bootstrap k3s server on the designated `control` node; export kubeconfig to `cluster/kubeconfig`. Driven by `cmd/cluster-bootstrap`.
-- [ ] **2.3 Worker join.** `cmd/cluster-join` (Go) runs on the control node, generates one-shot tokens + a join script per worker.
-- [ ] **2.4 Mesh networking.** Install **Tailscale** (or headscale for fully self-hosted) for stable identities across NAT/home networks. All cluster traffic uses tailnet addresses. Our agents use the Tailscale Go client (`tsnet`) where embedding makes sense (e.g. console serving directly on the tailnet).
-- [ ] **2.5 DNS & service names.** CoreDNS (k3s default) + tailnet MagicDNS for Mac workers. Reserve names: `gateway.cluster`, `console.cluster`, `registry.cluster`, `storage.cluster`, `images.cluster`, `rag.cluster`.
-- [ ] **2.6 Node labels & taints.** `cmd/cluster-label` reads inventory and applies labels: `accelerator=cuda|metal|cpu`, `vram=24|16|8`, `role=trainer|server|imagegen|videogen|both`. Trainer taint keeps general workloads off training boxes.
+- [x] **2.1 Choose control plane.** Default to **k3s** (single binary, light footprint); document Nomad as alternative. Macs join as "external workers" via `launchd` jobs running our Go agents, *not* k3s nodes.
+- [x] **2.2 Control-plane install.** Bootstrap k3s server on the designated `control` node; export kubeconfig to `cluster/kubeconfig`. Driven by `cmd/cluster-bootstrap`.
+- [x] **2.3 Worker join.** `cmd/cluster-join` (Go) runs on the control node, generates one-shot tokens + a join script per worker.
+- [x] **2.4 Mesh networking.** Install **Tailscale** (or headscale for fully self-hosted) for stable identities across NAT/home networks. All cluster traffic uses tailnet addresses. Our agents use the Tailscale Go client (`tsnet`) where embedding makes sense (e.g. console serving directly on the tailnet).
+- [x] **2.5 DNS & service names.** CoreDNS (k3s default) + tailnet MagicDNS for Mac workers. Reserve names: `gateway.cluster`, `console.cluster`, `registry.cluster`, `storage.cluster`, `images.cluster`, `rag.cluster`.
+- [x] **2.6 Node labels & taints.** `cmd/cluster-label` reads inventory and applies labels: `accelerator=cuda|metal|cpu`, `vram=24|16|8`, `role=trainer|server|imagegen|videogen|both`. Trainer taint keeps general workloads off training boxes.
 
 ## Phase 3 — Shared Storage & Artifact Cache
 

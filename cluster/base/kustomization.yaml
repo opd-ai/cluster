@@ -1,0 +1,53 @@
+# cluster/base kustomize overlay
+#
+# Apply with: kubectl apply -k cluster/base
+#
+# This overlay patches CoreDNS to add rewrite rules for the reserved
+# service short-names (gateway.cluster, console.cluster, etc.) defined
+# in docs/dns-and-service-names.md.
+#
+# Add additional manifests (Deployments, Services, ConfigMaps) for
+# core cluster services here as they are implemented.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+resources: []
+
+# Patch CoreDNS ConfigMap to rewrite .cluster short names.
+patches:
+  - target:
+      kind: ConfigMap
+      name: coredns
+      namespace: kube-system
+    patch: |-
+      - op: add
+        path: /data/NodeHosts
+        value: ""
+      - op: replace
+        path: /data/Corefile
+        value: |
+          .:53 {
+              errors
+              health
+              ready
+              kubernetes cluster.local in-addr.arpa ip6.arpa {
+                  pods insecure
+                  fallthrough in-addr.arpa ip6.arpa
+                  ttl 30
+              }
+              # Rewrite *.cluster short-names to k8s service FQDNs.
+              rewrite name gateway.cluster gateway.default.svc.cluster.local
+              rewrite name console.cluster console.default.svc.cluster.local
+              rewrite name registry.cluster registry.default.svc.cluster.local
+              rewrite name storage.cluster storage.default.svc.cluster.local
+              rewrite name images.cluster images.default.svc.cluster.local
+              rewrite name rag.cluster rag.default.svc.cluster.local
+              prometheus :9153
+              forward . /etc/resolv.conf
+              cache 30
+              loop
+              reload
+              loadbalance
+          }
