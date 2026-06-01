@@ -11,7 +11,7 @@ nodes:
     ram_gb: 64
     disk_gb: 1024
     labels:
-      role: trainer
+      workload: trainer
       zone: primary
 
   - hostname: worker-1
@@ -25,5 +25,5 @@ nodes:
     ram_gb: 32
     disk_gb: 512
     labels:
-      role: server
+      workload: server
       zone: edge

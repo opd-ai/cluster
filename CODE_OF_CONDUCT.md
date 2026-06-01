@@ -8,6 +8,5 @@ We pledge to make participation in this community a harassment-free experience f
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by opening a private security report as described in [SECURITY.md](SECURITY.md).
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainer at conduct@opd.ai.
 All reports will be reviewed and investigated promptly and fairly.
-
