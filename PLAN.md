@@ -8,17 +8,17 @@ A reproducible, extensible 2→X device cluster for self-hosted training and inf
 
 ## Phase 0 — Repository Scaffolding
 
-- [ ] **0.1 Repo layout.** Canonical tree: `cmd/` (every binary), `internal/`, `pkg/`, `cluster/` (k3s manifests, kustomize), `ansible/` or `scripts/bootstrap/`, `python/` (training only), `configs/`, `examples/`, `docs/`, `tools/`, `tests/`, `web/` (Ebitengine WASM client + Go embed assets), `rag/`.
-- [ ] **0.2 Tooling baseline.** `go.mod` (Go 1.22+, the single source of truth for almost everything), `pyproject.toml` (Python 3.11+, `uv`) scoped strictly to `python/`. No `package.json`, no `pnpm-lock.yaml`, no `node_modules` anywhere. `.editorconfig`, `.gitattributes` (LFS for sample GGUFs and a few demo sprites), `.gitignore`.
-- [ ] **0.3 Pre-commit & lint.** `golangci-lint` (with `gofumpt`, `revive`, `staticcheck`, `errcheck`, `gosec`), `ruff` for Python, `shellcheck`, `yamllint`, `markdownlint`. `make lint` runs them all. Zero JS linters because zero JS.
-- [ ] **0.4 Makefile / Taskfile.** Top-level targets: `bootstrap`, `up`, `down`, `sync`, `train`, `serve`, `console`, `console-wasm`, `rag`, `status`, `clean`, `test`, `docs`. `console-wasm` cross-compiles the Ebitengine UI with `GOOS=js GOARCH=wasm`.
-- [ ] **0.5 License & governance.** `LICENSE` (Apache-2.0 or MIT), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CODEOWNERS`.
-- [ ] **0.6 CI skeleton.** GitHub Actions: lint, `go test ./...` with race detector, build matrix (linux/amd64, linux/arm64, darwin/arm64, **js/wasm** for the console), `actionlint` self-check. WASM artifact uploaded as a CI artifact for size tracking.
-- [ ] **0.7 ROADMAP.md.** Reserved strictly for speculative ideas (multi-tenant SaaS, mobile clients, on-device personalization). The ambitious-but-targeted features (speculative decoding, LoRA hot-swap, federated training, RAG, Ebitengine console, video gen) are first-class scope inside this PLAN.
+- [x] **0.1 Repo layout.** Canonical tree: `cmd/` (every binary), `internal/`, `pkg/`, `cluster/` (k3s manifests, kustomize), `ansible/` or `scripts/bootstrap/`, `python/` (training only), `configs/`, `examples/`, `docs/`, `tools/`, `tests/`, `web/` (Ebitengine WASM client + Go embed assets), `rag/`.
+- [x] **0.2 Tooling baseline.** `go.mod` (Go 1.22+, the single source of truth for almost everything), `pyproject.toml` (Python 3.11+, `uv`) scoped strictly to `python/`. No `package.json`, no `pnpm-lock.yaml`, no `node_modules` anywhere. `.editorconfig`, `.gitattributes` (LFS for sample GGUFs and a few demo sprites), `.gitignore`.
+- [x] **0.3 Pre-commit & lint.** `golangci-lint` (with `gofumpt`, `revive`, `staticcheck`, `errcheck`, `gosec`), `ruff` for Python, `shellcheck`, `yamllint`, `markdownlint`. `make lint` runs them all. Zero JS linters because zero JS.
+- [x] **0.4 Makefile / Taskfile.** Top-level targets: `bootstrap`, `up`, `down`, `sync`, `train`, `serve`, `console`, `console-wasm`, `rag`, `status`, `clean`, `test`, `docs`. `console-wasm` cross-compiles the Ebitengine UI with `GOOS=js GOARCH=wasm`.
+- [x] **0.5 License & governance.** `LICENSE` (Apache-2.0 or MIT), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CODEOWNERS`.
+- [x] **0.6 CI skeleton.** GitHub Actions: lint, `go test ./...` with race detector, build matrix (linux/amd64, linux/arm64, darwin/arm64, **js/wasm** for the console), `actionlint` self-check. WASM artifact uploaded as a CI artifact for size tracking.
+- [x] **0.7 ROADMAP.md.** Reserved strictly for speculative ideas (multi-tenant SaaS, mobile clients, on-device personalization). The ambitious-but-targeted features (speculative decoding, LoRA hot-swap, federated training, RAG, Ebitengine console, video gen) are first-class scope inside this PLAN.
 
 ## Phase 1 — Hardware Inventory & Node Bootstrap
 
-- [ ] **1.1 Inventory schema.** `cluster/inventory.yaml` per node: `hostname`, `ssh_user`, `address`, `arch`, `os`, `role` (`control`|`worker`|`both`), `accelerator` (`cuda`|`rocm`|`metal`|`cpu`), `vram_gb`, `ram_gb`, `disk_gb`, `labels`.
+- [x] **1.1 Inventory schema.** `cluster/inventory.yaml` per node: `hostname`, `ssh_user`, `address`, `arch`, `os`, `role` (`control`|`worker`|`both`), `accelerator` (`cuda`|`rocm`|`metal`|`cpu`), `vram_gb`, `ram_gb`, `disk_gb`, `labels`.
 - [ ] **1.2 Discovery helper.** `cmd/cluster-probe` (Go, distributed as a static binary): SSHes via `golang.org/x/crypto/ssh` into each host, detects GPU vendor/VRAM/driver, CPU/RAM/disk, OS, and emits a populated inventory stub.
 - [ ] **1.3 Node prereqs.** Idempotent bootstrap (Ansible playbook *or* `cmd/cluster-bootstrap` driving SSH directly) installing: container runtime, NVIDIA/ROCm drivers + container toolkit, `ollama`, `git`, `git-lfs`, `rsync`, Python build deps + `uv` (only on trainer/image-gen nodes).
 - [ ] **1.4 Mac (Apple Silicon) path.** Bootstrap profile for `darwin/arm64`: Homebrew, `ollama`, MLX runtime, Python via `uv`, no container runtime. Mac nodes still run our Go agents natively (`darwin/arm64` build).

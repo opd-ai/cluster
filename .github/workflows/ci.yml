@@ -1,0 +1,98 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: astral-sh/setup-uv@v5
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+      - name: Install shell, yaml, and markdown linters
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck yamllint
+          sudo npm install -g markdownlint-cli
+      - name: Run lint suite
+        run: make lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run Go tests with race detector
+        run: go test -race ./...
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: arm64
+          - goos: js
+            goarch: wasm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build targets
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/${GOOS}-${GOARCH}
+          if [ "${GOOS}/${GOARCH}" = "js/wasm" ]; then
+            if go list ./cmd/console-wasm >/dev/null 2>&1; then
+              go build -o dist/${GOOS}-${GOARCH}/console.wasm ./cmd/console-wasm
+            else
+              echo "cmd/console-wasm missing; skipping wasm build for scaffold stage"
+            fi
+            exit 0
+          fi
+
+          pkgs="$(go list ./cmd/... 2>/dev/null || true)"
+          if [ -z "${pkgs}" ]; then
+            echo "no cmd packages to build"
+            exit 0
+          fi
+
+          for pkg in ${pkgs}; do
+            name="$(basename "${pkg}")"
+            go build -o "dist/${GOOS}-${GOARCH}/${name}" "${pkg}"
+          done
+      - name: Upload wasm artifact
+        if: matrix.goos == 'js' && matrix.goarch == 'wasm' && hashFiles('dist/js-wasm/console.wasm') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: console-wasm
+          path: dist/js-wasm/console.wasm
+
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/actionlint@v1
