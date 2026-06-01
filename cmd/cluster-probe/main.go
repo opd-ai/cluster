@@ -45,45 +45,55 @@ type HostInfo struct {
 }
 
 func main() {
-	var (
-		hostsFile   = flag.String("hosts", "", "File containing hosts (one per line: user@host:port or user@host)")
-		hostList    = flag.String("host", "", "Single host to probe (format: user@host:port)")
-		outputFile  = flag.String("output", "", "Output inventory YAML file")
-		keyPath     = flag.String("key", "", "SSH private key path (default: ~/.ssh/id_rsa)")
-		timeout     = flag.Int("timeout", 10, "SSH timeout in seconds")
-		jsonOutput  = flag.Bool("json", false, "Output JSON instead of YAML")
-	)
-	flag.Parse()
-
-	if *hostsFile == "" && *hostList == "" {
-		log.Fatal("Must specify either -hosts or -host")
-	}
-
-	var hosts []string
-	if *hostList != "" {
-		hosts = []string{*hostList}
-	} else {
-		var err error
-		hosts, err = readHostsFile(*hostsFile)
-		if err != nil {
-			log.Fatalf("Failed to read hosts file: %v", err)
-		}
-	}
-
+	hostsFile, hostList, outputFile, keyPath, timeout, jsonOutput := parseFlags()
+	
+	hosts := getHosts(hostsFile, hostList)
 	if len(hosts) == 0 {
 		log.Fatal("No hosts provided")
 	}
 
-	// Load SSH key
-	signer, err := loadSSHKey(*keyPath)
+	signer, err := loadSSHKey(keyPath)
 	if err != nil {
 		log.Fatalf("Failed to load SSH key: %v", err)
 	}
 
-	// Probe each host
+	nodes := probeHosts(hosts, signer, timeout)
+	
+	outputResults(nodes, jsonOutput, outputFile)
+}
+
+func parseFlags() (hostsFile, hostList, outputFile, keyPath string, timeout int, jsonOutput bool) {
+	hostsFileFlag := flag.String("hosts", "", "File containing hosts (one per line: user@host:port or user@host)")
+	hostListFlag := flag.String("host", "", "Single host to probe (format: user@host:port)")
+	outputFileFlag := flag.String("output", "", "Output inventory YAML file")
+	keyPathFlag := flag.String("key", "", "SSH private key path (default: ~/.ssh/id_rsa)")
+	timeoutFlag := flag.Int("timeout", 10, "SSH timeout in seconds")
+	jsonOutputFlag := flag.Bool("json", false, "Output JSON instead of YAML")
+	flag.Parse()
+
+	return *hostsFileFlag, *hostListFlag, *outputFileFlag, *keyPathFlag, *timeoutFlag, *jsonOutputFlag
+}
+
+func getHosts(hostsFile, hostList string) []string {
+	if hostList != "" {
+		return []string{hostList}
+	}
+	
+	if hostsFile == "" {
+		log.Fatal("Must specify either -hosts or -host")
+	}
+
+	hosts, err := readHostsFile(hostsFile)
+	if err != nil {
+		log.Fatalf("Failed to read hosts file: %v", err)
+	}
+	return hosts
+}
+
+func probeHosts(hosts []string, signer ssh.Signer, timeout int) []*Node {
 	var nodes []*Node
 	for _, hostStr := range hosts {
-		info, err := probeHost(hostStr, signer, *timeout)
+		info, err := probeHost(hostStr, signer, timeout)
 		if err != nil {
 			log.Printf("Failed to probe %s: %v", hostStr, err)
 			continue
@@ -104,12 +114,14 @@ func main() {
 		}
 		nodes = append(nodes, node)
 	}
+	return nodes
+}
 
-	// Output results
-	if *jsonOutput {
-		outputJSON(nodes, *outputFile)
+func outputResults(nodes []*Node, jsonOutput bool, outputFile string) {
+	if jsonOutput {
+		outputJSON(nodes, outputFile)
 	} else {
-		outputYAML(nodes, *outputFile)
+		outputYAML(nodes, outputFile)
 	}
 }
 
