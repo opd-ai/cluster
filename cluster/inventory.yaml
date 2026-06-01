@@ -1,0 +1,29 @@
+---
+nodes:
+  - hostname: control-1
+    ssh_user: ubuntu
+    address: 100.64.0.10
+    arch: amd64
+    os: linux
+    role: control
+    accelerator: cuda
+    vram_gb: 24
+    ram_gb: 64
+    disk_gb: 1024
+    labels:
+      workload: trainer
+      zone: primary
+
+  - hostname: worker-1
+    ssh_user: ubuntu
+    address: 100.64.0.11
+    arch: arm64
+    os: linux
+    role: worker
+    accelerator: cpu
+    vram_gb: 0
+    ram_gb: 32
+    disk_gb: 512
+    labels:
+      workload: server
+      zone: edge
