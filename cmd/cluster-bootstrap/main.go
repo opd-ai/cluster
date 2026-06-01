@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -16,6 +16,7 @@ import (
 	"github.com/opd-ai/cluster/internal/sshutil"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"gopkg.in/yaml.v3"
 )
 
 type BootstrapConfig struct {
@@ -29,14 +30,14 @@ type BootstrapConfig struct {
 }
 
 type NodeConfig struct {
-	Hostname    string
-	SSHUser     string
-	Address     string
-	Arch        string
-	OS          string
-	Accelerator string
-	Role        string
-	Labels      map[string]string
+	Hostname    string            `yaml:"hostname"`
+	SSHUser     string            `yaml:"ssh_user"`
+	Address     string            `yaml:"address"`
+	Arch        string            `yaml:"arch"`
+	OS          string            `yaml:"os"`
+	Accelerator string            `yaml:"accelerator"`
+	Role        string            `yaml:"role"`
+	Labels      map[string]string `yaml:"labels"`
 }
 
 func main() {
@@ -222,6 +223,12 @@ func fetchNodeToken(client *ssh.Client) (string, error) {
 }
 
 func joinK3sWorker(client *ssh.Client, serverAddr, token string, config BootstrapConfig) error {
+	if !shellSafe(serverAddr) {
+		return fmt.Errorf("joinK3sWorker: serverAddr contains unsafe characters")
+	}
+	if !shellSafe(token) {
+		return fmt.Errorf("joinK3sWorker: token contains unsafe characters")
+	}
 	cmd := fmt.Sprintf(
 		"curl -sfL https://get.k3s.io | K3S_URL=https://%s:6443 K3S_TOKEN=%s sh -",
 		serverAddr, token,
@@ -234,81 +241,42 @@ func joinK3sWorker(client *ssh.Client, serverAddr, token string, config Bootstra
 	return executeBootstrapSteps(client, steps, config)
 }
 
+// shellSafe reports whether s is safe to embed verbatim in a shell script:
+// it must be non-empty and contain only alphanumeric characters, dots,
+// hyphens, colons, underscores, and forward slashes.
+func shellSafe(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '.' || c == '-' ||
+			c == ':' || c == '_' || c == '/') {
+			return false
+		}
+	}
+	return true
+}
+
 func loadInventory(path string) ([]NodeConfig, error) {
-	// Simple YAML parsing for our specific inventory format
-	file, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-
+	var inv struct {
+		Nodes []NodeConfig `yaml:"nodes"`
+	}
+	if err := yaml.Unmarshal(data, &inv); err != nil {
+		return nil, fmt.Errorf("parse inventory %s: %w", path, err)
+	}
 	var nodes []NodeConfig
-	var current NodeConfig
-	inLabels := false
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") || trimmed == "---" || trimmed == "nodes:" {
+	for _, n := range inv.Nodes {
+		if n.Hostname == "" {
 			continue
 		}
-
-		if strings.HasPrefix(trimmed, "- hostname:") {
-			if current.Hostname != "" {
-				nodes = append(nodes, current)
-			}
-			current = NodeConfig{Labels: map[string]string{}}
-			current.Hostname = strings.TrimSpace(strings.TrimPrefix(trimmed, "- hostname:"))
-			inLabels = false
-			continue
-		}
-
-		if trimmed == "labels:" {
-			inLabels = true
-			if current.Labels == nil {
-				current.Labels = map[string]string{}
-			}
-			continue
-		}
-
-		if inLabels {
-			if indent >= 6 {
-				key, value, ok := strings.Cut(trimmed, ":")
-				if ok {
-					current.Labels[strings.TrimSpace(key)] = strings.TrimSpace(value)
-				}
-				continue
-			}
-			inLabels = false
-		}
-
-		parseInventoryField(&current, trimmed)
+		nodes = append(nodes, n)
 	}
-
-	if current.Hostname != "" {
-		nodes = append(nodes, current)
-	}
-
-	return nodes, scanner.Err()
-}
-
-func parseInventoryField(node *NodeConfig, line string) {
-	if strings.HasPrefix(line, "ssh_user:") {
-		node.SSHUser = strings.TrimSpace(strings.TrimPrefix(line, "ssh_user:"))
-	} else if strings.HasPrefix(line, "address:") {
-		node.Address = strings.TrimSpace(strings.TrimPrefix(line, "address:"))
-	} else if strings.HasPrefix(line, "arch:") {
-		node.Arch = strings.TrimSpace(strings.TrimPrefix(line, "arch:"))
-	} else if strings.HasPrefix(line, "os:") {
-		node.OS = strings.TrimSpace(strings.TrimPrefix(line, "os:"))
-	} else if strings.HasPrefix(line, "accelerator:") {
-		node.Accelerator = strings.TrimSpace(strings.TrimPrefix(line, "accelerator:"))
-	} else if strings.HasPrefix(line, "role:") {
-		node.Role = strings.TrimSpace(strings.TrimPrefix(line, "role:"))
-	}
+	return nodes, nil
 }
 
 func loadSSHKey(keyPath string) (ssh.Signer, error) {
@@ -338,6 +306,7 @@ func getAgentSigner() (ssh.Signer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SSH agent: %v", err)
 	}
+	defer agentConn.Close()
 
 	ag := agent.NewClient(agentConn)
 	signers, err := ag.Signers()
@@ -524,6 +493,7 @@ func bootstrapRHEL(client *ssh.Client, node *NodeConfig, config BootstrapConfig)
 }
 
 func executeBootstrapSteps(client *ssh.Client, steps []string, config BootstrapConfig) error {
+	var errs []error
 	for _, step := range steps {
 		if config.DryRun {
 			fmt.Printf("  [DRY-RUN] %s\n", step)
@@ -537,9 +507,10 @@ func executeBootstrapSteps(client *ssh.Client, steps []string, config BootstrapC
 			if output != "" {
 				fmt.Printf("    Output: %s\n", strings.TrimSpace(output))
 			}
+			errs = append(errs, fmt.Errorf("step %q: %w", step, err))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func isUbuntuDebian(osRelease string) bool {
@@ -558,8 +529,8 @@ func isTrainerNode(node *NodeConfig) bool {
 
 func isIdempotentError(step, output string) bool {
 	// These errors are OK if the software is already installed
-	return strings.Contains(output, "already") ||
-		strings.Contains(output, "already installed") ||
+	return strings.Contains(output, "already installed") ||
 		strings.Contains(output, "is already the newest version") ||
+		strings.Contains(output, "already exists") ||
 		strings.Contains(output, "nothing to do")
 }

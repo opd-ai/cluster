@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -40,10 +41,15 @@ type LoRAManifest struct {
 }
 
 // startLoRAWatcher polls the manifest file for changes and updates the
-// gateway's adapter registry.  It runs until the process exits.
-func (gw *Gateway) startLoRAWatcher(manifestPath string, pollInterval time.Duration) {
+// gateway's adapter registry.  It runs until stop is closed.
+func (gw *Gateway) startLoRAWatcher(manifestPath string, pollInterval time.Duration, stop <-chan struct{}) {
 	var lastMod time.Time
 	for {
+		select {
+		case <-stop:
+			return
+		default:
+		}
 		info, err := os.Stat(manifestPath)
 		if err != nil {
 			time.Sleep(pollInterval)
@@ -114,20 +120,5 @@ func (gw *Gateway) resolveLoRAModel(model string) string {
 // address.  Simple substring match is sufficient for inventory-driven setups.
 func backendMatchesNode(backendURL, nodeName string) bool {
 	return len(nodeName) > 0 && len(backendURL) > 0 &&
-		(contains(backendURL, nodeName))
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr ||
-		len(substr) == 0 ||
-		indexStr(s, substr) >= 0)
-}
-
-func indexStr(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+		strings.Contains(backendURL, nodeName)
 }

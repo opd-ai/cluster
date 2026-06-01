@@ -159,7 +159,10 @@ func performRemoteChecks(host, user string, signer ssh.Signer, config DoctorConf
 
 func loadSSHKey(keyPath string) (ssh.Signer, error) {
 	if keyPath == "" {
-		usr, _ := user.Current()
+		usr, err := user.Current()
+		if err != nil {
+			return nil, fmt.Errorf("resolve home directory: %w", err)
+		}
 		keyPath = filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 	}
 
@@ -180,6 +183,7 @@ func getAgentSigner() (ssh.Signer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("no SSH agent: %v", err)
 	}
+	defer agentConn.Close()
 
 	ag := agent.NewClient(agentConn)
 	signers, err := ag.Signers()

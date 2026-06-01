@@ -157,8 +157,13 @@ func (gw *Gateway) callSwarm(path string, body map[string]any) ([]string, error)
 		return nil, err
 	}
 
-	client := &http.Client{Timeout: 10 * time.Minute}
-	resp, err := client.Post(gw.swarmURL+path, "application/json", bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodPost, gw.swarmURL+path, bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := gw.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -32,6 +32,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -194,11 +195,13 @@ func main() {
 
 	// Wait for job completion.
 	deadline := time.Now().Add(time.Duration(*timeout) * time.Minute)
+	completed := false
 	for time.Now().Before(deadline) {
 		out, err := kubectlOutput(env, "get", "job", jobName,
 			"-o", "jsonpath={.status.conditions[?(@.type=='Complete')].status}")
 		if err == nil && strings.TrimSpace(out) == "True" {
 			log.Printf("Job %s completed successfully.", jobName)
+			completed = true
 			break
 		}
 		failed, _ := kubectlOutput(env, "get", "job", jobName,
@@ -208,6 +211,10 @@ func main() {
 			log.Fatalf("Job %s failed.", jobName)
 		}
 		time.Sleep(15 * time.Second)
+	}
+	if !completed {
+		streamLogs(env, jobName)
+		log.Fatalf("Job %s did not complete within %d minute(s) deadline.", jobName, *timeout)
 	}
 
 	// Stream final logs.
@@ -221,8 +228,38 @@ func main() {
 	}
 }
 
+// safeLabel matches Kubernetes label-safe identifiers and DNS subdomain
+// components: alphanumeric, dashes, dots, and forward slashes.
+var safeLabel = regexp.MustCompile(`^[a-zA-Z0-9._/:-]+$`)
+
+// validateJobSpec returns an error if any jobSpec string field contains
+// characters that could break YAML structure or inject arbitrary YAML/shell.
+func validateJobSpec(spec jobSpec) error {
+	fields := map[string]string{
+		"Name":      spec.Name,
+		"Namespace": spec.Namespace,
+		"Stage":     spec.Stage,
+		"Mode":      spec.Mode,
+		"NSName":    spec.NSName,
+		"Repo":      spec.Repo,
+		"Image":     spec.Image,
+	}
+	for name, val := range fields {
+		if val == "" {
+			continue
+		}
+		if !safeLabel.MatchString(val) {
+			return fmt.Errorf("jobSpec field %s contains unsafe characters: %q", name, val)
+		}
+	}
+	return nil
+}
+
 // writeJobManifest renders the Job template to a file.
 func writeJobManifest(path string, spec jobSpec) error {
+	if err := validateJobSpec(spec); err != nil {
+		return err
+	}
 	f, err := os.Create(path)
 	if err != nil {
 		return err

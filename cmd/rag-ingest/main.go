@@ -85,6 +85,13 @@ type config struct {
 func chunkText(text string, chunkToks, overlapToks int) []string {
 	chunkSize := chunkToks * charsPerToken
 	overlapSize := overlapToks * charsPerToken
+	if chunkSize <= 0 {
+		chunkSize = charsPerToken
+	}
+	// Guard: overlap must be smaller than chunk to ensure progress.
+	if overlapSize >= chunkSize {
+		overlapSize = chunkSize / 2
+	}
 	if len(text) <= chunkSize {
 		return []string{text}
 	}
@@ -117,7 +124,7 @@ func sha256Hex(data []byte) string {
 // Embedding via gateway
 // -------------------------------------------------------------------------
 
-func embed(ctx context.Context, gatewayURL, apiKey string, texts []string) ([][]float32, error) {
+func embed(ctx context.Context, client *http.Client, gatewayURL, apiKey string, texts []string) ([][]float32, error) {
 	body := map[string]any{
 		"input": texts,
 		"model": "nomic-embed-text",
@@ -137,11 +144,14 @@ func embed(ctx context.Context, gatewayURL, apiKey string, texts []string) ([][]
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("embed: unexpected status %d", resp.StatusCode)
+	}
 
 	var result struct {
 		Data []struct {
@@ -197,11 +207,12 @@ func upsert(ctx context.Context, client qdrant.PointsClient, collection string, 
 // -------------------------------------------------------------------------
 
 type ingestor struct {
-	cfg     config
-	conn    *grpc.ClientConn
-	qColl   qdrant.CollectionsClient
-	qPoints qdrant.PointsClient
-	seen    map[string]bool
+	cfg        config
+	conn       *grpc.ClientConn
+	qColl      qdrant.CollectionsClient
+	qPoints    qdrant.PointsClient
+	seen       map[string]bool
+	httpClient *http.Client
 }
 
 func newIngestor(cfg config, conn *grpc.ClientConn) *ingestor {
@@ -211,6 +222,14 @@ func newIngestor(cfg config, conn *grpc.ClientConn) *ingestor {
 		qColl:   qdrant.NewCollectionsClient(conn),
 		qPoints: qdrant.NewPointsClient(conn),
 		seen:    make(map[string]bool),
+		httpClient: &http.Client{
+			Transport: &http.Transport{
+				MaxIdleConns:        10,
+				MaxIdleConnsPerHost: 5,
+				IdleConnTimeout:     90 * time.Second,
+			},
+			Timeout: 2 * time.Minute,
+		},
 	}
 }
 
@@ -237,7 +256,7 @@ func (ing *ingestor) ingestFile(ctx context.Context, filePath string) error {
 	chunks := chunkText(string(data), ing.cfg.chunkTokens, ing.cfg.overlapToks)
 	log.Printf("ingest %s: %d chunk(s)", filePath, len(chunks))
 
-	vectors, err := embed(ctx, ing.cfg.gatewayURL, ing.cfg.apiKey, chunks)
+	vectors, err := embed(ctx, ing.httpClient, ing.cfg.gatewayURL, ing.cfg.apiKey, chunks)
 	if err != nil {
 		return fmt.Errorf("embed %s: %w", filePath, err)
 	}
@@ -304,7 +323,7 @@ func (ing *ingestor) fetchURL(ctx context.Context, rawURL string) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := ing.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

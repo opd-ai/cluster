@@ -12,6 +12,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -72,6 +74,18 @@ func (s *videoJobStore) get(id string) (*videoJob, bool) {
 	defer s.mu.RUnlock()
 	j, ok := s.jobs[id]
 	return j, ok
+}
+
+// getSnapshot returns a value copy of the job under the read lock, preventing
+// data races between the JSON encoder and concurrent writes in runVideoJob.
+func (s *videoJobStore) getSnapshot(id string) (videoJob, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	j, ok := s.jobs[id]
+	if !ok {
+		return videoJob{}, false
+	}
+	return *j, true
 }
 
 // -------------------------------------------------------------------------
@@ -184,12 +198,12 @@ func (gw *Gateway) handleVideoEdits(w http.ResponseWriter, r *http.Request) {
 // handleVideoJobStatus returns the current status of a video job.
 func (gw *Gateway) handleVideoJobStatus(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	job, ok := globalVideoJobs.get(id)
+	snapshot, ok := globalVideoJobs.getSnapshot(id)
 	if !ok {
 		http.Error(w, `{"error":"job not found"}`, http.StatusNotFound)
 		return
 	}
-	writeJSON(w, job)
+	writeJSON(w, snapshot)
 }
 
 // -------------------------------------------------------------------------
@@ -198,7 +212,18 @@ func (gw *Gateway) handleVideoJobStatus(w http.ResponseWriter, r *http.Request) 
 
 func newVideoJob(req videoGenerationRequest) *videoJob {
 	now := time.Now().UTC()
-	id := fmt.Sprintf("vid-%d", now.UnixNano())
+	var buf [8]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		// Fallback to timestamp on entropy failure (extremely unlikely).
+		return &videoJob{
+			ID:        fmt.Sprintf("vid-%d", now.UnixNano()),
+			Status:    jobPending,
+			CreatedAt: now,
+			UpdatedAt: now,
+			req:       req,
+		}
+	}
+	id := "vid-" + hex.EncodeToString(buf[:])
 	return &videoJob{
 		ID:        id,
 		Status:    jobPending,

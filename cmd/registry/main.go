@@ -23,6 +23,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"flag"
@@ -291,7 +292,20 @@ func hashFile(path string) (sha string, size int64, err error) {
 }
 
 func downloadFile(url, dest string) error {
-	resp, err := http.Get(url) //nolint:noctx // simple download helper
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 30 * time.Second,
+		},
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

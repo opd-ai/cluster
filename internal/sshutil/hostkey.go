@@ -1,6 +1,7 @@
 package sshutil
 
 import (
+	"log"
 	"os/user"
 	"path/filepath"
 
@@ -10,6 +11,8 @@ import (
 
 func HostKeyCallback(knownHostsPath string, insecureSkip bool) (ssh.HostKeyCallback, error) {
 	if insecureSkip {
+		log.Println("WARNING: SSH host key verification is disabled (insecure-skip-host-key=true); " +
+			"man-in-the-middle attacks will not be detected")
 		return ssh.InsecureIgnoreHostKey(), nil
 	}
 

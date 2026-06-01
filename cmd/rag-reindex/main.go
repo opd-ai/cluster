@@ -89,9 +89,11 @@ func main() {
 	// Debounce map: collection → timer
 	pending := make(map[string]*time.Timer)
 
-	// Nightly ticker
+	// Nightly ticker: track the last day we ran to avoid firing multiple
+	// times within the same hour (H7).
 	nightly := time.NewTicker(1 * time.Minute)
 	defer nightly.Stop()
+	var lastNightlyDay int // Julian day number of last nightly run
 
 	log.Printf("rag-reindex watching %s (debounce=%s, nightly=%02d:00 UTC)",
 		*cacheDir, *debounce, *nightlyHour)
@@ -126,7 +128,10 @@ func main() {
 			log.Printf("watcher error: %v", err)
 
 		case t := <-nightly.C:
-			if t.UTC().Hour() == *nightlyHour {
+			utc := t.UTC()
+			today := utc.YearDay() + utc.Year()*366
+			if utc.Hour() == *nightlyHour && today != lastNightlyDay {
+				lastNightlyDay = today
 				log.Println("nightly full re-ingest triggered")
 				for dir, coll := range repoToCollection {
 					runIngest(*ragIngest, dir, coll, *gatewayURL, *qdrantAddr, *apiKey)
@@ -206,8 +211,10 @@ func runIngest(binary, dir, collection, gatewayURL, qdrantAddr, apiKey string) {
 		"--collection", collection,
 		"--gateway-url", gatewayURL,
 		"--qdrant-addr", qdrantAddr,
-		"--api-key", apiKey,
 	)
+	// Pass the API key via the environment rather than a CLI argument to avoid
+	// exposure in process listings readable by other local users (M13).
+	cmd.Env = append(os.Environ(), "GATEWAY_API_KEY="+apiKey)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

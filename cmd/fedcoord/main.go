@@ -33,6 +33,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -40,6 +41,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -147,7 +149,9 @@ func broadcastAdapter(nodes []FedNode, adapterPath, roundDir string, dry bool) e
 // triggerLocalTraining SSHes into each node and starts the local training job.
 func triggerLocalTraining(nodes []FedNode, nsName, namespacesPath, baseAdapter,
 	roundDir string, round, epochs int, algo string, proxMu float64, dry bool) error {
-	for _, n := range nodes {
+	var wg sync.WaitGroup
+	errs := make([]error, len(nodes))
+	for i, n := range nodes {
 		outputDir := fmt.Sprintf("%s/%s/", roundDir, n.Name)
 		args := []string{
 			n.SSHUser + "@" + n.Address,
@@ -170,14 +174,19 @@ func triggerLocalTraining(nodes []FedNode, nsName, namespacesPath, baseAdapter,
 			log.Printf("  ssh %s", strings.Join(args, " "))
 			continue
 		}
-		cmd := exec.Command("ssh", args...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("node %s: %w", n.Name, err)
-		}
+		wg.Add(1)
+		go func(idx int, name string, a []string) {
+			defer wg.Done()
+			cmd := exec.Command("ssh", a...)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				errs[idx] = fmt.Errorf("node %s: %w", name, err)
+			}
+		}(i, n.Name, args)
 	}
-	return nil
+	wg.Wait()
+	return errors.Join(errs...)
 }
 
 // waitForAdapters polls until each node has written its adapter file.
@@ -251,7 +260,7 @@ func loadFedNodes(path string) []FedNode {
 	federated := false
 	for _, line := range lines {
 		trim := strings.TrimSpace(line)
-		if strings.HasPrefix(trim, "- name:") || strings.HasPrefix(trim, "name:") {
+		if strings.HasPrefix(trim, "- hostname:") || strings.HasPrefix(trim, "hostname:") {
 			if current != nil && federated {
 				nodes = append(nodes, *current)
 			}
@@ -259,6 +268,9 @@ func loadFedNodes(path string) []FedNode {
 			federated = false
 			name := strings.TrimSpace(strings.SplitN(trim, ":", 2)[1])
 			current.Name = strings.Trim(name, `"'`)
+			if current.Name == "" {
+				current = nil
+			}
 			continue
 		}
 		if current == nil {
