@@ -22,7 +22,7 @@ A reproducible, extensible 2→X device cluster for self-hosted training and inf
 - [x] **1.2 Discovery helper.** `cmd/cluster-probe` (Go, distributed as a static binary): SSHes via `golang.org/x/crypto/ssh` into each host, detects GPU vendor/VRAM/driver, CPU/RAM/disk, OS, and emits a populated inventory stub.
 - [x] **1.3 Node prereqs.** Idempotent bootstrap (Ansible playbook *or* `cmd/cluster-bootstrap` driving SSH directly) installing: container runtime, NVIDIA/ROCm drivers + container toolkit, `ollama`, `git`, `git-lfs`, `rsync`, Python build deps + `uv` (only on trainer/image-gen nodes).
 - [x] **1.4 Mac (Apple Silicon) path.** Bootstrap profile for `darwin/arm64`: Homebrew, `ollama`, MLX runtime, Python via `uv`, no container runtime. Mac nodes still run our Go agents natively (`darwin/arm64` build).
-- [ ] **1.5 Hardware sanity tests.** `cmd/doctor` runs per-node checks: GPU visible, FP16/BF16 supported, disk free ≥ threshold, clock skew, MTU, outbound HTTPS. Single Go binary, no shell sprawl.
+- [x] **1.5 Hardware sanity tests.** `cmd/doctor` runs per-node checks: GPU visible, FP16/BF16 supported, disk free ≥ threshold, clock skew, MTU, outbound HTTPS. Single Go binary, no shell sprawl.
 
 ## Phase 2 — Cluster Formation & Networking
 
