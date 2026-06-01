@@ -35,11 +35,11 @@ A reproducible, extensible 2→X device cluster for self-hosted training and inf
 
 ## Phase 3 — Shared Storage & Artifact Cache
 
-- [ ] **3.1 Storage tiering.** `hot` (NVMe per node, model + KV cache), `warm` (network-shared: datasets, adapters, image/video checkpoints, vector indexes), `cold` (object store, snapshots).
-- [ ] **3.2 Shared filesystem.** **MinIO** (S3-compatible, Go-native) on the largest-disk node; replicate to a second if available. Buckets: `models/`, `datasets/`, `adapters/`, `checkpoints/` (SDXL/Flux/video/VAE/CLIP/LoRAs), `outputs/`, `rag/` (corpora + indexes), `snapshots/`, `logs/`. All our services use the official `minio-go` client.
-- [ ] **3.3 Per-node cache.** Mount local NVMe at `/var/lib/aicluster/cache` on every node; LRU eviction via `cmd/cache-gc` (Go).
-- [ ] **3.4 Repo cache.** Shared bare-clone cache (`repo-cache/`) on warm storage; nodes pull via `rsync` or `git fetch --reference`. Operated by `cmd/repo-sync` (Go, using `go-git` for in-process operations and shelling to `git` only when needed for performance).
-- [ ] **3.5 Model registry.** `cmd/registry` (Go) maintains `registry/models.json`: LLM bases/adapters/GGUFs and image/video checkpoints (SDXL base/refiner, Flux dev/schnell, video models, VAEs, CLIP/T5 encoders, LoRAs), each with SHA256, size, license tag, source URL. Subcommands `list`, `push`, `pull`, `verify`.
+- [x] **3.1 Storage tiering.** `hot` (NVMe per node, model + KV cache), `warm` (network-shared: datasets, adapters, image/video checkpoints, vector indexes), `cold` (object store, snapshots).
+- [x] **3.2 Shared filesystem.** **MinIO** (S3-compatible, Go-native) on the largest-disk node; replicate to a second if available. Buckets: `models/`, `datasets/`, `adapters/`, `checkpoints/` (SDXL/Flux/video/VAE/CLIP/LoRAs), `outputs/`, `rag/` (corpora + indexes), `snapshots/`, `logs/`. All our services use the official `minio-go` client.
+- [x] **3.3 Per-node cache.** Mount local NVMe at `/var/lib/aicluster/cache` on every node; LRU eviction via `cmd/cache-gc` (Go).
+- [x] **3.4 Repo cache.** Shared bare-clone cache (`repo-cache/`) on warm storage; nodes pull via `rsync` or `git fetch --reference`. Operated by `cmd/repo-sync` (Go, using `go-git` for in-process operations and shelling to `git` only when needed for performance).
+- [x] **3.5 Model registry.** `cmd/registry` (Go) maintains `registry/models.json`: LLM bases/adapters/GGUFs and image/video checkpoints (SDXL base/refiner, Flux dev/schnell, video models, VAEs, CLIP/T5 encoders, LoRAs), each with SHA256, size, license tag, source URL. Subcommands `list`, `push`, `pull`, `verify`.
 
 ## Phase 4 — Inference Serving Layer (LLMs)
 
