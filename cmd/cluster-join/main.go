@@ -20,7 +20,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -35,6 +34,7 @@ import (
 	"github.com/opd-ai/cluster/internal/sshutil"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"gopkg.in/yaml.v3"
 )
 
 // JoinConfig holds CLI configuration for cluster-join.
@@ -50,11 +50,11 @@ type JoinConfig struct {
 
 // InventoryNode is a minimal representation of an inventory entry.
 type InventoryNode struct {
-	Hostname string
-	SSHUser  string
-	Address  string
-	OS       string
-	Role     string
+	Hostname string `yaml:"hostname"`
+	SSHUser  string `yaml:"ssh_user"`
+	Address  string `yaml:"address"`
+	OS       string `yaml:"os"`
+	Role     string `yaml:"role"`
 }
 
 func main() {
@@ -107,7 +107,10 @@ func main() {
 		if node.Role != "worker" && node.Role != "both" {
 			continue
 		}
-		script := joinScript(controlAddr, token)
+		script, err := joinScript(controlAddr, token)
+		if err != nil {
+			log.Fatalf("joinScript: %v", err)
+		}
 		if cfg.ScriptDir != "" {
 			if err := writeScript(cfg.ScriptDir, node.Hostname, script); err != nil {
 				log.Printf("write script for %s: %v", node.Hostname, err)
@@ -139,16 +142,39 @@ func fetchToken(address, sshUser string, signer ssh.Signer, cfg JoinConfig) (str
 	return token, nil
 }
 
+// shellSafe reports whether s is safe to embed verbatim in a shell script:
+// it must be non-empty and contain only alphanumeric characters, dots,
+// hyphens, colons, underscores, and forward slashes.
+func shellSafe(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '.' || c == '-' ||
+			c == ':' || c == '_' || c == '/') {
+			return false
+		}
+	}
+	return true
+}
+
 // joinScript returns an idempotent shell script that installs and starts the
 // k3s agent on a worker node.
-func joinScript(serverAddr, token string) string {
+func joinScript(serverAddr, token string) (string, error) {
+	if !shellSafe(serverAddr) {
+		return "", fmt.Errorf("joinScript: serverAddr contains unsafe characters")
+	}
+	if !shellSafe(token) {
+		return "", fmt.Errorf("joinScript: token contains unsafe characters")
+	}
 	return fmt.Sprintf(`#!/usr/bin/env sh
 set -eu
 curl -sfL https://get.k3s.io | K3S_URL=https://%s:6443 K3S_TOKEN=%s sh -
 systemctl enable k3s-agent
 systemctl start k3s-agent
 echo "joined k3s cluster at %s"
-`, serverAddr, token, serverAddr)
+`, serverAddr, token, serverAddr), nil
 }
 
 // writeScript writes a join script for hostname into dir.
@@ -171,53 +197,24 @@ func findControl(nodes []InventoryNode) *InventoryNode {
 }
 
 func loadInventory(path string) ([]InventoryNode, error) {
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-
+	var inv struct {
+		Nodes []InventoryNode `yaml:"nodes"`
+	}
+	if err := yaml.Unmarshal(data, &inv); err != nil {
+		return nil, fmt.Errorf("parse inventory %s: %w", path, err)
+	}
 	var nodes []InventoryNode
-	var cur InventoryNode
-	scanner := bufio.NewScanner(f)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") || trimmed == "---" || trimmed == "nodes:" {
+	for _, n := range inv.Nodes {
+		if n.Hostname == "" {
 			continue
 		}
-
-		if strings.HasPrefix(trimmed, "- hostname:") {
-			if cur.Hostname != "" {
-				nodes = append(nodes, cur)
-			}
-			cur = InventoryNode{}
-			cur.Hostname = strings.TrimSpace(strings.TrimPrefix(trimmed, "- hostname:"))
-			continue
-		}
-
-		parseField(&cur, trimmed)
+		nodes = append(nodes, n)
 	}
-
-	if cur.Hostname != "" {
-		nodes = append(nodes, cur)
-	}
-	return nodes, scanner.Err()
-}
-
-func parseField(n *InventoryNode, line string) {
-	switch {
-	case strings.HasPrefix(line, "ssh_user:"):
-		n.SSHUser = strings.TrimSpace(strings.TrimPrefix(line, "ssh_user:"))
-	case strings.HasPrefix(line, "address:"):
-		n.Address = strings.TrimSpace(strings.TrimPrefix(line, "address:"))
-	case strings.HasPrefix(line, "os:"):
-		n.OS = strings.TrimSpace(strings.TrimPrefix(line, "os:"))
-	case strings.HasPrefix(line, "role:"):
-		n.Role = strings.TrimSpace(strings.TrimPrefix(line, "role:"))
-	}
+	return nodes, nil
 }
 
 func loadSSHKey(keyPath string) (ssh.Signer, error) {

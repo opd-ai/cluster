@@ -91,9 +91,10 @@ type result struct {
 
 // server holds the RAG service state.
 type server struct {
-	cfg     config
-	conn    *grpc.ClientConn
-	qPoints qdrant.PointsClient
+	cfg        config
+	conn       *grpc.ClientConn
+	qPoints    qdrant.PointsClient
+	httpClient *http.Client
 }
 
 func newServer(cfg config, conn *grpc.ClientConn) *server {
@@ -101,6 +102,14 @@ func newServer(cfg config, conn *grpc.ClientConn) *server {
 		cfg:     cfg,
 		conn:    conn,
 		qPoints: qdrant.NewPointsClient(conn),
+		httpClient: &http.Client{
+			Transport: &http.Transport{
+				MaxIdleConns:        10,
+				MaxIdleConnsPerHost: 5,
+				IdleConnTimeout:     90 * time.Second,
+			},
+			Timeout: 2 * time.Minute,
+		},
 	}
 }
 
@@ -340,11 +349,14 @@ func (s *server) embed(ctx context.Context, text string) ([]float32, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("embed: unexpected status %d", resp.StatusCode)
+	}
 
 	var result struct {
 		Data []struct {

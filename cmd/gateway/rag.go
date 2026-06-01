@@ -24,7 +24,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // ragTool is the "rag" entry in a chat completion tools array.
@@ -73,7 +72,7 @@ func extractRAGTools(tools []json.RawMessage) (ragTools []ragTool, rest []json.R
 // retrieveRAGContext calls the RAG service and returns a formatted context
 // string with citations.  ragURL is the base URL of cmd/rag (e.g.
 // http://rag:8081).
-func retrieveRAGContext(ctx context.Context, ragURL, query, collection string, topK int, authHeader string) (string, error) {
+func retrieveRAGContext(ctx context.Context, client *http.Client, ragURL, query, collection string, topK int, authHeader string) (string, error) {
 	if topK <= 0 {
 		topK = 5
 	}
@@ -97,7 +96,6 @@ func retrieveRAGContext(ctx context.Context, ragURL, query, collection string, t
 		req.Header.Set("Authorization", authHeader)
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -147,7 +145,7 @@ func (gw *Gateway) injectRAGContextRaw(ctx context.Context, req map[string]json.
 
 	var contextParts []string
 	for _, rt := range ragTools {
-		ctxStr, err := retrieveRAGContext(ctx, gw.ragURL, query, rt.Collection, rt.TopK, authHeader)
+		ctxStr, err := retrieveRAGContext(ctx, gw.httpClient, gw.ragURL, query, rt.Collection, rt.TopK, authHeader)
 		if err != nil {
 			log.Printf("RAG retrieve %s: %v", rt.Collection, err)
 			continue
@@ -249,7 +247,7 @@ func (gw *Gateway) injectRAGContext(ctx context.Context, req map[string]any, aut
 	// Retrieve context for each RAG tool.
 	var contextParts []string
 	for _, rt := range ragTools {
-		ctxStr, err := retrieveRAGContext(ctx, gw.ragURL, query, rt.Collection, rt.TopK, authHeader)
+		ctxStr, err := retrieveRAGContext(ctx, gw.httpClient, gw.ragURL, query, rt.Collection, rt.TopK, authHeader)
 		if err != nil {
 			log.Printf("RAG retrieve %s: %v", rt.Collection, err)
 			continue

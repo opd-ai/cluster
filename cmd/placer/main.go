@@ -252,10 +252,14 @@ func parseInventory(path string) []*Node {
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		trim := strings.TrimSpace(line)
-		if strings.HasPrefix(trim, "- name:") || strings.HasPrefix(trim, "name:") {
+		if strings.HasPrefix(trim, "- hostname:") || strings.HasPrefix(trim, "hostname:") {
 			current = &Node{}
 			name := strings.TrimSpace(strings.SplitN(trim, ":", 2)[1])
 			current.Name = strings.Trim(name, `"'`)
+			if current.Name == "" {
+				current = nil
+				continue
+			}
 			nodes = append(nodes, current)
 			continue
 		}

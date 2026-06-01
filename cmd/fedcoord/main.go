@@ -251,7 +251,7 @@ func loadFedNodes(path string) []FedNode {
 	federated := false
 	for _, line := range lines {
 		trim := strings.TrimSpace(line)
-		if strings.HasPrefix(trim, "- name:") || strings.HasPrefix(trim, "name:") {
+		if strings.HasPrefix(trim, "- hostname:") || strings.HasPrefix(trim, "hostname:") {
 			if current != nil && federated {
 				nodes = append(nodes, *current)
 			}
@@ -259,6 +259,9 @@ func loadFedNodes(path string) []FedNode {
 			federated = false
 			name := strings.TrimSpace(strings.SplitN(trim, ":", 2)[1])
 			current.Name = strings.Trim(name, `"'`)
+			if current.Name == "" {
+				current = nil
+			}
 			continue
 		}
 		if current == nil {

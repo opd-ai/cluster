@@ -74,6 +74,18 @@ func (s *videoJobStore) get(id string) (*videoJob, bool) {
 	return j, ok
 }
 
+// getSnapshot returns a value copy of the job under the read lock, preventing
+// data races between the JSON encoder and concurrent writes in runVideoJob.
+func (s *videoJobStore) getSnapshot(id string) (videoJob, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	j, ok := s.jobs[id]
+	if !ok {
+		return videoJob{}, false
+	}
+	return *j, true
+}
+
 // -------------------------------------------------------------------------
 // Request / response types
 // -------------------------------------------------------------------------
@@ -184,12 +196,12 @@ func (gw *Gateway) handleVideoEdits(w http.ResponseWriter, r *http.Request) {
 // handleVideoJobStatus returns the current status of a video job.
 func (gw *Gateway) handleVideoJobStatus(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	job, ok := globalVideoJobs.get(id)
+	snapshot, ok := globalVideoJobs.getSnapshot(id)
 	if !ok {
 		http.Error(w, `{"error":"job not found"}`, http.StatusNotFound)
 		return
 	}
-	writeJSON(w, job)
+	writeJSON(w, snapshot)
 }
 
 // -------------------------------------------------------------------------

@@ -160,5 +160,5 @@ func diskUsagePct(path string) (int, error) {
 		return 0, nil
 	}
 	used := stat.Blocks - stat.Bfree
-	return int(used * 100 / stat.Blocks), nil
+	return int(float64(used) / float64(stat.Blocks) * 100), nil
 }

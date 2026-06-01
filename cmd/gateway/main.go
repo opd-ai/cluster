@@ -41,6 +41,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -65,9 +66,14 @@ type Gateway struct {
 	swarmHealthy  bool
 	ragURL        string
 	quotaCfg      *quotaConfig
-	mu            sync.Mutex
+	mu            sync.RWMutex
+	httpClient    *http.Client  // shared client for connection pooling
+	rrIdx         atomic.Uint64 // round-robin counter for pickBackend
 	speculative   bool
 }
+
+// maxStickyEntries limits the sticky session map size to prevent unbounded growth.
+const maxStickyEntries = 10_000
 
 func main() {
 	addr := flag.String("addr", ":8080", "Listen address")
@@ -96,6 +102,16 @@ func main() {
 			MaxVideosPerKeyPerDay: *maxVideos,
 			NSFWFilter:            *nsfwFilter,
 			NSFWBlocklist:         defaultNSFWBlocklist,
+		},
+	}
+
+	// Shared HTTP client with connection pooling (H8).
+	gw.httpClient = &http.Client{
+		Timeout: 10 * time.Minute,
+		Transport: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 20,
+			IdleConnTimeout:     90 * time.Second,
 		},
 	}
 
@@ -178,9 +194,9 @@ func (gw *Gateway) authMiddleware(next http.Handler) http.Handler {
 		}
 
 		key := extractBearerToken(r)
-		gw.mu.Lock()
+		gw.mu.RLock()
 		_, ok := gw.apiKeys[key]
-		gw.mu.Unlock()
+		gw.mu.RUnlock()
 
 		if !ok {
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
@@ -212,8 +228,8 @@ func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 // -------------------------------------------------------------------------
 
 func (gw *Gateway) handleStatus(w http.ResponseWriter, _ *http.Request) {
-	gw.mu.Lock()
-	defer gw.mu.Unlock()
+	gw.mu.RLock()
+	defer gw.mu.RUnlock()
 
 	type backendStatus struct {
 		URL     string   `json:"url"`
@@ -243,7 +259,7 @@ func (gw *Gateway) handleStatus(w http.ResponseWriter, _ *http.Request) {
 // -------------------------------------------------------------------------
 
 func (gw *Gateway) handleMetrics(w http.ResponseWriter, _ *http.Request) {
-	gw.mu.Lock()
+	gw.mu.RLock()
 	healthy := 0
 	total := len(gw.backends)
 	for _, b := range gw.backends {
@@ -253,7 +269,7 @@ func (gw *Gateway) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 		}
 		b.mu.RUnlock()
 	}
-	gw.mu.Unlock()
+	gw.mu.RUnlock()
 
 	fmt.Fprintf(w, "# HELP gateway_backends_total Total configured backends\n")
 	fmt.Fprintf(w, "# TYPE gateway_backends_total gauge\n")
@@ -418,10 +434,19 @@ func (gw *Gateway) pickBackend(key, model string) *Backend {
 		}
 	}
 
-	// Round-robin: pick the candidate with the smallest index not yet sticky.
-	chosen := candidateIdx[0]
+	// Round-robin across candidates using an atomic counter (M5).
+	idx := int(gw.rrIdx.Add(1)-1) % len(candidates)
+	chosen := candidateIdx[idx]
+
+	// Evict oldest entry if the sticky map exceeds the size cap (M4).
+	if len(gw.sticky) >= maxStickyEntries {
+		for k := range gw.sticky {
+			delete(gw.sticky, k)
+			break
+		}
+	}
 	gw.sticky[stickyKey] = chosen
-	return candidates[0]
+	return candidates[idx]
 }
 
 func containsModel(models []string, model string) bool {
@@ -442,8 +467,14 @@ func (gw *Gateway) proxyTo(url string, w http.ResponseWriter, r *http.Request, b
 		return
 	}
 
-	client := &http.Client{Timeout: 5 * time.Minute}
-	resp, err := client.Post(url, "application/json", strings.NewReader(string(data)))
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, strings.NewReader(string(data)))
+	if err != nil {
+		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := gw.httpClient.Do(req)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadGateway)
 		return
@@ -486,11 +517,11 @@ func (gw *Gateway) probeLoop(interval time.Duration) {
 }
 
 func (gw *Gateway) probeAll() {
-	gw.mu.Lock()
+	gw.mu.RLock()
 	backends := make([]*Backend, len(gw.backends))
 	copy(backends, gw.backends)
 	swarmURL := gw.swarmURL
-	gw.mu.Unlock()
+	gw.mu.RUnlock()
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	for _, b := range backends {

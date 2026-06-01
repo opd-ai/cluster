@@ -27,13 +27,14 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // LabelConfig holds CLI flags.
@@ -45,13 +46,13 @@ type LabelConfig struct {
 
 // InventoryNode holds the fields needed to compute labels and taints.
 type InventoryNode struct {
-	Hostname    string
-	Arch        string
-	OS          string
-	Role        string
-	Accelerator string
-	VramGB      string
-	Labels      map[string]string
+	Hostname    string            `yaml:"hostname"`
+	Arch        string            `yaml:"arch"`
+	OS          string            `yaml:"os"`
+	Role        string            `yaml:"role"`
+	Accelerator string            `yaml:"accelerator"`
+	VramGB      string            `yaml:"vram_gb"`
+	Labels      map[string]string `yaml:"labels"`
 }
 
 func main() {
@@ -144,72 +145,22 @@ func kubectl(args []string, cfg LabelConfig) error {
 }
 
 func loadInventory(path string) ([]InventoryNode, error) {
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-
+	var inv struct {
+		Nodes []InventoryNode `yaml:"nodes"`
+	}
+	if err := yaml.Unmarshal(data, &inv); err != nil {
+		return nil, fmt.Errorf("parse inventory %s: %w", path, err)
+	}
 	var nodes []InventoryNode
-	var cur InventoryNode
-	inLabels := false
-	scanner := bufio.NewScanner(f)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		trimmed := strings.TrimSpace(line)
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") || trimmed == "---" || trimmed == "nodes:" {
+	for _, n := range inv.Nodes {
+		if n.Hostname == "" {
 			continue
 		}
-
-		if strings.HasPrefix(trimmed, "- hostname:") {
-			if cur.Hostname != "" {
-				nodes = append(nodes, cur)
-			}
-			cur = InventoryNode{Labels: make(map[string]string)}
-			cur.Hostname = strings.TrimSpace(strings.TrimPrefix(trimmed, "- hostname:"))
-			inLabels = false
-			continue
-		}
-
-		if trimmed == "labels:" {
-			inLabels = true
-			continue
-		}
-
-		if inLabels {
-			if indent >= 6 {
-				k, v, ok := strings.Cut(trimmed, ":")
-				if ok {
-					cur.Labels[strings.TrimSpace(k)] = strings.TrimSpace(v)
-				}
-				continue
-			}
-			inLabels = false
-		}
-
-		parseField(&cur, trimmed)
+		nodes = append(nodes, n)
 	}
-
-	if cur.Hostname != "" {
-		nodes = append(nodes, cur)
-	}
-	return nodes, scanner.Err()
-}
-
-func parseField(n *InventoryNode, line string) {
-	switch {
-	case strings.HasPrefix(line, "arch:"):
-		n.Arch = strings.TrimSpace(strings.TrimPrefix(line, "arch:"))
-	case strings.HasPrefix(line, "os:"):
-		n.OS = strings.TrimSpace(strings.TrimPrefix(line, "os:"))
-	case strings.HasPrefix(line, "role:"):
-		n.Role = strings.TrimSpace(strings.TrimPrefix(line, "role:"))
-	case strings.HasPrefix(line, "accelerator:"):
-		n.Accelerator = strings.TrimSpace(strings.TrimPrefix(line, "accelerator:"))
-	case strings.HasPrefix(line, "vram_gb:"):
-		n.VramGB = strings.TrimSpace(strings.TrimPrefix(line, "vram_gb:"))
-	}
+	return nodes, nil
 }
