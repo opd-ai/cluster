@@ -310,33 +310,55 @@ func checkClockSkew() CheckResult {
 func checkMTU() CheckResult {
 	// Check default MTU
 	out, err := runCmd("ip", "link", "show")
-	if err == nil && strings.Contains(out, "mtu") {
-		// Extract MTU from ip command
-		for _, line := range strings.Split(out, "\n") {
-			if strings.Contains(line, "mtu") {
-				parts := strings.Fields(line)
-				for i, part := range parts {
-					if part == "mtu" && i+1 < len(parts) {
-						mtu := parts[i+1]
-						mtuVal, _ := strconv.Atoi(mtu)
-						if mtuVal >= 1500 {
-							return CheckResult{
-								Name:    "MTU",
-								Status:  "PASS",
-								Message: fmt.Sprintf("MTU: %s", mtu),
-							}
-						}
-					}
-				}
-			}
+	if err != nil || !strings.Contains(out, "mtu") {
+		return CheckResult{
+			Name:    "MTU",
+			Status:  "WARN",
+			Message: "Unable to verify MTU",
+		}
+	}
+
+	mtu, found := extractMTUValue(out)
+	if !found {
+		return CheckResult{
+			Name:    "MTU",
+			Status:  "WARN",
+			Message: "Unable to parse MTU value",
+		}
+	}
+
+	if mtu >= 1500 {
+		return CheckResult{
+			Name:    "MTU",
+			Status:  "PASS",
+			Message: fmt.Sprintf("MTU: %d", mtu),
 		}
 	}
 
 	return CheckResult{
 		Name:    "MTU",
 		Status:  "WARN",
-		Message: "Unable to verify MTU",
+		Message: fmt.Sprintf("MTU: %d (< 1500)", mtu),
 	}
+}
+
+func extractMTUValue(output string) (int, bool) {
+	for _, line := range strings.Split(output, "\n") {
+		if !strings.Contains(line, "mtu") {
+			continue
+		}
+
+		parts := strings.Fields(line)
+		for i, part := range parts {
+			if part == "mtu" && i+1 < len(parts) {
+				mtu, err := strconv.Atoi(parts[i+1])
+				if err == nil {
+					return mtu, true
+				}
+			}
+		}
+	}
+	return 0, false
 }
 
 func checkHTTPSConnectivity() CheckResult {
