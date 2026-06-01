@@ -11,8 +11,10 @@ opening issues or pull requests.
   external services. Everything else — gateway, placer, registry, RAG service,
   ingestion, console (Ebitengine → WASM), bootstrap, drain, cache GC, doctor,
   probe — is pure Go.
-- **No Node.js.** No `package.json`, no `node_modules`, no npm/pnpm/yarn
-  anywhere in this repo.
+- **No Node.js in project code.** No `package.json`, no `node_modules`, no
+  npm/pnpm/yarn anywhere in this repo. Dev-only CLI tools installed by
+  `pre-commit` (e.g. `markdownlint-cli`) are acceptable as they never
+  become project dependencies.
 - **No new dependencies without discussion.** Open an issue first so we can
   evaluate alternatives and licensing impact.
 
@@ -39,10 +41,10 @@ make lint
 # Run tests with race detector
 make test
 
-# Build all binaries
+# Build all binaries (requires cmd/* packages — not yet implemented)
 make build
 
-# Cross-compile the Ebitengine WASM console
+# Cross-compile the Ebitengine WASM console (requires cmd/console-wasm — not yet implemented)
 make console-wasm
 ```
 

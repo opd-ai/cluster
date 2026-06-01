@@ -83,11 +83,15 @@ status: ## Diff declared vs actual cluster state
 # --------------------------------------------------------------------------
 build: ## Build all cmd/* binaries into bin/
 	@mkdir -p $(BIN_DIR)
-	@for pkg in $$($(GO) list ./cmd/...); do \
-	  name=$$(basename $$pkg); \
-	  echo "  building $$name"; \
-	  $(GO) build $(GOFLAGS) -o $(BIN_DIR)/$$name $$pkg; \
-	done
+	@if [ -z "$$($(GO) list ./cmd/... 2>/dev/null)" ]; then \
+	  echo "  no cmd/* packages found — skipping build"; \
+	else \
+	  for pkg in $$($(GO) list ./cmd/...); do \
+	    name=$$(basename $$pkg); \
+	    echo "  building $$name"; \
+	    $(GO) build $(GOFLAGS) -o $(BIN_DIR)/$$name $$pkg; \
+	  done; \
+	fi
 
 # --------------------------------------------------------------------------
 # Testing
@@ -110,7 +114,7 @@ lint-sh: ## Run shellcheck on all shell scripts
 	find . -name '*.sh' -not -path './.git/*' | xargs -r shellcheck --severity=warning
 
 lint-yaml: ## Run yamllint on all YAML files
-	find . -name '*.yaml' -o -name '*.yml' \
+	find . \( -name '*.yaml' -o -name '*.yml' \) \
 	  | grep -v '.git' \
 	  | grep -v 'cluster/kubeconfig' \
 	  | xargs -r yamllint -c .yamllint.yml
