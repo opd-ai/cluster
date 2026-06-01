@@ -1,12 +1,12 @@
 # github.com/opd-ai/cluster
 
-`cluster` is a repository scaffold for a self-hosted AI cluster with Go-first tooling and an optional Python training environment. The root module is declared in `/tmp/workspace/opd-ai/cluster/go.mod` as `github.com/opd-ai/cluster`, and the top-level workflow is orchestrated through `/tmp/workspace/opd-ai/cluster/Makefile`. The codebase currently emphasizes project structure, task entry points, and development conventions rather than fully implemented command packages.
+`cluster` is a repository scaffold for a self-hosted AI cluster with Go-first tooling and an optional Python training environment. The root module is declared in `go.mod` as `github.com/opd-ai/cluster`, and the top-level workflow is orchestrated through `Makefile`. The codebase currently emphasizes project structure, task entry points, and development conventions rather than fully implemented command packages.
 
 ---
 
 ## Description
 
-This package defines a unified development surface for cluster lifecycle operations, model training, serving, a web console, and RAG workflows through named `make` targets. It also includes a Python project in `/tmp/workspace/opd-ai/cluster/python/pyproject.toml` named `cluster-training` for PyTorch-based training dependencies. At the current state of the repository, many runtime command paths referenced by the Makefile are placeholders, so the README documents what is explicitly configured.
+This repository defines a unified development surface for cluster lifecycle operations, model training, serving, a web console, and RAG workflows through named `make` targets. It also includes a Python project in `python/pyproject.toml` named `cluster-training` for PyTorch-based training dependencies. At the current state of the repository, many runtime command paths referenced by the Makefile are placeholders, so the README documents what is explicitly configured.
 
 ---
 
@@ -28,7 +28,7 @@ pre-commit install
 
 ### Requirements
 
-The following requirements are explicitly documented in `/tmp/workspace/opd-ai/cluster/CONTRIBUTING.md` and `/tmp/workspace/opd-ai/cluster/python/pyproject.toml`:
+The following requirements are explicitly documented in `CONTRIBUTING.md` and `python/pyproject.toml`:
 
 - Go 1.22 or newer
 - Python 3.11+
@@ -39,7 +39,7 @@ The following requirements are explicitly documented in `/tmp/workspace/opd-ai/c
 The Python project metadata is:
 
 ```toml
-# /tmp/workspace/opd-ai/cluster/python/pyproject.toml
+# python/pyproject.toml
 [project]
 name = "cluster-training"
 version = "0.1.0"
@@ -50,7 +50,7 @@ requires-python = ">=3.11"
 
 ## Usage
 
-Use the top-level Makefile as the primary interface from `/tmp/workspace/opd-ai/cluster`.
+Use the top-level Makefile as the primary interface from the repository root.
 
 ```bash
 # Show all documented targets
@@ -69,7 +69,7 @@ make build
 The repository defines lifecycle-oriented targets for bootstrap, cluster bring-up, synchronization, training, serving, console, RAG, and status diffing:
 
 ```makefile
-# /tmp/workspace/opd-ai/cluster/Makefile
+# Makefile
 bootstrap: ## Bootstrap nodes listed in cluster/inventory.yaml
 up: ## Bring up the cluster (k3s control-plane + workers)
 sync: ## Sync repo-cache and push updated datasets
@@ -87,11 +87,11 @@ These targets call `go run` on `./cmd/...` entry points. If those packages are n
 ## Features
 
 - **Go-first project layout** - Contribution rules state that repository-owned components are written in Go, with Python reserved for training code in `python/`.
-- **Centralized task runner** - `/tmp/workspace/opd-ai/cluster/Makefile` provides one command surface for linting, testing, building, and runtime entry points.
+- **Centralized task runner** - `Makefile` provides one command surface for linting, testing, building, and runtime entry points.
 - **Multi-language linting workflow** - Lint targets exist for Go, Python (Ruff via `uv`), shell scripts, YAML, and Markdown.
 - **WASM console build hook** - `make console-wasm` defines a Go `GOOS=js GOARCH=wasm` build path and copies `wasm_exec.js` into `web/`.
 - **Python training dependency set** - `cluster-training` declares PyTorch/Transformers/TRL/PEFT-style dependencies in `python/pyproject.toml`.
-- **Contributor guidance** - `/tmp/workspace/opd-ai/cluster/CONTRIBUTING.md` documents prerequisites, workflow, branch conventions, and review expectations.
+- **Contributor guidance** - `CONTRIBUTING.md` documents prerequisites, workflow, branch conventions, and review expectations.
 
 ---
 
@@ -114,7 +114,7 @@ make up INVENTORY=cluster/custom-inventory.yaml
 
 ## Contributing
 
-See `/tmp/workspace/opd-ai/cluster/CONTRIBUTING.md` for full contribution process. The documented workflow includes:
+See `CONTRIBUTING.md` for full contribution process. The documented workflow includes:
 
 - Running `make lint` and `make test` before opening a PR
 - Using Conventional Commits (`feat:`, `fix:`, `docs:`, etc.)
@@ -125,4 +125,4 @@ See `/tmp/workspace/opd-ai/cluster/CONTRIBUTING.md` for full contribution proces
 
 ## License
 
-This project is licensed under the BSD 2-Clause License. See `/tmp/workspace/opd-ai/cluster/LICENSE`.
+This project is licensed under the BSD 2-Clause License. See `LICENSE`.
