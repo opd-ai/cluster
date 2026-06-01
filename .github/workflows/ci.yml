@@ -18,6 +18,8 @@ jobs:
         with:
           go-version-file: go.mod
       - uses: astral-sh/setup-uv@v5
+      - name: Sync Python dev tools
+        run: cd python && uv sync --extra dev
       - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
