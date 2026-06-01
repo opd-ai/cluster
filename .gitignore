@@ -1,7 +1,5 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# ---- Go ---------------------------------------------------------------
+# Binaries
 *.exe
 *.exe~
 *.dll
@@ -17,16 +15,55 @@ coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
+# Dependency directories
 # vendor/
 
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
-.env
+# Build output
+dist/
+bin/
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# ---- Python -----------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.venv/
+venv/
+.uv/
+*.egg-info/
+.eggs/
+*.whl
+python/.venv/
+
+# ---- Node (explicitly NOT welcome here) ------------------------------
+# No node_modules, no package.json, no pnpm-lock.yaml
+
+# ---- Secrets / env ----------------------------------------------------
+.env
+.env.*
+*.age
+*.key
+!*.pub
+
+# ---- Editor / IDE -----------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---- OS ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ---- Build / CI artifacts ---------------------------------------------
+*.wasm
+!web/*.wasm
+
+# ---- Cluster state ----------------------------------------------------
+cluster/kubeconfig
+cluster/*.kubeconfig

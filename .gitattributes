@@ -1,0 +1,48 @@
+# Normalize line endings for text files
+* text=auto eol=lf
+
+# Go source
+*.go text eol=lf diff=golang
+
+# Python source
+*.py text eol=lf diff=python
+
+# Shell scripts
+*.sh text eol=lf
+
+# YAML / TOML / JSON
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+
+# Markdown
+*.md text eol=lf
+
+# Makefile
+Makefile text eol=lf
+
+# ----------------------------------------------------------------
+# Git LFS — large binary assets
+# ----------------------------------------------------------------
+# Sample model files (GGUFs, safetensors, checkpoints)
+*.gguf  filter=lfs diff=lfs merge=lfs -text
+*.ggml  filter=lfs diff=lfs merge=lfs -text
+*.bin   filter=lfs diff=lfs merge=lfs -text
+*.pt    filter=lfs diff=lfs merge=lfs -text
+*.pth   filter=lfs diff=lfs merge=lfs -text
+*.safetensors filter=lfs diff=lfs merge=lfs -text
+
+# Demo sprites / UI assets
+*.png   filter=lfs diff=lfs merge=lfs -text
+*.jpg   filter=lfs diff=lfs merge=lfs -text
+*.jpeg  filter=lfs diff=lfs merge=lfs -text
+*.gif   filter=lfs diff=lfs merge=lfs -text
+*.webp  filter=lfs diff=lfs merge=lfs -text
+*.ttf   filter=lfs diff=lfs merge=lfs -text
+*.otf   filter=lfs diff=lfs merge=lfs -text
+*.woff  filter=lfs diff=lfs merge=lfs -text
+*.woff2 filter=lfs diff=lfs merge=lfs -text
+
+# Compiled WASM (tracked for CI size reporting only)
+*.wasm  filter=lfs diff=lfs merge=lfs -text
