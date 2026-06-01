@@ -208,12 +208,65 @@ func remoteCmd(client *ssh.Client, cmd string) (string, error) {
 
 func bootstrapNode(client *ssh.Client, node *NodeConfig, config BootstrapConfig) error {
 	// Detect OS/distro
-	osRelease, err := remoteCmd(client, "cat /etc/os-release 2>/dev/null || cat /etc/issue 2>/dev/null")
+	osRelease, err := remoteCmd(client, "cat /etc/os-release 2>/dev/null || cat /etc/issue 2>/dev/null || echo 'unknown'")
 	if err != nil {
 		return fmt.Errorf("failed to detect OS")
 	}
 
 	var steps []string
+
+	// macOS/Darwin path
+	if strings.Contains(osRelease, "unknown") || node.OS == "darwin" {
+		// Check if it's actually macOS
+		if osType, err := remoteCmd(client, "uname -s"); err == nil && strings.TrimSpace(osType) == "Darwin" {
+			// macOS bootstrap (Homebrew, no container runtime)
+			steps = append(steps,
+				"command -v brew >/dev/null 2>&1 || /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
+				"brew install ollama git git-lfs rsync curl wget",
+			)
+
+			// MLX runtime for Apple Silicon
+			if node.Arch == "arm64" || strings.Contains(osType, "arm") {
+				steps = append(steps,
+					"pip3 install mlx-lm mlx-vlm || true",
+					"brew install python@3.11 || true",
+				)
+			}
+
+			// Python and uv for trainers
+			if isTrainerNode(node) {
+				steps = append(steps,
+					"brew install python@3.11",
+					"curl -LsSf https://astral.sh/uv/install.sh | sh || pip3 install uv",
+					"brew install pytorch::pytorch || true",
+				)
+			}
+
+			// Start ollama
+			steps = append(steps,
+				"brew services start ollama || launchctl start homebrew.mxcl.ollama || true",
+			)
+
+			// Execute macOS bootstrap steps
+			for _, step := range steps {
+				if config.DryRun {
+					fmt.Printf("  [DRY-RUN] %s\n", step)
+					continue
+				}
+
+				fmt.Printf("  → %s\n", step)
+				output, err := remoteCmd(client, step)
+				if err != nil && !isIdempotentError(step, output) {
+					fmt.Printf("    Warning: %v\n", err)
+					if output != "" {
+						fmt.Printf("    Output: %s\n", strings.TrimSpace(output))
+					}
+				}
+			}
+
+			return nil
+		}
+	}
 
 	// Update package manager
 	if isUbuntuDebian(osRelease) {
