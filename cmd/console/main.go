@@ -1,0 +1,407 @@
+// Command console is the server-side component of the cluster management
+// console.  It:
+//   - Serves the embedded WASM client (cmd/console-wasm compiled to main.wasm)
+//     together with the necessary wasm_exec.js shim.
+//   - Exposes a WebSocket endpoint at /api/ws that proxies cluster state from
+//     the gateway and node agents, pushing uiapi.Message values to clients.
+//   - Provides REST endpoints:
+//       POST /api/login            — exchange an API key for a session token
+//       GET  /api/cluster          — current ClusterState snapshot
+//       GET  /api/jobs             — recent JobState list
+//       GET  /api/logs?source=…    — last N log lines
+//
+// Usage:
+//
+//	console --addr :8080 --gateway http://localhost:8000 \
+//	        --key-file /etc/cluster/keys.yaml \
+//	        --wasm-dir /path/to/wasm
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/opd-ai/cluster/internal/uiapi"
+)
+
+// -------------------------------------------------------------------------
+// Server
+// -------------------------------------------------------------------------
+
+// Server is the console HTTP server.
+type Server struct {
+	addr       string
+	gatewayURL string
+	wasmDir    string
+	apiKeys    map[string]uiapi.Role
+
+	mu      sync.RWMutex
+	state   uiapi.ClusterState
+	jobs    []uiapi.JobState
+	logBuf  []uiapi.LogLine
+	clients map[chan uiapi.Message]struct{}
+	audit   *auditLog
+}
+
+func newServer(addr, gatewayURL, wasmDir, keyFile string) (*Server, error) {
+	keys, err := loadKeyFile(keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("load key file: %w", err)
+	}
+	return &Server{
+		addr:       addr,
+		gatewayURL: gatewayURL,
+		wasmDir:    wasmDir,
+		apiKeys:    keys,
+		clients:    make(map[chan uiapi.Message]struct{}),
+		audit:      newAuditLog(0),
+	}, nil
+}
+
+// -------------------------------------------------------------------------
+// Key file loader
+// -------------------------------------------------------------------------
+
+// loadKeyFile reads a newline-separated key:role file.
+// Lines starting with '#' are ignored.
+func loadKeyFile(path string) (map[string]uiapi.Role, error) {
+	if path == "" {
+		return make(map[string]uiapi.Role), nil
+	}
+	data, err := os.ReadFile(path) // #nosec G304 — operator-supplied path
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]uiapi.Role)
+	for _, line := range splitLines(string(data)) {
+		if len(line) == 0 || line[0] == '#' {
+			continue
+		}
+		key, role := parseKeyLine(line)
+		if key != "" {
+			result[key] = role
+		}
+	}
+	return result, nil
+}
+
+// -------------------------------------------------------------------------
+// HTTP handlers
+// -------------------------------------------------------------------------
+
+// routes registers all HTTP routes.
+func (s *Server) routes() http.Handler {
+	mux := http.NewServeMux()
+
+	// Static WASM client files.
+	mux.Handle("/", http.FileServer(http.Dir(s.wasmDir)))
+
+	// REST API.
+	mux.HandleFunc("/api/login", s.handleLogin)
+	mux.HandleFunc("/api/cluster", s.withAuth(s.handleCluster))
+	mux.HandleFunc("/api/jobs", s.withAuth(s.handleJobs))
+	mux.HandleFunc("/api/logs", s.withAuth(s.handleLogs))
+	mux.HandleFunc("/api/audit", s.withAuth(s.handleAuditLog))
+
+	// WebSocket.
+	mux.HandleFunc("/api/ws", s.handleWS)
+
+	// Plain-HTML accessibility fallback.
+	s.registerHTMLRoutes(mux)
+
+	return mux
+}
+
+// handleLogin exchanges an API key for a session token.
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req uiapi.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.RLock()
+	role, ok := s.apiKeys[req.APIKey]
+	s.mu.RUnlock()
+
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	// For now, the session token is the API key itself (simple stateless auth).
+	// Production should use a signed JWT with short expiry.
+	resp := uiapi.LoginResponse{Token: req.APIKey, Role: string(role)}
+	s.audit.Record(auditEntry{
+		Actor:  req.APIKey[:min(8, len(req.APIKey))] + "…",
+		Role:   role,
+		Action: "login",
+		OK:     true,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// handleCluster returns the current ClusterState.
+func (s *Server) handleCluster(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	state := s.state
+	s.mu.RUnlock()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(state)
+}
+
+// handleJobs returns recent jobs.
+func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	jobs := s.jobs
+	s.mu.RUnlock()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(jobs)
+}
+
+// handleLogs returns buffered log lines.
+func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	lines := s.logBuf
+	s.mu.RUnlock()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(lines)
+}
+
+// handleWS upgrades to a WebSocket and pushes cluster updates.
+func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+	// Validate token from query param.
+	token := r.URL.Query().Get("token")
+	s.mu.RLock()
+	_, ok := s.apiKeys[token]
+	s.mu.RUnlock()
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	ch := make(chan uiapi.Message, 64)
+	s.mu.Lock()
+	s.clients[ch] = struct{}{}
+	s.mu.Unlock()
+
+	defer func() {
+		s.mu.Lock()
+		delete(s.clients, ch)
+		s.mu.Unlock()
+	}()
+
+	// Use nhooyr.io/websocket for WASM-compatible WS.
+	upgradeAndServe(w, r, ch)
+}
+
+// withAuth wraps a handler with bearer-token auth.
+func (s *Server) withAuth(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := bearerToken(r)
+		if token == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		s.mu.RLock()
+		_, ok := s.apiKeys[token]
+		s.mu.RUnlock()
+		if !ok {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		h(w, r)
+	}
+}
+
+// -------------------------------------------------------------------------
+// Broadcast
+// -------------------------------------------------------------------------
+
+// broadcast sends a message to all connected WebSocket clients.
+func (s *Server) broadcast(msg uiapi.Message) {
+	s.mu.RLock()
+	for ch := range s.clients {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+	s.mu.RUnlock()
+}
+
+// -------------------------------------------------------------------------
+// Polling loop — pull cluster state from gateway /status endpoint
+// -------------------------------------------------------------------------
+
+// pollGateway periodically fetches cluster state from the gateway.
+func (s *Server) pollGateway(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.fetchGatewayState(client)
+		}
+	}
+}
+
+func (s *Server) fetchGatewayState(client *http.Client) {
+	url := s.gatewayURL + "/status"
+	resp, err := client.Get(url) // #nosec G107 — operator-supplied URL
+	if err != nil {
+		log.Printf("gateway poll error: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var raw map[string]json.RawMessage
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		log.Printf("gateway state decode error: %v", err)
+		return
+	}
+
+	// Build a minimal ClusterState from gateway /status.
+	state := uiapi.ClusterState{UpdatedAt: time.Now()}
+	if backendsRaw, ok := raw["backends"]; ok {
+		var backends []struct {
+			URL     string `json:"url"`
+			Healthy bool   `json:"healthy"`
+			Models  []string `json:"models"`
+		}
+		if err := json.Unmarshal(backendsRaw, &backends); err == nil {
+			for _, b := range backends {
+				state.Nodes = append(state.Nodes, uiapi.NodeState{
+					Name:    b.URL,
+					Role:    "inference",
+					Healthy: b.Healthy,
+					Models:  b.Models,
+				})
+			}
+		}
+	}
+
+	s.mu.Lock()
+	s.state = state
+	s.mu.Unlock()
+
+	s.broadcast(uiapi.Message{Type: uiapi.MsgClusterState, Payload: state})
+}
+
+// -------------------------------------------------------------------------
+// Helpers
+// -------------------------------------------------------------------------
+
+func bearerToken(r *http.Request) string {
+	auth := r.Header.Get("Authorization")
+	const prefix = "Bearer "
+	if len(auth) > len(prefix) && auth[:len(prefix)] == prefix {
+		return auth[len(prefix):]
+	}
+	return ""
+}
+
+func splitLines(s string) []string {
+	var out []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			out = append(out, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		out = append(out, s[start:])
+	}
+	return out
+}
+
+func parseKeyLine(line string) (string, uiapi.Role) {
+	for i := 0; i < len(line); i++ {
+		if line[i] == ':' {
+			key := line[:i]
+			role := uiapi.Role(line[i+1:])
+			return key, role
+		}
+	}
+	return line, uiapi.RoleUser
+}
+
+// -------------------------------------------------------------------------
+// WebSocket upgrade helper (uses nhooyr.io/websocket)
+// -------------------------------------------------------------------------
+
+func upgradeAndServe(w http.ResponseWriter, r *http.Request, ch <-chan uiapi.Message) {
+	// Import is in ws.go to keep this file import-clean.
+	serveWebSocket(w, r, ch)
+}
+
+// -------------------------------------------------------------------------
+// main
+// -------------------------------------------------------------------------
+
+func main() {
+	addr := flag.String("addr", ":8080", "listen address")
+	gatewayURL := flag.String("gateway", "http://localhost:8000", "gateway base URL")
+	keyFile := flag.String("key-file", "", "path to key:role file")
+	wasmDir := flag.String("wasm-dir", "", "directory containing compiled WASM client (main.wasm, wasm_exec.js, index.html)")
+	pollInterval := flag.Duration("poll-interval", 5*time.Second, "gateway poll interval")
+	flag.Parse()
+
+	if *wasmDir == "" {
+		// Default to the wasm sub-directory next to the binary.
+		exe, _ := os.Executable()
+		*wasmDir = filepath.Join(filepath.Dir(exe), "wasm")
+	}
+
+	srv, err := newServer(*addr, *gatewayURL, *wasmDir, *keyFile)
+	if err != nil {
+		log.Fatalf("init server: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go srv.pollGateway(ctx, *pollInterval)
+
+	httpSrv := &http.Server{
+		Addr:         *addr,
+		Handler:      srv.routes(),
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 60 * time.Second,
+	}
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		cancel()
+		shutCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutCancel()
+		_ = httpSrv.Shutdown(shutCtx)
+	}()
+
+	log.Printf("console listening on %s", *addr)
+	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("listen: %v", err)
+	}
+}
