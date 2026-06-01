@@ -52,7 +52,7 @@ Pre-built ComfyUI API workflow JSON files live in `configs/workflows/`:
 ## Gateway API
 
 The gateway exposes `/v1/videos/generations` and `/v1/videos/edits`
-(see [gateway API docs](./docs/gateway-api.md)).  Both endpoints accept
+(see [gateway API docs](./gateway-api.md)).  Both endpoints accept
 an OpenAI-compatible JSON body and return a `job_id` for polling.
 
 Long-running jobs are tracked in-memory (restart-safe persistence is

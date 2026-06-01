@@ -22,7 +22,7 @@ deployed as a Kubernetes `Service` whose `metadata.name` matches the short
 hostname above.  CoreDNS resolves `<service>.cluster.svc.cluster.local` and
 the short alias `<service>.cluster` via the `rewrite` plugin.
 
-The kustomize overlay at `cluster/base/coredns-patch.yaml` injects the
+The kustomize overlay at `cluster/base/kustomization.yaml` (under the `patches:` key) injects the
 `rewrite` rules so that `gateway.cluster` resolves to
 `gateway.default.svc.cluster.local` (or the appropriate namespace).
 

@@ -42,7 +42,7 @@ fi
 REQ_FILE="$LLAMA_CPP_DIR/requirements/requirements-convert.txt"
 if [ -f "$REQ_FILE" ]; then
   echo "[setup-llama-cpp] Installing Python requirements from $REQ_FILE" >&2
-  uv pip install -r "$REQ_FILE" 2>&1 | tail -5 >&2 || true
+  uv pip install -r "$REQ_FILE" 2>&1 | tail -5 >&2
 fi
 
 # ---- Report -------------------------------------------------------------

@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -14,6 +15,7 @@ import (
 
 // videoStudioScene is the video generation studio.
 type videoStudioScene struct {
+	mu       sync.Mutex
 	onBack   func()
 	backBtn  *ui.Button
 	genBtn   *ui.Button
@@ -36,15 +38,21 @@ func newVideoStudioScene(onBack func()) *videoStudioScene {
 
 func (s *videoStudioScene) generate() {
 	text := strings.TrimSpace(s.prompt)
+	s.mu.Lock()
 	if text == "" || s.busy {
+		s.mu.Unlock()
 		return
 	}
 	s.busy = true
 	s.progress.Value = 0.05
+	s.mu.Unlock()
 
 	go func() {
-		s.jobID = s.submitJob(text)
+		id := s.submitJob(text)
+		s.mu.Lock()
+		s.jobID = id
 		s.busy = false
+		s.mu.Unlock()
 	}()
 }
 

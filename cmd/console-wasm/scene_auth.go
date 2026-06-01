@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -37,8 +38,12 @@ func newAuthScene(onSuccess func(string, uiapi.Role)) *authScene {
 
 func (a *authScene) doLogin() {
 	req := uiapi.LoginRequest{APIKey: strings.TrimSpace(a.keyInput)}
-	body, _ := json.Marshal(req)
-	resp, err := http.Post(a.loginURL, "application/json", strings.NewReader(string(body)))
+	body, err := json.Marshal(req)
+	if err != nil {
+		a.errMsg = "internal error: " + err.Error()
+		return
+	}
+	resp, err := http.Post(a.loginURL, "application/json", bytes.NewReader(body))
 	if err != nil {
 		a.errMsg = "connection error: " + err.Error()
 		return

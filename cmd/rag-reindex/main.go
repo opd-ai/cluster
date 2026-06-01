@@ -33,9 +33,15 @@ type ragBlock struct {
 	Exclude    []string `yaml:"exclude"`
 }
 
+type repo struct {
+	Label  string `yaml:"label"`
+	URL    string `yaml:"url"`
+	Branch string `yaml:"branch"`
+}
+
 type namespace struct {
-	Name  string   `yaml:"name"`
-	Repos []string `yaml:"repos"`
+	Name  string    `yaml:"name"`
+	Repos []repo    `yaml:"repos"`
 	RAG   *ragBlock `yaml:"rag,omitempty"`
 }
 
@@ -99,7 +105,7 @@ func main() {
 			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
 				continue
 			}
-			coll := collectionForPath(event.Name, repoToCollection)
+			dir, coll := dirAndCollectionForPath(event.Name, repoToCollection)
 			if coll == "" {
 				continue
 			}
@@ -107,9 +113,10 @@ func main() {
 			if t, exists := pending[coll]; exists {
 				t.Stop()
 			}
-			dir := dirForCollection(coll, repoToCollection)
+			// Copy dir to avoid closure capture issues if dir is reassigned.
+			dirCopy := dir
 			pending[coll] = time.AfterFunc(*debounce, func() {
-				runIngest(*ragIngest, dir, coll, *gatewayURL, *qdrantAddr, *apiKey)
+				runIngest(*ragIngest, dirCopy, coll, *gatewayURL, *qdrantAddr, *apiKey)
 			})
 
 		case err, ok := <-watcher.Errors:
@@ -149,38 +156,31 @@ func buildRepoMap(cfg *namespacesConfig, cacheDir string) map[string]string {
 		if ns.RAG == nil || ns.RAG.Collection == "" {
 			continue
 		}
-		for _, repo := range ns.Repos {
-			dir := filepath.Join(cacheDir, repoDir(repo))
+		for _, r := range ns.Repos {
+			dir := filepath.Join(cacheDir, sanitizeLabel(r.Label))
 			m[dir] = ns.RAG.Collection
 		}
 	}
 	return m
 }
 
-// repoDir converts a git URL to a directory name (last path segment without .git).
-func repoDir(repoURL string) string {
-	base := filepath.Base(repoURL)
-	return strings.TrimSuffix(base, ".git")
+// sanitizeLabel replaces path separators and spaces with underscores,
+// matching the convention used by cmd/repo-sync.
+func sanitizeLabel(label string) string {
+	replacer := strings.NewReplacer("/", "_", " ", "_", ":", "_")
+	return replacer.Replace(label)
 }
 
-// collectionForPath returns the collection name for a changed file path.
-func collectionForPath(path string, m map[string]string) string {
+// dirAndCollectionForPath returns the repo directory and collection name for
+// a changed file path, avoiding the round-trip through dirForCollection that
+// could return a different directory than the one that actually changed.
+func dirAndCollectionForPath(path string, m map[string]string) (string, string) {
 	for dir, coll := range m {
 		if strings.HasPrefix(path, dir) {
-			return coll
+			return dir, coll
 		}
 	}
-	return ""
-}
-
-// dirForCollection returns the first directory mapped to a collection.
-func dirForCollection(coll string, m map[string]string) string {
-	for dir, c := range m {
-		if c == coll {
-			return dir
-		}
-	}
-	return ""
+	return "", ""
 }
 
 func addWatchRecursive(w *fsnotify.Watcher, root string) error {

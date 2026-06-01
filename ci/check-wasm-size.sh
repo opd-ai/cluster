@@ -37,12 +37,12 @@ GZIP_PATH="$TMPDIR_LOCAL/main.wasm.gz"
 gzip -9 --keep -c "$WASM_PATH" > "$GZIP_PATH"
 GZIP_SIZE=$(wc -c < "$GZIP_PATH")
 
-raw_mb=$(echo "scale=2; $RAW_SIZE / 1048576" | bc)
-gz_mb=$(echo "scale=2; $GZIP_SIZE / 1048576" | bc)
+raw_mb=$(awk "BEGIN {printf \"%.2f\", $RAW_SIZE / 1048576}")
+gz_mb=$(awk "BEGIN {printf \"%.2f\", $GZIP_SIZE / 1048576}")
 
 echo "WASM size:        ${raw_mb} MB (raw)"
 echo "WASM size:        ${gz_mb} MB (gzipped)"
-echo "Budget:           $(echo "scale=0; $MAX_GZIP_BYTES / 1048576" | bc) MB gzipped"
+echo "Budget:           $((MAX_GZIP_BYTES / 1048576)) MB gzipped"
 
 if [[ "$GZIP_SIZE" -gt "$MAX_GZIP_BYTES" ]]; then
   echo "FAIL: gzipped WASM ${gz_mb} MB exceeds budget of 15 MB" >&2

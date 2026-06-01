@@ -14,9 +14,7 @@ import (
 // serveWebSocket upgrades r to a WebSocket connection and pumps messages
 // from ch until it is closed or the client disconnects.
 func serveWebSocket(w http.ResponseWriter, r *http.Request, ch <-chan uiapi.Message) {
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		InsecureSkipVerify: true, // allow all origins for self-hosted deploy
-	})
+	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		log.Printf("ws accept: %v", err)
 		return

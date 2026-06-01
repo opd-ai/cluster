@@ -42,6 +42,7 @@ type jobSpec struct {
 	Name        string
 	Namespace   string // k8s namespace (always "default")
 	Stage       string
+	Mode        string // mapped mode value for train.py ("namespace" or "repo")
 	NSName      string // pipeline namespace
 	Repo        string
 	Image       string
@@ -49,6 +50,12 @@ type jobSpec struct {
 	DatasetPath string
 	CkptPath    string
 	NSFilePath  string
+}
+
+// stageToMode maps k8s-trainer stage names to train.py --mode values.
+var stageToMode = map[string]string{
+	"train-ns":   "namespace",
+	"train-repo": "repo",
 }
 
 // jobTemplate is the Job manifest template.
@@ -76,10 +83,18 @@ spec:
       containers:
         - name: trainer
           image: {{.Image}}
+{{- if eq .Stage "convert"}}
+          command: ["python3", "/app/tools/llama.cpp/convert_lora_to_gguf.py"]
+          args:
+            - "--input"
+            - "/data/checkpoints/{{.NSName}}"
+            - "--output"
+            - "/data/checkpoints/{{.NSName}}/model.gguf"
+{{- else}}
           command: ["python3", "/app/python/train.py"]
           args:
             - "--mode"
-            - "{{.Stage}}"
+            - "{{.Mode}}"
             - "--namespace"
             - "{{.NSName}}"
 {{- if .Repo}}
@@ -92,18 +107,24 @@ spec:
             - "/data/datasets/{{.NSName}}"
             - "--output-dir"
             - "/data/checkpoints/{{.NSName}}"
+{{- end}}
           resources:
             limits:
               nvidia.com/gpu: "{{.GPUCount}}"
           volumeMounts:
-            - name: data
-              mountPath: /data
+            - name: datasets
+              mountPath: /data/datasets
+            - name: checkpoints
+              mountPath: /data/checkpoints
             - name: config
               mountPath: /config
       volumes:
-        - name: data
+        - name: datasets
           hostPath:
             path: {{.DatasetPath}}
+        - name: checkpoints
+          hostPath:
+            path: {{.CkptPath}}
         - name: config
           configMap:
             name: cluster-namespaces
@@ -145,6 +166,7 @@ func main() {
 		Name:        jobName,
 		Namespace:   "default",
 		Stage:       stage,
+		Mode:        stageToMode[stage],
 		NSName:      nsName,
 		Repo:        *repo,
 		Image:       *image,

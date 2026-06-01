@@ -89,7 +89,7 @@ func main() {
 	close(work)
 
 	var wg sync.WaitGroup
-	for range cfg.Jobs {
+	for i := 0; i < cfg.Jobs; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
