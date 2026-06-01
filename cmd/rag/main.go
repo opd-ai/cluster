@@ -20,11 +20,11 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
-	"time"
-	"os/signal"
 	"syscall"
+	"time"
 
 	qdrant "github.com/qdrant/go-client/qdrant"
 	"google.golang.org/grpc"
@@ -66,9 +66,9 @@ func bm25Score(text, query string) float64 {
 		tf[w]++
 	}
 
-	// IDF approximation: log((N+1)/(df+0.5)) where N=corpus size proxy and
-	// df is inferred from whether the term appears in the document (df=1)
-	// or not (df=0).  This mirrors BM25 IDF without a corpus index.
+	// IDF approximation: log((N-df+0.5)/(df+0.5)+1) where N=corpus size proxy
+	// and df is inferred from whether the term appears in the document (df=1)
+	// or not (df=0). This mirrors BM25 IDF without a corpus index.
 	const N = 1000.0 // assumed corpus size
 	score := 0.0
 	for _, t := range tokens {

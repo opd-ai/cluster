@@ -94,7 +94,6 @@ func main() {
 	nightly := time.NewTicker(1 * time.Minute)
 	defer nightly.Stop()
 	var lastNightlyDay int // Julian day number of last nightly run
-	defer nightly.Stop()
 
 	log.Printf("rag-reindex watching %s (debounce=%s, nightly=%02d:00 UTC)",
 		*cacheDir, *debounce, *nightlyHour)

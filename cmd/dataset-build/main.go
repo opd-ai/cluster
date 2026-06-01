@@ -72,7 +72,6 @@ type RepoEntry struct {
 }
 
 // Hyperparams holds training hyperparameter values.
-// Hyperparams holds training hyperparameter values.
 // Pointer fields (MaxSteps, LearningRate) allow a namespace to explicitly
 // override a global default to zero (e.g. max_steps: 0 for early-stopping).
 type Hyperparams struct {

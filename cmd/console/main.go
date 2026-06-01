@@ -118,12 +118,13 @@ func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Static WASM client files.
-	// The root index.html is public (it contains the login form); all other
-	// static assets require a valid session to prevent directory traversal
-	// exposing operator-misconfigured files.
+	// The root index.html and WASM bootstrap assets are public (needed for the
+	// login page to load); all other static assets require a valid session to
+	// prevent directory traversal exposing operator-misconfigured files.
 	fileServer := http.FileServer(http.Dir(s.wasmDir))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+		switch r.URL.Path {
+		case "/", "/index.html", "/main.wasm", "/wasm_exec.js":
 			fileServer.ServeHTTP(w, r)
 			return
 		}
@@ -176,6 +177,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.Lock()
+	now := time.Now()
+	for existingToken, entry := range s.sessions {
+		if now.After(entry.expires) {
+			delete(s.sessions, existingToken)
+		}
+	}
 	s.sessions[token] = sessionEntry{role: role, expires: time.Now().Add(sessionTTL)}
 	s.mu.Unlock()
 

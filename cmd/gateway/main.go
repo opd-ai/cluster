@@ -460,7 +460,7 @@ func (gw *Gateway) pickBackend(key, model string) *Backend {
 	idx := int(gw.rrIdx.Add(1)-1) % len(candidates)
 	chosen := candidateIdx[idx]
 
-	// Evict oldest entry if the sticky map exceeds the size cap (M4).
+	// Evict an arbitrary entry if the sticky map exceeds the size cap (M4).
 	if len(gw.sticky) >= maxStickyEntries {
 		for k := range gw.sticky {
 			delete(gw.sticky, k)
