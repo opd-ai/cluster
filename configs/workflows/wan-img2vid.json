@@ -1,0 +1,71 @@
+{
+  "last_node_id": 8,
+  "last_link_id": 10,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "WanVideoModelLoader",
+      "inputs": [],
+      "outputs": [{"name": "MODEL"}, {"name": "VAE"}, {"name": "CLIP"}],
+      "widgets_values": ["Wan2.1-I2V-14B-480P.safetensors", "bf16"]
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "inputs": [],
+      "outputs": [{"name": "IMAGE"}, {"name": "MASK"}],
+      "widgets_values": ["PLACEHOLDER_IMAGE_PATH", "none"]
+    },
+    {
+      "id": 3,
+      "type": "WanVideoTextEncode",
+      "inputs": [{"name": "clip", "link": 1}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["PLACEHOLDER_POSITIVE"]
+    },
+    {
+      "id": 4,
+      "type": "WanVideoTextEncode",
+      "inputs": [{"name": "clip", "link": 1}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["low quality, blurry, watermark, noise"]
+    },
+    {
+      "id": 5,
+      "type": "WanVideoImageToVideoLatent",
+      "inputs": [
+        {"name": "image", "link": 2},
+        {"name": "vae", "link": 1}
+      ],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [832, 480, 81, 42]
+    },
+    {
+      "id": 6,
+      "type": "WanVideoSampler",
+      "inputs": [
+        {"name": "model", "link": 1},
+        {"name": "positive", "link": 3},
+        {"name": "negative", "link": 4},
+        {"name": "latent_image", "link": 5}
+      ],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [42, 50, 5.0, "uni_pc", "simple", 1.0]
+    },
+    {
+      "id": 7,
+      "type": "WanVideoDecode",
+      "inputs": [{"name": "samples", "link": 6}, {"name": "vae", "link": 1}],
+      "outputs": [{"name": "IMAGE"}],
+      "widgets_values": [true]
+    },
+    {
+      "id": 8,
+      "type": "VHS_VideoCombine",
+      "inputs": [{"name": "images", "link": 7}],
+      "outputs": [],
+      "widgets_values": ["mp4", 16, "wan_img2vid_output", true, true]
+    }
+  ],
+  "_comment": "Wan 2.1 image-to-video workflow. Replace PLACEHOLDER_IMAGE_PATH and PLACEHOLDER_POSITIVE at runtime."
+}

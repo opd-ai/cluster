@@ -1,0 +1,67 @@
+{
+  "last_node_id": 14,
+  "last_link_id": 14,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CheckpointLoaderSimple",
+      "inputs": [],
+      "outputs": [{"name": "MODEL"}, {"name": "CLIP"}, {"name": "VAE"}],
+      "widgets_values": ["animatediff/dreamshaper_8.safetensors"]
+    },
+    {
+      "id": 2,
+      "type": "AnimateDiffLoaderWithContext",
+      "inputs": [{"name": "model", "link": 1}],
+      "outputs": [{"name": "MODEL"}],
+      "widgets_values": ["animatediff/mm_sdxl_v10_beta.ckpt", "lcm", 16]
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "inputs": [{"name": "clip", "link": 2}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["PLACEHOLDER_POSITIVE"]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "inputs": [{"name": "clip", "link": 2}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["low quality, blurry, watermark"]
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "inputs": [],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [512, 512, 16]
+    },
+    {
+      "id": 6,
+      "type": "KSampler",
+      "inputs": [
+        {"name": "model", "link": 10},
+        {"name": "positive", "link": 3},
+        {"name": "negative", "link": 4},
+        {"name": "latent_image", "link": 5}
+      ],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [42, "lcm", 20, 7.0, "lcm", "simple", 1.0]
+    },
+    {
+      "id": 7,
+      "type": "VAEDecode",
+      "inputs": [{"name": "samples", "link": 6}, {"name": "vae", "link": 3}],
+      "outputs": [{"name": "IMAGE"}]
+    },
+    {
+      "id": 8,
+      "type": "VHS_VideoCombine",
+      "inputs": [{"name": "images", "link": 7}],
+      "outputs": [],
+      "widgets_values": ["mp4", 8, "animatediff_output", true, true]
+    }
+  ],
+  "_comment": "AnimateDiff text-to-video workflow. Replace PLACEHOLDER_POSITIVE with the actual prompt at runtime."
+}

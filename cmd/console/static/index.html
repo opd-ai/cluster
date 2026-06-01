@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cluster Console</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0c0c14; overflow: hidden; }
+    canvas { display: block; }
+    #loading {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #0c0c14; color: #aaa; font-family: monospace; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading console…</div>
+  <script>
+    // Inject server-side configuration for the WASM binary.
+    window.consoleWSURL = (location.protocol === 'https:' ? 'wss://' : 'ws://') +
+                          location.host + '/api/ws';
+  </script>
+  <script src="wasm_exec.js"></script>
+  <script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then(result => {
+      document.getElementById('loading').style.display = 'none';
+      go.run(result.instance);
+    }).catch(err => {
+      document.getElementById('loading').textContent = 'Failed to load: ' + err;
+    });
+  </script>
+</body>
+</html>

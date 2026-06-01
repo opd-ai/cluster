@@ -1,0 +1,61 @@
+{
+  "last_node_id": 6,
+  "last_link_id": 7,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LTXVLoader",
+      "inputs": [],
+      "outputs": [{"name": "MODEL"}, {"name": "VAE"}],
+      "widgets_values": ["ltxv-0.9.1.safetensors", "bf16"]
+    },
+    {
+      "id": 2,
+      "type": "LTXVCLIPTextEncode",
+      "inputs": [],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["PLACEHOLDER_POSITIVE"]
+    },
+    {
+      "id": 3,
+      "type": "LTXVCLIPTextEncode",
+      "inputs": [],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["low quality, noise, watermark"]
+    },
+    {
+      "id": 4,
+      "type": "LTXVEmptyLatentVideo",
+      "inputs": [],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [768, 512, 97, 42]
+    },
+    {
+      "id": 5,
+      "type": "LTXVSampler",
+      "inputs": [
+        {"name": "model", "link": 1},
+        {"name": "positive", "link": 2},
+        {"name": "negative", "link": 3},
+        {"name": "latent_image", "link": 4}
+      ],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [42, 40, 3.0, "euler", "simple", 0.05, 1.0]
+    },
+    {
+      "id": 6,
+      "type": "LTXVDecode",
+      "inputs": [{"name": "samples", "link": 5}, {"name": "vae", "link": 1}],
+      "outputs": [{"name": "IMAGE"}],
+      "widgets_values": [true]
+    },
+    {
+      "id": 7,
+      "type": "VHS_VideoCombine",
+      "inputs": [{"name": "images", "link": 6}],
+      "outputs": [],
+      "widgets_values": ["mp4", 24, "ltx_output", true, true]
+    }
+  ],
+  "_comment": "LTX-Video text-to-video workflow. Replace PLACEHOLDER_POSITIVE with the actual prompt at runtime."
+}

@@ -1,0 +1,61 @@
+{
+  "last_node_id": 6,
+  "last_link_id": 8,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CogVideoXModelLoader",
+      "inputs": [],
+      "outputs": [{"name": "MODEL"}, {"name": "VAE"}],
+      "widgets_values": ["CogVideoX-5B"]
+    },
+    {
+      "id": 2,
+      "type": "CogVideoXTextEncode",
+      "inputs": [{"name": "model", "link": 1}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["PLACEHOLDER_POSITIVE"]
+    },
+    {
+      "id": 3,
+      "type": "CogVideoXTextEncode",
+      "inputs": [{"name": "model", "link": 1}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["low quality, blurry, watermark, text"]
+    },
+    {
+      "id": 4,
+      "type": "CogVideoXEmptyLatentVideo",
+      "inputs": [],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [720, 480, 49, 42]
+    },
+    {
+      "id": 5,
+      "type": "CogVideoXSampler",
+      "inputs": [
+        {"name": "model", "link": 1},
+        {"name": "positive", "link": 2},
+        {"name": "negative", "link": 3},
+        {"name": "latent_image", "link": 4}
+      ],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [42, 50, 6.0, "DDIM", "linear"]
+    },
+    {
+      "id": 6,
+      "type": "CogVideoXDecode",
+      "inputs": [{"name": "samples", "link": 5}, {"name": "vae", "link": 1}],
+      "outputs": [{"name": "IMAGE"}],
+      "widgets_values": [true, 4]
+    },
+    {
+      "id": 7,
+      "type": "VHS_VideoCombine",
+      "inputs": [{"name": "images", "link": 6}],
+      "outputs": [],
+      "widgets_values": ["mp4", 8, "cogvideox_output", true, true]
+    }
+  ],
+  "_comment": "CogVideoX-5B text-to-video workflow. Replace PLACEHOLDER_POSITIVE with the actual prompt at runtime."
+}

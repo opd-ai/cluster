@@ -1,0 +1,13 @@
+{
+  "_comment": "4x upscaling workflow using RealESRGAN or ESRGAN model.",
+  "20": { "class_type": "LoadImage", "inputs": { "image": "input.png", "upload": "image" } },
+  "30": {
+    "class_type": "UpscaleModelLoader",
+    "inputs": { "model_name": "RealESRGAN_x4plus.pth" }
+  },
+  "31": {
+    "class_type": "ImageUpscaleWithModel",
+    "inputs": { "upscale_model": ["30", 0], "image": ["20", 0] }
+  },
+  "9": { "class_type": "SaveImage", "inputs": { "filename_prefix": "upscaled-4x", "images": ["31", 0] } }
+}

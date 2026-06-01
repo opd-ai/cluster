@@ -95,9 +95,143 @@ func main() {
 	}
 
 	if config.UpMode {
-		fmt.Println("\nNote: Full cluster bring-up (k3s control-plane + workers) is not yet implemented.")
-		fmt.Println("Run 'make up' after bootstrapping to complete cluster formation.")
+		if err := bringUpCluster(nodes, signer, config); err != nil {
+			log.Fatalf("Cluster bring-up failed: %v", err)
+		}
 	}
+}
+
+// bringUpCluster installs k3s on the control node, exports kubeconfig, and
+// joins Linux worker nodes.  Mac (darwin) nodes are skipped — they run our
+// Go agents natively under launchd and do not join k3s.
+func bringUpCluster(nodes []NodeConfig, signer ssh.Signer, config BootstrapConfig) error {
+	controlNode := findControlNode(nodes)
+	if controlNode == nil {
+		return fmt.Errorf("no node with role=control found in inventory")
+	}
+
+	fmt.Printf("\n=== Installing k3s control-plane on %s ===\n", controlNode.Hostname)
+
+	client, err := createSSHClient(controlNode.SSHUser, controlNode.Address, "22", signer, config)
+	if err != nil {
+		return fmt.Errorf("connect to control node: %w", err)
+	}
+	defer client.Close()
+
+	if err := installK3sServer(client, config); err != nil {
+		return fmt.Errorf("k3s server install: %w", err)
+	}
+
+	kubeconfig, err := fetchKubeconfig(client)
+	if err != nil {
+		return fmt.Errorf("fetch kubeconfig: %w", err)
+	}
+
+	if err := saveKubeconfig(config.InventoryPath, kubeconfig, controlNode.Address); err != nil {
+		return fmt.Errorf("save kubeconfig: %w", err)
+	}
+
+	token, err := fetchNodeToken(client)
+	if err != nil {
+		return fmt.Errorf("fetch node token: %w", err)
+	}
+
+	for _, node := range nodes {
+		if node.Hostname == controlNode.Hostname || node.OS == "darwin" {
+			continue
+		}
+		if !isWorkerNode(&node) {
+			continue
+		}
+		fmt.Printf("\n=== Joining worker %s ===\n", node.Hostname)
+		wc, err := createSSHClient(node.SSHUser, node.Address, "22", signer, config)
+		if err != nil {
+			log.Printf("Failed to connect to worker %s: %v", node.Hostname, err)
+			continue
+		}
+		if err := joinK3sWorker(wc, controlNode.Address, token, config); err != nil {
+			log.Printf("Failed to join worker %s: %v", node.Hostname, err)
+		} else {
+			fmt.Printf("✓ %s joined the cluster\n", node.Hostname)
+		}
+		wc.Close()
+	}
+
+	fmt.Printf("\n✓ k3s control-plane is up. Kubeconfig saved.\n")
+	return nil
+}
+
+func findControlNode(nodes []NodeConfig) *NodeConfig {
+	for i := range nodes {
+		if nodes[i].Role == "control" || nodes[i].Role == "both" {
+			return &nodes[i]
+		}
+	}
+	return nil
+}
+
+func isWorkerNode(node *NodeConfig) bool {
+	return node.Role == "worker" || node.Role == "both"
+}
+
+func installK3sServer(client *ssh.Client, config BootstrapConfig) error {
+	steps := []string{
+		"curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC='server' sh -s -",
+		"systemctl enable k3s",
+		"systemctl start k3s",
+		"until kubectl get nodes 2>/dev/null | grep -q 'Ready'; do sleep 2; done",
+	}
+	return executeBootstrapSteps(client, steps, config)
+}
+
+func fetchKubeconfig(client *ssh.Client) (string, error) {
+	out, err := remoteCmd(client, "cat /etc/rancher/k3s/k3s.yaml")
+	if err != nil {
+		return "", fmt.Errorf("read k3s.yaml: %w", err)
+	}
+	if strings.TrimSpace(out) == "" {
+		return "", fmt.Errorf("k3s.yaml is empty")
+	}
+	return out, nil
+}
+
+// saveKubeconfig writes kubeconfig adjacent to the inventory file, replacing
+// the loopback server address with the control node's actual address.
+func saveKubeconfig(inventoryPath, kubeconfig, controlAddr string) error {
+	dir := filepath.Dir(inventoryPath)
+	dst := filepath.Join(dir, "kubeconfig")
+	// Replace the default 127.0.0.1 server address so external clients work.
+	kubeconfig = strings.ReplaceAll(kubeconfig, "127.0.0.1", controlAddr)
+	if err := os.WriteFile(dst, []byte(kubeconfig), 0o600); err != nil {
+		return err
+	}
+	fmt.Printf("Kubeconfig written to %s\n", dst)
+	return nil
+}
+
+func fetchNodeToken(client *ssh.Client) (string, error) {
+	out, err := remoteCmd(client, "cat /var/lib/rancher/k3s/server/node-token")
+	if err != nil {
+		return "", fmt.Errorf("read node-token: %w", err)
+	}
+	token := strings.TrimSpace(out)
+	if token == "" {
+		return "", fmt.Errorf("node-token is empty")
+	}
+	return token, nil
+}
+
+func joinK3sWorker(client *ssh.Client, serverAddr, token string, config BootstrapConfig) error {
+	cmd := fmt.Sprintf(
+		"curl -sfL https://get.k3s.io | K3S_URL=https://%s:6443 K3S_TOKEN=%s sh -",
+		serverAddr, token,
+	)
+	steps := []string{
+		cmd,
+		"systemctl enable k3s-agent",
+		"systemctl start k3s-agent",
+	}
+	return executeBootstrapSteps(client, steps, config)
 }
 
 func loadInventory(path string) ([]NodeConfig, error) {
@@ -274,6 +408,10 @@ func bootstrapMacOS(client *ssh.Client, node *NodeConfig, config BootstrapConfig
 	steps := []string{
 		"command -v brew >/dev/null 2>&1 || /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
 		"brew install ollama git git-lfs rsync curl wget",
+		// Tailscale for mesh networking — Mac nodes join the tailnet so the Go
+		// agents are reachable at a stable identity across NAT.
+		"brew install --cask tailscale || true",
+		"open -a Tailscale || true",
 	}
 
 	// MLX runtime for Apple Silicon
@@ -326,6 +464,13 @@ func bootstrapUbuntuDebian(client *ssh.Client, node *NodeConfig, config Bootstra
 		"systemctl start ollama || true",
 	)
 
+	// Tailscale — install via official script then enable for stable tailnet identity.
+	steps = append(steps,
+		"curl -fsSL https://tailscale.com/install.sh | sh || true",
+		"systemctl enable tailscaled || true",
+		"systemctl start tailscaled || true",
+	)
+
 	if isTrainerNode(node) {
 		steps = append(steps,
 			"apt-get install -y python3-dev python3-pip python3.11-dev",
@@ -359,6 +504,13 @@ func bootstrapRHEL(client *ssh.Client, node *NodeConfig, config BootstrapConfig)
 		"curl -fsSL https://ollama.ai/install.sh | sh || true",
 		"systemctl enable ollama || true",
 		"systemctl start ollama || true",
+	)
+
+	// Tailscale — install via official script then enable for stable tailnet identity.
+	steps = append(steps,
+		"curl -fsSL https://tailscale.com/install.sh | sh || true",
+		"systemctl enable tailscaled || true",
+		"systemctl start tailscaled || true",
 	)
 
 	if isTrainerNode(node) {

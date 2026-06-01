@@ -1,0 +1,61 @@
+{
+  "last_node_id": 7,
+  "last_link_id": 8,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "WanVideoModelLoader",
+      "inputs": [],
+      "outputs": [{"name": "MODEL"}, {"name": "VAE"}, {"name": "CLIP"}],
+      "widgets_values": ["Wan2.1-T2V-14B.safetensors", "bf16"]
+    },
+    {
+      "id": 2,
+      "type": "WanVideoTextEncode",
+      "inputs": [{"name": "clip", "link": 1}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["PLACEHOLDER_POSITIVE"]
+    },
+    {
+      "id": 3,
+      "type": "WanVideoTextEncode",
+      "inputs": [{"name": "clip", "link": 1}],
+      "outputs": [{"name": "CONDITIONING"}],
+      "widgets_values": ["low quality, blurry, watermark, text, noise"]
+    },
+    {
+      "id": 4,
+      "type": "WanVideoEmptyLatentVideo",
+      "inputs": [],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [832, 480, 81, 42]
+    },
+    {
+      "id": 5,
+      "type": "WanVideoSampler",
+      "inputs": [
+        {"name": "model", "link": 1},
+        {"name": "positive", "link": 2},
+        {"name": "negative", "link": 3},
+        {"name": "latent_image", "link": 4}
+      ],
+      "outputs": [{"name": "LATENT"}],
+      "widgets_values": [42, 50, 5.0, "uni_pc", "simple", 1.0]
+    },
+    {
+      "id": 6,
+      "type": "WanVideoDecode",
+      "inputs": [{"name": "samples", "link": 5}, {"name": "vae", "link": 1}],
+      "outputs": [{"name": "IMAGE"}],
+      "widgets_values": [true]
+    },
+    {
+      "id": 7,
+      "type": "VHS_VideoCombine",
+      "inputs": [{"name": "images", "link": 6}],
+      "outputs": [],
+      "widgets_values": ["mp4", 16, "wan_txt2vid_output", true, true]
+    }
+  ],
+  "_comment": "Wan 2.1 text-to-video workflow. Replace PLACEHOLDER_POSITIVE with the actual prompt at runtime."
+}

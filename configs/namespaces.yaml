@@ -1,0 +1,87 @@
+# configs/namespaces.yaml — Authoritative namespace configuration.
+#
+# Each namespace maps a set of repos to a single fine-tuned LLM adapter.
+# The pipeline (cmd/pipeline) reads this file to drive:
+#   repo-sync → dataset-build → train (ns) → train (repo) → convert → register
+#
+# Top-level keys:
+#   namespaces:      list of namespace definitions
+#   global:          defaults applied to every namespace (overridable per-ns)
+#
+# Per-namespace fields:
+#   name:            unique identifier (alphanumeric + hyphens)
+#   base_model:      Ollama model tag used as LoRA base (e.g. "llama3:8b")
+#   quantization:    GGUF quantization target (q4_k_m | q5_k_m | q8_0 | f16)
+#   skip_repo_lora:  list of repo labels to skip per-repo LoRA for
+#   repo_min_samples: minimum training examples to attempt repo LoRA
+#   repos:           list of repo entries (label + URL)
+#   hyperparams:     per-namespace training hyperparameter overrides
+#
+# Per-repo fields:
+#   label:           short unique identifier (alphanumeric + hyphens)
+#   url:             git clone URL
+#   branch:          branch to track (default: main)
+#
+# Hyperparameter fields (all optional; global defaults shown):
+#   lora_rank:            8
+#   lora_alpha:           32
+#   batch_size:           2
+#   grad_accum:           4
+#   max_steps:            300
+#   learning_rate:        2e-4
+#   max_seq_length:       4096
+#   min_file_bytes:       512
+#   max_file_bytes:       131072
+
+global:
+  base_model: "llama3:8b"
+  quantization: "q4_k_m"
+  repo_min_samples: 50
+  skip_repo_lora: []
+  hyperparams:
+    lora_rank: 8
+    lora_alpha: 32
+    batch_size: 2
+    grad_accum: 4
+    max_steps: 300
+    learning_rate: 2.0e-4
+    max_seq_length: 4096
+    min_file_bytes: 512
+    max_file_bytes: 131072
+
+namespaces:
+  - name: "core"
+    base_model: "llama3:8b"
+    quantization: "q4_k_m"
+    repos:
+      - label: "cluster"
+        url: "https://github.com/opd-ai/cluster.git"
+        branch: "main"
+    hyperparams:
+      lora_rank: 16
+      max_steps: 500
+
+  - name: "docs"
+    base_model: "llama3:8b"
+    quantization: "q5_k_m"
+    skip_repo_lora: []
+    repo_min_samples: 30
+    repos: []
+    hyperparams:
+      lora_rank: 8
+      max_steps: 200
+
+  # Add further namespaces here.  Each entry triggers its own pipeline run.
+  # Example:
+  #
+  # - name: "my-project"
+  #   base_model: "llama3:70b"
+  #   quantization: "q4_k_m"
+  #   repos:
+  #     - label: "repo-a"
+  #       url: "https://github.com/org/repo-a.git"
+  #     - label: "repo-b"
+  #       url: "https://github.com/org/repo-b.git"
+  #   hyperparams:
+  #     lora_rank: 32
+  #     max_steps: 1000
