@@ -220,16 +220,25 @@ func probeNode(client *http.Client, node *Node) {
 	var result struct {
 		Models []struct {
 			Name string `json:"name"`
+			Size int64  `json:"size"` // bytes on disk; approximate VRAM proxy
 		} `json:"models"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return
 	}
+	const bytesPerGiB = 1 << 30
+	usedBytes := int64(0)
 	for _, m := range result.Models {
 		node.LoadedModels = append(node.LoadedModels, m.Name)
+		if m.Size > 0 {
+			usedBytes += m.Size
+		} else {
+			// Fallback: assume 8 GiB when size is not reported.
+			usedBytes += 8 * bytesPerGiB
+		}
 	}
-	// Estimate free VRAM: assume each loaded model uses 8 GiB as a rough heuristic.
-	used := len(node.LoadedModels) * 8
+	// Convert bytes to GiB, rounding up.
+	used := int((usedBytes + bytesPerGiB - 1) / bytesPerGiB)
 	if used > node.VRAM {
 		used = node.VRAM
 	}

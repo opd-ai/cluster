@@ -12,6 +12,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -210,7 +212,18 @@ func (gw *Gateway) handleVideoJobStatus(w http.ResponseWriter, r *http.Request) 
 
 func newVideoJob(req videoGenerationRequest) *videoJob {
 	now := time.Now().UTC()
-	id := fmt.Sprintf("vid-%d", now.UnixNano())
+	var buf [8]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		// Fallback to timestamp on entropy failure (extremely unlikely).
+		return &videoJob{
+			ID:        fmt.Sprintf("vid-%d", now.UnixNano()),
+			Status:    jobPending,
+			CreatedAt: now,
+			UpdatedAt: now,
+			req:       req,
+		}
+	}
+	id := "vid-" + hex.EncodeToString(buf[:])
 	return &videoJob{
 		ID:        id,
 		Status:    jobPending,

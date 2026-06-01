@@ -242,6 +242,7 @@ func agentSigner() (ssh.Signer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("SSH agent unavailable: %w", err)
 	}
+	defer conn.Close()
 	signers, err := agent.NewClient(conn).Signers()
 	if err != nil {
 		return nil, err

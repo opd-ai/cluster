@@ -306,6 +306,7 @@ func getAgentSigner() (ssh.Signer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SSH agent: %v", err)
 	}
+	defer agentConn.Close()
 
 	ag := agent.NewClient(agentConn)
 	signers, err := ag.Signers()

@@ -212,8 +212,10 @@ func runIngest(binary, dir, collection, gatewayURL, qdrantAddr, apiKey string) {
 		"--collection", collection,
 		"--gateway-url", gatewayURL,
 		"--qdrant-addr", qdrantAddr,
-		"--api-key", apiKey,
 	)
+	// Pass the API key via the environment rather than a CLI argument to avoid
+	// exposure in process listings readable by other local users (M13).
+	cmd.Env = append(os.Environ(), "GATEWAY_API_KEY="+apiKey)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

@@ -72,16 +72,19 @@ type RepoEntry struct {
 }
 
 // Hyperparams holds training hyperparameter values.
+// Hyperparams holds training hyperparameter values.
+// Pointer fields (MaxSteps, LearningRate) allow a namespace to explicitly
+// override a global default to zero (e.g. max_steps: 0 for early-stopping).
 type Hyperparams struct {
-	LoraRank      int     `yaml:"lora_rank"`
-	LoraAlpha     int     `yaml:"lora_alpha"`
-	BatchSize     int     `yaml:"batch_size"`
-	GradAccum     int     `yaml:"grad_accum"`
-	MaxSteps      int     `yaml:"max_steps"`
-	LearningRate  float64 `yaml:"learning_rate"`
-	MaxSeqLength  int     `yaml:"max_seq_length"`
-	MinFileBytes  int     `yaml:"min_file_bytes"`
-	MaxFileBytes  int     `yaml:"max_file_bytes"`
+	LoraRank     int      `yaml:"lora_rank"`
+	LoraAlpha    int      `yaml:"lora_alpha"`
+	BatchSize    int      `yaml:"batch_size"`
+	GradAccum    int      `yaml:"grad_accum"`
+	MaxSteps     *int     `yaml:"max_steps"`
+	LearningRate *float64 `yaml:"learning_rate"`
+	MaxSeqLength int      `yaml:"max_seq_length"`
+	MinFileBytes int      `yaml:"min_file_bytes"`
+	MaxFileBytes int      `yaml:"max_file_bytes"`
 }
 
 // example is a single JSONL training record.
@@ -113,11 +116,11 @@ func main() {
 			log.Fatalf("mkdir %s: %v", nsOutDir, err)
 		}
 
-		nsFile, err := os.Create(filepath.Join(nsOutDir, "dataset.jsonl"))
+		nsOutFile, err := os.Create(filepath.Join(nsOutDir, "dataset.jsonl"))
 		if err != nil {
 			log.Fatalf("create dataset: %v", err)
 		}
-		nsWriter := bufio.NewWriter(nsFile)
+		nsWriter := bufio.NewWriter(nsOutFile)
 		nsSeen := make(map[string]struct{})
 
 		for _, repo := range ns.Repos {
@@ -149,7 +152,7 @@ func main() {
 		}
 
 		_ = nsWriter.Flush()
-		_ = nsFile.Close()
+		_ = nsOutFile.Close()
 		log.Printf("namespace=%s dataset written to %s", ns.Name, nsOutDir)
 	}
 }
@@ -228,7 +231,9 @@ func contentHash(s string) string {
 	return fmt.Sprintf("%x", h)
 }
 
-// mergeHyperparams returns global defaults overridden by any non-zero ns values.
+// mergeHyperparams returns global defaults overridden by any non-nil/non-zero ns values.
+// Pointer fields (MaxSteps, LearningRate) allow a namespace to override a global
+// default to zero (e.g. max_steps: 0 for early-stopping only).
 func mergeHyperparams(global, ns Hyperparams) Hyperparams {
 	out := global
 	if ns.LoraRank != 0 {
@@ -243,10 +248,10 @@ func mergeHyperparams(global, ns Hyperparams) Hyperparams {
 	if ns.GradAccum != 0 {
 		out.GradAccum = ns.GradAccum
 	}
-	if ns.MaxSteps != 0 {
+	if ns.MaxSteps != nil {
 		out.MaxSteps = ns.MaxSteps
 	}
-	if ns.LearningRate != 0 {
+	if ns.LearningRate != nil {
 		out.LearningRate = ns.LearningRate
 	}
 	if ns.MaxSeqLength != 0 {

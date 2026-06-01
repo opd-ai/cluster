@@ -33,15 +33,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -136,11 +139,15 @@ func main() {
 	loadAPIKeys(gw, *keysFile)
 
 	// Start health probing
-	go gw.probeLoop(time.Duration(*probeInterval) * time.Second)
+	stopProbe := make(chan struct{})
+	go gw.probeLoop(time.Duration(*probeInterval)*time.Second, stopProbe)
+	defer close(stopProbe)
 
 	// Start LoRA adapter watcher if manifest path is set.
 	if *loraManifest != "" {
-		go gw.startLoRAWatcher(*loraManifest, 10*time.Second)
+		stopLora := make(chan struct{})
+		go gw.startLoRAWatcher(*loraManifest, 10*time.Second, stopLora)
+		defer close(stopLora)
 	}
 
 	// Build router
@@ -170,8 +177,23 @@ func main() {
 
 	log.Printf("gateway listening on %s (backends: %d, speculative: %v)",
 		*addr, len(gw.backends), *speculative)
-	if err := http.ListenAndServe(*addr, r); err != nil {
-		log.Fatalf("listen: %v", err)
+	httpSrv := &http.Server{Addr: *addr, Handler: r}
+
+	go func() {
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	log.Println("gateway shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := httpSrv.Shutdown(ctx); err != nil {
+		log.Printf("http shutdown: %v", err)
 	}
 }
 
@@ -508,11 +530,16 @@ func (gw *Gateway) proxyTo(url string, w http.ResponseWriter, r *http.Request, b
 // Health probing
 // -------------------------------------------------------------------------
 
-func (gw *Gateway) probeLoop(interval time.Duration) {
+func (gw *Gateway) probeLoop(interval time.Duration, stop <-chan struct{}) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	for range ticker.C {
-		gw.probeAll()
+	for {
+		select {
+		case <-ticker.C:
+			gw.probeAll()
+		case <-stop:
+			return
+		}
 	}
 }
 

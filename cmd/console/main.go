@@ -19,6 +19,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -34,9 +36,18 @@ import (
 	"github.com/opd-ai/cluster/internal/uiapi"
 )
 
+// sessionTTL is how long a session token remains valid after issuance.
+const sessionTTL = 24 * time.Hour
+
 // -------------------------------------------------------------------------
 // Server
 // -------------------------------------------------------------------------
+
+// sessionEntry stores a session token with its owner role and expiry.
+type sessionEntry struct {
+	role    uiapi.Role
+	expires time.Time
+}
 
 // Server is the console HTTP server.
 type Server struct {
@@ -45,12 +56,13 @@ type Server struct {
 	wasmDir    string
 	apiKeys    map[string]uiapi.Role
 
-	mu      sync.RWMutex
-	state   uiapi.ClusterState
-	jobs    []uiapi.JobState
-	logBuf  []uiapi.LogLine
-	clients map[chan uiapi.Message]struct{}
-	audit   *auditLog
+	mu       sync.RWMutex
+	state    uiapi.ClusterState
+	jobs     []uiapi.JobState
+	logBuf   []uiapi.LogLine
+	clients  map[chan uiapi.Message]struct{}
+	audit    *auditLog
+	sessions map[string]sessionEntry
 }
 
 func newServer(addr, gatewayURL, wasmDir, keyFile string) (*Server, error) {
@@ -64,6 +76,7 @@ func newServer(addr, gatewayURL, wasmDir, keyFile string) (*Server, error) {
 		wasmDir:    wasmDir,
 		apiKeys:    keys,
 		clients:    make(map[chan uiapi.Message]struct{}),
+		sessions:   make(map[string]sessionEntry),
 		audit:      newAuditLog(0),
 	}, nil
 }
@@ -105,7 +118,17 @@ func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Static WASM client files.
-	mux.Handle("/", http.FileServer(http.Dir(s.wasmDir)))
+	// The root index.html is public (it contains the login form); all other
+	// static assets require a valid session to prevent directory traversal
+	// exposing operator-misconfigured files.
+	fileServer := http.FileServer(http.Dir(s.wasmDir))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		s.withAuth(fileServer.ServeHTTP)(w, r)
+	})
 
 	// REST API.
 	mux.HandleFunc("/api/login", s.handleLogin)
@@ -143,9 +166,20 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	// For now, the session token is the API key itself (simple stateless auth).
-	// Production should use a signed JWT with short expiry.
-	resp := uiapi.LoginResponse{Token: req.APIKey, Role: string(role)}
+
+	// Generate a random session token so the API key is not exposed to the
+	// browser or network (M8).
+	token, err := newSessionToken()
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	s.sessions[token] = sessionEntry{role: role, expires: time.Now().Add(sessionTTL)}
+	s.mu.Unlock()
+
+	resp := uiapi.LoginResponse{Token: token, Role: string(role)}
 	s.audit.Record(auditEntry{
 		Actor:  req.APIKey[:min(8, len(req.APIKey))] + "…",
 		Role:   role,
@@ -154,6 +188,31 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// newSessionToken generates a cryptographically random 32-byte hex token.
+func newSessionToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+// lookupSession returns the role for a session token if it exists and has not
+// expired. Expired sessions are pruned lazily on lookup.
+func (s *Server) lookupSession(token string) (uiapi.Role, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entry, ok := s.sessions[token]
+	if !ok {
+		return "", false
+	}
+	if time.Now().After(entry.expires) {
+		delete(s.sessions, token)
+		return "", false
+	}
+	return entry.role, true
 }
 
 // handleCluster returns the current ClusterState.
@@ -185,12 +244,9 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 
 // handleWS upgrades to a WebSocket and pushes cluster updates.
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
-	// Validate token from query param.
+	// Validate session token from query param.
 	token := r.URL.Query().Get("token")
-	s.mu.RLock()
-	_, ok := s.apiKeys[token]
-	s.mu.RUnlock()
-	if !ok {
+	if _, ok := s.lookupSession(token); !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -218,10 +274,7 @@ func (s *Server) withAuth(h http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		s.mu.RLock()
-		_, ok := s.apiKeys[token]
-		s.mu.RUnlock()
-		if !ok {
+		if _, ok := s.lookupSession(token); !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}

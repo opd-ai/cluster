@@ -23,6 +23,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"os/signal"
+	"syscall"
 
 	qdrant "github.com/qdrant/go-client/qdrant"
 	"google.golang.org/grpc"
@@ -64,10 +66,19 @@ func bm25Score(text, query string) float64 {
 		tf[w]++
 	}
 
+	// IDF approximation: log((N+1)/(df+0.5)) where N=corpus size proxy and
+	// df is inferred from whether the term appears in the document (df=1)
+	// or not (df=0).  This mirrors BM25 IDF without a corpus index.
+	const N = 1000.0 // assumed corpus size
 	score := 0.0
 	for _, t := range tokens {
 		f := tf[t]
-		score += f * (k1 + 1) / (f + k1*(1-b+b*dl/avgdl))
+		df := 0.0
+		if f > 0 {
+			df = 1.0
+		}
+		idf := math.Log((N-df+0.5)/(df+0.5) + 1)
+		score += idf * f * (k1 + 1) / (f + k1*(1-b+b*dl/avgdl))
 	}
 	return score
 }
@@ -512,7 +523,22 @@ func main() {
 	})
 
 	log.Printf("rag service listening on %s", cfg.addr)
-	if err := http.ListenAndServe(cfg.addr, mux); err != nil {
-		log.Fatalf("listen: %v", err)
+	httpSrv := &http.Server{Addr: cfg.addr, Handler: mux}
+
+	go func() {
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	log.Println("shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := httpSrv.Shutdown(ctx); err != nil {
+		log.Printf("http shutdown: %v", err)
 	}
 }

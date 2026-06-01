@@ -85,6 +85,10 @@ type config struct {
 func chunkText(text string, chunkToks, overlapToks int) []string {
 	chunkSize := chunkToks * charsPerToken
 	overlapSize := overlapToks * charsPerToken
+	// Guard: overlap must be smaller than chunk to ensure progress.
+	if overlapSize >= chunkSize {
+		overlapSize = chunkSize / 2
+	}
 	if len(text) <= chunkSize {
 		return []string{text}
 	}

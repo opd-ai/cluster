@@ -18,6 +18,7 @@ import (
 	"github.com/opd-ai/cluster/internal/sshutil"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"gopkg.in/yaml.v3"
 )
 
 type Node struct {
@@ -175,6 +176,7 @@ func getAgentSigner() (ssh.Signer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SSH agent: %v", err)
 	}
+	defer agentConn.Close()
 
 	ag := agent.NewClient(agentConn)
 	signers, err := ag.Signers()
@@ -403,32 +405,12 @@ func getDiskGB(client *ssh.Client) int {
 }
 
 func outputYAML(nodes []*Node, outputPath string) {
-	var buf bytes.Buffer
-	buf.WriteString("---\n")
-	buf.WriteString("nodes:\n")
-
-	for _, node := range nodes {
-		fmt.Fprintf(&buf, "  - hostname: %s\n", node.Hostname)
-		fmt.Fprintf(&buf, "    ssh_user: %s\n", node.SSHUser)
-		fmt.Fprintf(&buf, "    address: %s\n", node.Address)
-		fmt.Fprintf(&buf, "    arch: %s\n", node.Arch)
-		fmt.Fprintf(&buf, "    os: %s\n", node.OS)
-		fmt.Fprintf(&buf, "    role: %s\n", node.Role)
-		fmt.Fprintf(&buf, "    accelerator: %s\n", node.Accelerator)
-		fmt.Fprintf(&buf, "    vram_gb: %d\n", node.VramGB)
-		fmt.Fprintf(&buf, "    ram_gb: %d\n", node.RamGB)
-		fmt.Fprintf(&buf, "    disk_gb: %d\n", node.DiskGB)
-
-		if len(node.Labels) > 0 {
-			buf.WriteString("    labels:\n")
-			for k, v := range node.Labels {
-				fmt.Fprintf(&buf, "      %s: %s\n", k, v)
-			}
-		}
-		buf.WriteString("\n")
+	doc := map[string]interface{}{"nodes": nodes}
+	data, err := yaml.Marshal(doc)
+	if err != nil {
+		log.Fatalf("Failed to marshal YAML: %v", err)
 	}
-
-	output := buf.String()
+	output := "---\n" + string(data)
 	if outputPath != "" {
 		if err := os.WriteFile(outputPath, []byte(output), 0o644); err != nil {
 			log.Fatalf("Failed to write output file: %v", err)
