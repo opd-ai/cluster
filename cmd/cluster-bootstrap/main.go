@@ -11,17 +11,21 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/opd-ai/cluster/internal/sshutil"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
 type BootstrapConfig struct {
-	InventoryPath string
-	DryRun        bool
-	KeyPath       string
-	Timeout       int
-	UpMode        bool
+	InventoryPath            string
+	DryRun                   bool
+	KeyPath                  string
+	KnownHostsPath           string
+	InsecureSkipHostKeyCheck bool
+	Timeout                  int
+	UpMode                   bool
 }
 
 type NodeConfig struct {
@@ -32,6 +36,7 @@ type NodeConfig struct {
 	OS          string
 	Accelerator string
 	Role        string
+	Labels      map[string]string
 }
 
 func main() {
@@ -39,6 +44,8 @@ func main() {
 	flag.StringVar(&config.InventoryPath, "inventory", "cluster/inventory.yaml", "Path to inventory YAML file")
 	flag.BoolVar(&config.DryRun, "dry-run", false, "Show what would be done without doing it")
 	flag.StringVar(&config.KeyPath, "key", "", "SSH private key path")
+	flag.StringVar(&config.KnownHostsPath, "known-hosts", "", "SSH known_hosts file (default: ~/.ssh/known_hosts)")
+	flag.BoolVar(&config.InsecureSkipHostKeyCheck, "insecure-skip-hostkey-check", false, "Skip SSH host key verification")
 	flag.IntVar(&config.Timeout, "timeout", 30, "SSH timeout in seconds")
 	flag.BoolVar(&config.UpMode, "up", false, "Full bring-up mode (k3s cluster + services)")
 	flag.Parse()
@@ -61,28 +68,30 @@ func main() {
 
 	// Bootstrap each node
 	for _, node := range nodes {
-		fmt.Printf("\n=== Bootstrapping %s (%s) ===\n", node.Hostname, node.Address)
+		func(node NodeConfig) {
+			fmt.Printf("\n=== Bootstrapping %s (%s) ===\n", node.Hostname, node.Address)
 
-		client, err := createSSHClient(node.SSHUser, node.Address, "22", signer)
-		if err != nil {
-			log.Printf("Failed to connect to %s: %v", node.Hostname, err)
-			continue
-		}
-		defer client.Close()
+			client, err := createSSHClient(node.SSHUser, node.Address, "22", signer, config)
+			if err != nil {
+				log.Printf("Failed to connect to %s: %v", node.Hostname, err)
+				return
+			}
+			defer client.Close()
 
-		// Test connection
-		if output, err := remoteCmd(client, "echo 'Connected'"); err != nil || strings.TrimSpace(output) != "Connected" {
-			log.Printf("Connection test failed on %s", node.Hostname)
-			continue
-		}
+			// Test connection
+			if output, err := remoteCmd(client, "echo 'Connected'"); err != nil || strings.TrimSpace(output) != "Connected" {
+				log.Printf("Connection test failed on %s", node.Hostname)
+				return
+			}
 
-		// Run bootstrap steps
-		if err := bootstrapNode(client, &node, config); err != nil {
-			log.Printf("Bootstrap failed on %s: %v", node.Hostname, err)
-			continue
-		}
+			// Run bootstrap steps
+			if err := bootstrapNode(client, &node, config); err != nil {
+				log.Printf("Bootstrap failed on %s: %v", node.Hostname, err)
+				return
+			}
 
-		fmt.Printf("✓ %s bootstrapped successfully\n", node.Hostname)
+			fmt.Printf("✓ %s bootstrapped successfully\n", node.Hostname)
+		}(node)
 	}
 
 	if config.UpMode {
@@ -101,13 +110,15 @@ func loadInventory(path string) ([]NodeConfig, error) {
 
 	var nodes []NodeConfig
 	var current NodeConfig
+	inLabels := false
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		trimmed := strings.TrimSpace(line)
+		indent := len(line) - len(strings.TrimLeft(line, " "))
 
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") || trimmed == "---" || trimmed == "nodes:" {
 			continue
 		}
 
@@ -115,11 +126,32 @@ func loadInventory(path string) ([]NodeConfig, error) {
 			if current.Hostname != "" {
 				nodes = append(nodes, current)
 			}
-			current = NodeConfig{}
+			current = NodeConfig{Labels: map[string]string{}}
 			current.Hostname = strings.TrimSpace(strings.TrimPrefix(trimmed, "- hostname:"))
-		} else {
-			parseInventoryField(&current, trimmed)
+			inLabels = false
+			continue
 		}
+
+		if trimmed == "labels:" {
+			inLabels = true
+			if current.Labels == nil {
+				current.Labels = map[string]string{}
+			}
+			continue
+		}
+
+		if inLabels {
+			if indent >= 6 {
+				key, value, ok := strings.Cut(trimmed, ":")
+				if ok {
+					current.Labels[strings.TrimSpace(key)] = strings.TrimSpace(value)
+				}
+				continue
+			}
+			inLabels = false
+		}
+
+		parseInventoryField(&current, trimmed)
 	}
 
 	if current.Hostname != "" {
@@ -150,8 +182,9 @@ func loadSSHKey(keyPath string) (ssh.Signer, error) {
 		usr, err := user.Current()
 		if err != nil {
 			return nil, err
+		} else {
+			keyPath = filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 		}
-		keyPath = filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 	}
 
 	keyBytes, err := os.ReadFile(keyPath)
@@ -183,13 +216,19 @@ func getAgentSigner() (ssh.Signer, error) {
 	return signers[0], nil
 }
 
-func createSSHClient(user, address, port string, signer ssh.Signer) (*ssh.Client, error) {
+func createSSHClient(user, address, port string, signer ssh.Signer, bootstrapConfig BootstrapConfig) (*ssh.Client, error) {
+	hostKeyCallback, err := sshutil.HostKeyCallback(bootstrapConfig.KnownHostsPath, bootstrapConfig.InsecureSkipHostKeyCheck)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
+		Timeout:         time.Duration(bootstrapConfig.Timeout) * time.Second,
 	}
 
 	return ssh.Dial("tcp", address+":"+port, config)
@@ -362,7 +401,7 @@ func isRHEL(osRelease string) bool {
 }
 
 func isTrainerNode(node *NodeConfig) bool {
-	return strings.Contains(node.Role, "trainer") || strings.Contains(node.Role, "both")
+	return strings.EqualFold(strings.TrimSpace(node.Labels["workload"]), "trainer")
 }
 
 func isIdempotentError(step, output string) bool {

@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"runtime"
@@ -15,16 +16,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opd-ai/cluster/internal/sshutil"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/sys/unix"
 )
 
 type DoctorConfig struct {
-	Host       string
-	User       string
-	KeyPath    string
-	DiskThreshold int
-	CheckRemote   bool
+	Host                     string
+	User                     string
+	KeyPath                  string
+	KnownHostsPath           string
+	InsecureSkipHostKeyCheck bool
+	DiskThreshold            int
+	CheckRemote              bool
 }
 
 type HealthReport struct {
@@ -41,9 +46,11 @@ type CheckResult struct {
 
 func main() {
 	config := DoctorConfig{}
-	flag.StringVar(&config.Host, "host", "", "Remote host to check (local check if empty)")
+	flag.StringVar(&config.Host, "host", "", "Remote host to check (requires -remote)")
 	flag.StringVar(&config.User, "user", "root", "SSH user for remote host")
 	flag.StringVar(&config.KeyPath, "key", "", "SSH private key path")
+	flag.StringVar(&config.KnownHostsPath, "known-hosts", "", "SSH known_hosts file (default: ~/.ssh/known_hosts)")
+	flag.BoolVar(&config.InsecureSkipHostKeyCheck, "insecure-skip-hostkey-check", false, "Skip SSH host key verification")
 	flag.IntVar(&config.DiskThreshold, "disk-threshold", 50, "Minimum free disk space in GB")
 	flag.BoolVar(&config.CheckRemote, "remote", false, "Enable remote checks")
 	flag.Parse()
@@ -52,7 +59,10 @@ func main() {
 	report.AllPassed = true
 
 	// Get hostname
-	if config.Host != "" {
+	if config.CheckRemote {
+		if config.Host == "" {
+			log.Fatal("-host is required when -remote is set")
+		}
 		report.Hostname = config.Host
 		signer, err := loadSSHKey(config.KeyPath)
 		if err != nil {
@@ -60,6 +70,9 @@ func main() {
 		}
 		report = performRemoteChecks(config.Host, config.User, signer, config)
 	} else {
+		if config.Host != "" {
+			log.Fatal("use -remote with -host to run remote checks")
+		}
 		host, _ := os.Hostname()
 		report.Hostname = host
 		report = performLocalChecks(config)
@@ -114,7 +127,7 @@ func performRemoteChecks(host, user string, signer ssh.Signer, config DoctorConf
 	var report HealthReport
 	report.Hostname = host
 
-	client, err := createSSHClient(user, host, "22", signer)
+	client, err := createSSHClient(user, host, "22", signer, config)
 	if err != nil {
 		report.Checks = append(report.Checks, CheckResult{
 			Name:    "SSH Connectivity",
@@ -179,13 +192,18 @@ func getAgentSigner() (ssh.Signer, error) {
 	return signers[0], nil
 }
 
-func createSSHClient(user, address, port string, signer ssh.Signer) (*ssh.Client, error) {
+func createSSHClient(user, address, port string, signer ssh.Signer, doctorConfig DoctorConfig) (*ssh.Client, error) {
+	hostKeyCallback, err := sshutil.HostKeyCallback(doctorConfig.KnownHostsPath, doctorConfig.InsecureSkipHostKeyCheck)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         10 * time.Second,
 	}
 
@@ -253,13 +271,17 @@ func checkGPU() CheckResult {
 func checkFPSupport() CheckResult {
 	// Try to detect FP16/BF16 support via GPU
 	if out, err := runCmd("nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"); err == nil {
-		cc := strings.TrimSpace(out)
-		if cc != "" {
-			// Compute capability 7.0+ supports FP16/BF16
+		if supported, capabilities, ok := computeCapabilitySupport(out); ok && supported {
 			return CheckResult{
 				Name:    "FP16/BF16 Support",
 				Status:  "PASS",
-				Message: fmt.Sprintf("Compute capability: %s (FP16/BF16 supported)", cc),
+				Message: fmt.Sprintf("Compute capability: %s (FP16/BF16 supported)", capabilities),
+			}
+		} else if ok {
+			return CheckResult{
+				Name:    "FP16/BF16 Support",
+				Status:  "FAIL",
+				Message: fmt.Sprintf("Compute capability: %s (need ≥ 7.0)", capabilities),
 			}
 		}
 	}
@@ -274,6 +296,14 @@ func checkFPSupport() CheckResult {
 func checkDiskSpace(threshold int) CheckResult {
 	const path = "/"
 	free := getFreeDiskGB(path)
+
+	if free < 0 {
+		return CheckResult{
+			Name:    "Disk Space",
+			Status:  "WARN",
+			Message: "Unable to determine free disk space",
+		}
+	}
 
 	if free < threshold {
 		return CheckResult{
@@ -410,10 +440,18 @@ func checkRemoteGPU(client *ssh.Client) CheckResult {
 
 func checkRemoteFPSupport(client *ssh.Client) CheckResult {
 	if out, err := remoteCmd(client, "nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null"); err == nil && out != "" {
-		return CheckResult{
-			Name:    "FP16/BF16 Support",
-			Status:  "PASS",
-			Message: "FP16/BF16 likely supported",
+		if supported, capabilities, ok := computeCapabilitySupport(out); ok && supported {
+			return CheckResult{
+				Name:    "FP16/BF16 Support",
+				Status:  "PASS",
+				Message: fmt.Sprintf("Compute capability: %s (FP16/BF16 supported)", capabilities),
+			}
+		} else if ok {
+			return CheckResult{
+				Name:    "FP16/BF16 Support",
+				Status:  "FAIL",
+				Message: fmt.Sprintf("Compute capability: %s (need ≥ 7.0)", capabilities),
+			}
 		}
 	}
 
@@ -510,15 +548,46 @@ func checkRemoteHTTPSConnectivity(client *ssh.Client) CheckResult {
 // ============================================================================
 
 func runCmd(name string, args ...string) (string, error) {
-	// Implementation uses os/exec which we avoid for simplicity
-	// In production, this would use exec.Command
-	return "", fmt.Errorf("not implemented for local execution")
+	output, err := exec.Command(name, args...).CombinedOutput()
+	return string(output), err
 }
 
 func getFreeDiskGB(path string) int {
-	// Simplified: return 0 to indicate unable to check
-	// In production, use syscall.Statfs
-	return 0
+	var stat unix.Statfs_t
+	if err := unix.Statfs(path, &stat); err != nil {
+		return -1
+	}
+
+	return int((stat.Bavail * uint64(stat.Bsize)) / (1024 * 1024 * 1024))
+}
+
+func computeCapabilitySupport(output string) (bool, string, bool) {
+	var capabilities []string
+	parsed := 0
+
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		capabilities = append(capabilities, line)
+
+		capability, err := strconv.ParseFloat(line, 64)
+		if err != nil {
+			continue
+		}
+		parsed++
+		if capability < 7.0 {
+			return false, strings.Join(capabilities, ", "), true
+		}
+	}
+
+	if parsed == 0 {
+		return false, "", false
+	}
+
+	return true, strings.Join(capabilities, ", "), true
 }
 
 func printReport(report HealthReport) {

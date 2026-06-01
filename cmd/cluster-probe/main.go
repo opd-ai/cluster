@@ -13,40 +13,42 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/opd-ai/cluster/internal/sshutil"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
 type Node struct {
-	Hostname  string            `yaml:"hostname" json:"hostname"`
-	SSHUser   string            `yaml:"ssh_user" json:"ssh_user"`
-	Address   string            `yaml:"address" json:"address"`
-	Arch      string            `yaml:"arch" json:"arch"`
-	OS        string            `yaml:"os" json:"os"`
-	Role      string            `yaml:"role" json:"role"`
-	Accelerator string          `yaml:"accelerator" json:"accelerator"`
-	VramGB    int               `yaml:"vram_gb" json:"vram_gb"`
-	RamGB     int               `yaml:"ram_gb" json:"ram_gb"`
-	DiskGB    int               `yaml:"disk_gb" json:"disk_gb"`
-	Labels    map[string]string `yaml:"labels" json:"labels"`
+	Hostname    string            `yaml:"hostname" json:"hostname"`
+	SSHUser     string            `yaml:"ssh_user" json:"ssh_user"`
+	Address     string            `yaml:"address" json:"address"`
+	Arch        string            `yaml:"arch" json:"arch"`
+	OS          string            `yaml:"os" json:"os"`
+	Role        string            `yaml:"role" json:"role"`
+	Accelerator string            `yaml:"accelerator" json:"accelerator"`
+	VramGB      int               `yaml:"vram_gb" json:"vram_gb"`
+	RamGB       int               `yaml:"ram_gb" json:"ram_gb"`
+	DiskGB      int               `yaml:"disk_gb" json:"disk_gb"`
+	Labels      map[string]string `yaml:"labels" json:"labels"`
 }
 
 type HostInfo struct {
-	Hostname   string
-	Address    string
-	SSHUser    string
-	Arch       string
-	OS         string
+	Hostname    string
+	Address     string
+	SSHUser     string
+	Arch        string
+	OS          string
 	Accelerator string
-	VramGB     int
-	RamGB      int
-	DiskGB     int
+	VramGB      int
+	RamGB       int
+	DiskGB      int
 }
 
 func main() {
-	hostsFile, hostList, outputFile, keyPath, timeout, jsonOutput := parseFlags()
-	
+	hostsFile, hostList, outputFile, keyPath, knownHostsPath, timeout, jsonOutput, insecureSkipHostKeyCheck := parseFlags()
+
 	hosts := getHosts(hostsFile, hostList)
 	if len(hosts) == 0 {
 		log.Fatal("No hosts provided")
@@ -57,28 +59,30 @@ func main() {
 		log.Fatalf("Failed to load SSH key: %v", err)
 	}
 
-	nodes := probeHosts(hosts, signer, timeout)
-	
+	nodes := probeHosts(hosts, signer, knownHostsPath, timeout, insecureSkipHostKeyCheck)
+
 	outputResults(nodes, jsonOutput, outputFile)
 }
 
-func parseFlags() (hostsFile, hostList, outputFile, keyPath string, timeout int, jsonOutput bool) {
+func parseFlags() (hostsFile, hostList, outputFile, keyPath, knownHostsPath string, timeout int, jsonOutput, insecureSkipHostKeyCheck bool) {
 	hostsFileFlag := flag.String("hosts", "", "File containing hosts (one per line: user@host:port or user@host)")
 	hostListFlag := flag.String("host", "", "Single host to probe (format: user@host:port)")
 	outputFileFlag := flag.String("output", "", "Output inventory YAML file")
 	keyPathFlag := flag.String("key", "", "SSH private key path (default: ~/.ssh/id_rsa)")
+	knownHostsPathFlag := flag.String("known-hosts", "", "SSH known_hosts file (default: ~/.ssh/known_hosts)")
+	insecureSkipHostKeyCheckFlag := flag.Bool("insecure-skip-hostkey-check", false, "Skip SSH host key verification")
 	timeoutFlag := flag.Int("timeout", 10, "SSH timeout in seconds")
 	jsonOutputFlag := flag.Bool("json", false, "Output JSON instead of YAML")
 	flag.Parse()
 
-	return *hostsFileFlag, *hostListFlag, *outputFileFlag, *keyPathFlag, *timeoutFlag, *jsonOutputFlag
+	return *hostsFileFlag, *hostListFlag, *outputFileFlag, *keyPathFlag, *knownHostsPathFlag, *timeoutFlag, *jsonOutputFlag, *insecureSkipHostKeyCheckFlag
 }
 
 func getHosts(hostsFile, hostList string) []string {
 	if hostList != "" {
 		return []string{hostList}
 	}
-	
+
 	if hostsFile == "" {
 		log.Fatal("Must specify either -hosts or -host")
 	}
@@ -90,10 +94,10 @@ func getHosts(hostsFile, hostList string) []string {
 	return hosts
 }
 
-func probeHosts(hosts []string, signer ssh.Signer, timeout int) []*Node {
+func probeHosts(hosts []string, signer ssh.Signer, knownHostsPath string, timeout int, insecureSkipHostKeyCheck bool) []*Node {
 	var nodes []*Node
 	for _, hostStr := range hosts {
-		info, err := probeHost(hostStr, signer, timeout)
+		info, err := probeHost(hostStr, signer, knownHostsPath, timeout, insecureSkipHostKeyCheck)
 		if err != nil {
 			log.Printf("Failed to probe %s: %v", hostStr, err)
 			continue
@@ -183,7 +187,7 @@ func getAgentSigner() (ssh.Signer, error) {
 	return signers[0], nil
 }
 
-func probeHost(hostStr string, signer ssh.Signer, timeoutSec int) (*HostInfo, error) {
+func probeHost(hostStr string, signer ssh.Signer, knownHostsPath string, timeoutSec int, insecureSkipHostKeyCheck bool) (*HostInfo, error) {
 	// Parse host string
 	user, address, port := parseHostString(hostStr)
 	if user == "" {
@@ -194,7 +198,7 @@ func probeHost(hostStr string, signer ssh.Signer, timeoutSec int) (*HostInfo, er
 	}
 
 	// Connect to host
-	client, err := createSSHClient(user, address, port, signer, timeoutSec)
+	client, err := createSSHClient(user, address, port, signer, knownHostsPath, timeoutSec, insecureSkipHostKeyCheck)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +212,7 @@ func probeHost(hostStr string, signer ssh.Signer, timeoutSec int) (*HostInfo, er
 	hostname = strings.TrimSpace(hostname)
 
 	arch, _ := remoteCmd(client, "uname -m")
-	arch = strings.TrimSpace(arch)
+	arch = normalizeArch(strings.TrimSpace(arch))
 
 	osName, _ := remoteCmd(client, "uname -s")
 	osName = strings.TrimSpace(osName)
@@ -255,17 +259,33 @@ func parseHostString(hostStr string) (user, address, port string) {
 	return user, address, port
 }
 
-func createSSHClient(user, address, port string, signer ssh.Signer, timeoutSec int) (*ssh.Client, error) {
+func createSSHClient(user, address, port string, signer ssh.Signer, knownHostsPath string, timeoutSec int, insecureSkipHostKeyCheck bool) (*ssh.Client, error) {
+	hostKeyCallback, err := sshutil.HostKeyCallback(knownHostsPath, insecureSkipHostKeyCheck)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         0, // Handled at the TCP level
+		HostKeyCallback: hostKeyCallback,
+		Timeout:         time.Duration(timeoutSec) * time.Second,
 	}
 
 	return ssh.Dial("tcp", address+":"+port, config)
+}
+
+func normalizeArch(arch string) string {
+	switch arch {
+	case "x86_64":
+		return "amd64"
+	case "aarch64":
+		return "arm64"
+	default:
+		return arch
+	}
 }
 
 func remoteCmd(client *ssh.Client, cmd string) (string, error) {
