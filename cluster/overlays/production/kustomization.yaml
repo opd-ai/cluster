@@ -27,6 +27,7 @@ resources:
   - ssh-hardening.yaml
   - network-policies.yaml
   - cert-manager.yaml
+  - backup.yaml
 
 configMapGenerator:
   - name: grafana-dashboards-json

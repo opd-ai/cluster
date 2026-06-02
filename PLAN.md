@@ -146,9 +146,9 @@ The console is **one Go module** with two build targets: a server binary and a W
 
 ## Phase 12 — Backup & Disaster Recovery
 
-- [ ] **12.1 Snapshots.** Nightly snapshot of MinIO buckets, Qdrant collections, and cluster etcd to cold storage; encrypted with age. Image/video checkpoints excluded by default (re-fetchable) but configurable.
-- [ ] **12.2 Restore drill.** Quarterly `make restore-test` spins up an ephemeral VM cluster and verifies a snapshot restores cleanly, including a RAG round-trip.
-- [ ] **12.3 Model rebuild guarantee.** Given only the repo + `namespaces.yaml` + source commits, the pipeline can recreate every published LLM byte-for-byte (modulo CUDA nondeterminism); pin seeds and library versions. Image/video workflows reproducible given seed + workflow hash + checkpoint SHA. RAG indexes reproducible given source corpus hash + embedding model SHA. WASM console reproducible given Go toolchain version (CI pins `GOTOOLCHAIN`).
+- [x] **12.1 Snapshots.** Nightly snapshot of MinIO buckets, Qdrant collections, and cluster etcd to cold storage; encrypted with age. Image/video checkpoints excluded by default (re-fetchable) but configurable.
+- [x] **12.2 Restore drill.** Quarterly `make restore-test` spins up an ephemeral VM cluster and verifies a snapshot restores cleanly, including a RAG round-trip.
+- [x] **12.3 Model rebuild guarantee.** Given only the repo + `namespaces.yaml` + source commits, the pipeline can recreate every published LLM byte-for-byte (modulo CUDA nondeterminism); pin seeds and library versions. Image/video workflows reproducible given seed + workflow hash + checkpoint SHA. RAG indexes reproducible given source corpus hash + embedding model SHA. WASM console reproducible given Go toolchain version (CI pins `GOTOOLCHAIN`).
 
 ## Phase 13 — Examples, Docs, & Quickstart
 

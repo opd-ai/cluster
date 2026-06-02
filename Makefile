@@ -30,7 +30,7 @@ INVENTORY   ?= cluster/inventory.yaml
 
 .PHONY: help bootstrap up down sync train serve console console-wasm rag \
         status join drain clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
-        docs build tidy
+        docs build tidy restore-test
 
 # --------------------------------------------------------------------------
 # Help
@@ -83,6 +83,36 @@ join: ## Join a new node: make join HOST=<hostname>
 
 drain: ## Drain and remove a node: make drain HOST=<hostname>
 	$(GO) run $(GOFLAGS) ./cmd/drain $(if $(HOST),$(HOST),)
+
+restore-test: ## Quarterly DR drill: verify latest backup restores cleanly in an ephemeral namespace
+	@echo "==> Starting restore drill in ephemeral namespace restore-test-$$(date +%s)"
+	@NS="restore-test-$$(date +%s)"; \
+	  kubectl create namespace "$$NS"; \
+	  kubectl -n "$$NS" run restore-verify \
+	    --image=alpine:3.21 \
+	    --restart=Never \
+	    --env="COLD_STORAGE_ENDPOINT=$$(kubectl -n ai-cluster get secret backup-s3-credentials -o jsonpath='{.data.endpoint}' | base64 -d)" \
+	    --env="COLD_STORAGE_ACCESS_KEY=$$(kubectl -n ai-cluster get secret backup-s3-credentials -o jsonpath='{.data.access-key}' | base64 -d)" \
+	    --env="COLD_STORAGE_SECRET_KEY=$$(kubectl -n ai-cluster get secret backup-s3-credentials -o jsonpath='{.data.secret-key}' | base64 -d)" \
+	    --env="COLD_STORAGE_BUCKET=$$(kubectl -n ai-cluster get secret backup-s3-credentials -o jsonpath='{.data.bucket}' | base64 -d)" \
+	    --env="AGE_KEY=$$(kubectl -n ai-cluster get secret backup-age-key -o jsonpath='{.data.age\.key}' | base64 -d)" \
+	    -- sh -c ' \
+	      apk add --no-cache age curl jq mc wget tar >/dev/null; \
+	      wget -q -O /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc; \
+	      chmod +x /usr/local/bin/mc; \
+	      mc alias set cold "$$COLD_STORAGE_ENDPOINT" "$$COLD_STORAGE_ACCESS_KEY" "$$COLD_STORAGE_SECRET_KEY"; \
+	      LATEST=$$(mc ls "cold/$$COLD_STORAGE_BUCKET" --json | jq -r ".key" | sort | tail -1); \
+	      echo "Restoring from: $$LATEST"; \
+	      mc cp "cold/$$COLD_STORAGE_BUCKET/$$LATEST" /tmp/backup.tar.age; \
+	      echo "$$AGE_KEY" > /tmp/age.key; \
+	      age --decrypt -i /tmp/age.key -o /tmp/backup.tar /tmp/backup.tar.age; \
+	      tar -tf /tmp/backup.tar | head -20; \
+	      echo "Restore drill PASSED: backup archive is valid"; \
+	    '; \
+	  kubectl -n "$$NS" wait --for=condition=Completed pod/restore-verify --timeout=300s && \
+	    echo "==> Restore drill PASSED" || \
+	    (echo "==> Restore drill FAILED"; kubectl -n "$$NS" logs restore-verify); \
+	  kubectl delete namespace "$$NS"
 
 # --------------------------------------------------------------------------
 # Build all Go binaries

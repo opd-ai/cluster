@@ -64,6 +64,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GOTOOLCHAIN: local
         run: |
           set -euo pipefail
           mkdir -p dist/${GOOS}-${GOARCH}
