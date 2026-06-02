@@ -30,7 +30,7 @@ INVENTORY   ?= cluster/inventory.yaml
 
 .PHONY: help bootstrap up down sync train serve console console-wasm rag \
         status join drain clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
-        docs build tidy restore-test
+        docs build tidy restore-test changelog release upgrade
 
 # --------------------------------------------------------------------------
 # Help
@@ -170,6 +170,44 @@ tidy: ## go mod tidy
 # --------------------------------------------------------------------------
 docs: ## Generate documentation (placeholder)
 	@echo "TODO: generate docs (Phase 13)"
+
+# --------------------------------------------------------------------------
+# Release engineering
+# --------------------------------------------------------------------------
+changelog: ## Regenerate CHANGELOG.md from conventional commits using git-cliff
+	@command -v git-cliff >/dev/null 2>&1 || \
+	  { echo "git-cliff not found; install with: cargo install git-cliff"; exit 1; }
+	git-cliff --output CHANGELOG.md
+	@echo "CHANGELOG.md regenerated"
+
+release: ## Tag a new semver release: make release VERSION=v1.2.3
+	@[ -n "$(VERSION)" ] || { echo "Usage: make release VERSION=v1.2.3"; exit 1; }
+	@echo "==> Releasing $(VERSION)"
+	$(MAKE) changelog
+	git add CHANGELOG.md
+	git commit -m "chore: release $(VERSION)" --allow-empty
+	git tag -a "$(VERSION)" -m "Release $(VERSION)"
+	@echo "==> Tagged $(VERSION). Push with: git push origin $(VERSION)"
+
+upgrade: ## Rolling upgrade of cluster components in safe order
+	@echo "==> Phase 1: control plane"
+	kubectl -n kube-system rollout restart daemonset/ssh-hardening || true
+	@echo "==> Phase 2: stateful services"
+	kubectl -n ai-cluster rollout restart deployment/minio
+	kubectl -n ai-cluster rollout restart deployment/qdrant
+	kubectl -n ai-cluster rollout status deployment/minio --timeout=120s
+	kubectl -n ai-cluster rollout status deployment/qdrant --timeout=120s
+	@echo "==> Phase 3: stateless services"
+	kubectl -n ai-cluster rollout restart deployment/rag
+	kubectl -n ai-cluster rollout restart deployment/gateway
+	kubectl -n ai-cluster rollout restart deployment/console
+	kubectl -n ai-cluster rollout status deployment/rag     --timeout=120s
+	kubectl -n ai-cluster rollout status deployment/gateway --timeout=120s
+	kubectl -n ai-cluster rollout status deployment/console --timeout=120s
+	@echo "==> Phase 4: monitoring"
+	kubectl -n monitoring rollout restart deployment/prometheus \
+	  deployment/grafana deployment/loki deployment/tempo || true
+	@echo "==> Upgrade complete. WASM console cache-busted by content hash on next deploy."
 
 # --------------------------------------------------------------------------
 # Clean

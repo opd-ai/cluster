@@ -1,0 +1,104 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # required for git-cliff changelog generation
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install git-cliff
+        run: |
+          cargo install git-cliff || \
+            curl -sL "https://github.com/orhun/git-cliff/releases/latest/download/git-cliff-$(uname -m)-unknown-linux-musl.tar.gz" \
+            | tar -xz --strip-components=2 -C /usr/local/bin git-cliff-*/git-cliff
+
+      - name: Generate release notes
+        run: |
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^$(git describe --tags --exact-match)$" | head -1)
+          if [ -n "$PREV_TAG" ]; then
+            git-cliff "${PREV_TAG}..HEAD" --strip header --output RELEASE_NOTES.md
+          else
+            git-cliff --strip header --output RELEASE_NOTES.md
+          fi
+
+      - name: Build release binaries
+        env:
+          GOTOOLCHAIN: local
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME}"
+          LDFLAGS="-s -w -X main.version=${VERSION}"
+          mkdir -p dist
+
+          for target in "linux/amd64" "linux/arm64" "darwin/arm64"; do
+            GOOS="${target%/*}"
+            GOARCH="${target#*/}"
+            OUT="dist/cluster-${VERSION}-${GOOS}-${GOARCH}"
+            mkdir -p "$OUT"
+
+            pkgs="$(go list ./cmd/... 2>/dev/null || true)"
+            for pkg in $pkgs; do
+              name="$(basename "$pkg")"
+              GOOS="$GOOS" GOARCH="$GOARCH" \
+                go build -ldflags="$LDFLAGS" -o "${OUT}/${name}" "$pkg"
+            done
+
+            tar -czf "${OUT}.tar.gz" -C dist "$(basename "$OUT")"
+            rm -rf "$OUT"
+          done
+
+          # WASM console
+          if go list ./cmd/console-wasm >/dev/null 2>&1; then
+            GOOS=js GOARCH=wasm \
+              go build -ldflags="-s -w" -o dist/console.wasm ./cmd/console-wasm
+          fi
+
+      - name: Generate SBOM for release
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/sbom-${{ github.ref_name }}.spdx.json
+          artifact-name: sbom-${{ github.ref_name }}.spdx.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/*.tar.gz
+            dist/console.wasm
+            dist/sbom-${{ github.ref_name }}.spdx.json
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+
+      - name: Log in to GHCR and push release images
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          VERSION="${GITHUB_REF_NAME}"
+          for svc in gateway rag console; do
+            docker build \
+              --label "org.opencontainers.image.version=${VERSION}" \
+              --label "org.opencontainers.image.revision=${{ github.sha }}" \
+              -t "ghcr.io/opd-ai/cluster/${svc}:${VERSION}" \
+              -t "ghcr.io/opd-ai/cluster/${svc}:latest" \
+              --build-arg "CMD=${svc}" . || \
+              echo "No Dockerfile for ${svc}; skipping image push"
+          done

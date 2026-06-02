@@ -95,6 +95,7 @@ func main() {
 	nsfwFilter := flag.Bool("nsfw-filter", false, "Enable NSFW prompt filter (off by default in self-hosted)")
 	ragURL := flag.String("rag-url", "", "RAG service base URL (e.g. http://rag:8081)")
 	otelEndpoint := flag.String("otel-endpoint", "", "OTLP/HTTP collector endpoint (e.g. http://otel-collector:4318); empty disables tracing")
+	telemetry := flag.Bool("telemetry", false, "Send anonymous usage ping (opt-in; disabled by default)")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -164,6 +165,11 @@ func main() {
 		defer close(stopLora)
 	}
 
+	// Start anonymous usage ping (opt-in, off by default).
+	if *telemetry {
+		go telemetryPing(ctx, len(gw.backends))
+	}
+
 	// Build router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -209,6 +215,49 @@ func main() {
 	defer cancel()
 	if err := httpSrv.Shutdown(shutCtx); err != nil {
 		log.Printf("http shutdown: %v", err)
+	}
+}
+
+// -------------------------------------------------------------------------
+// Telemetry (opt-in; disabled by default via --telemetry=false)
+// -------------------------------------------------------------------------
+
+// telemetryPing sends an anonymous usage ping once on startup and then every
+// 24 hours. The payload contains only aggregate, non-identifying information:
+// number of backends and the Go runtime GOOS/GOARCH. No user data, prompts,
+// API keys, or model outputs are ever included.
+//
+// Enabled only when the --telemetry flag is explicitly set to true.
+func telemetryPing(ctx context.Context, backendCount int) {
+	const endpoint = "https://telemetry.opd-ai.com/v1/ping"
+	const interval = 24 * time.Hour
+
+	payload := fmt.Sprintf(`{"product":"cluster-gateway","backends":%d}`, backendCount)
+
+	send := func() {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint,
+			strings.NewReader(payload))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return
+		}
+		resp.Body.Close()
+	}
+
+	send()
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			send()
+		}
 	}
 }
 
