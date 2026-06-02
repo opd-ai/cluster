@@ -24,6 +24,9 @@ resources:
   - logging.yaml
   - tracing.yaml
   - alerting.yaml
+  - ssh-hardening.yaml
+  - network-policies.yaml
+  - cert-manager.yaml
 
 configMapGenerator:
   - name: grafana-dashboards-json

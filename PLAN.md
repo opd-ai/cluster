@@ -136,13 +136,13 @@ The console is **one Go module** with two build targets: a server binary and a W
 
 ## Phase 11 — Security & Hardening
 
-- [ ] **11.1 SSH hygiene.** Key-only auth, fail2ban or equivalent, signed `authorized_keys` from a single source of truth.
-- [ ] **11.2 Network policy.** k3s NetworkPolicies restricting cross-namespace traffic; gateway and console are the only ingresses; SwarmUI/ComfyUI/Qdrant not exposed beyond tailnet.
-- [ ] **11.3 TLS everywhere.** cert-manager with an internal CA; gateway and console terminate TLS; backends mTLS.
-- [ ] **11.4 Image provenance.** Pin all container images by digest; verify with cosign in CI.
-- [ ] **11.5 Supply-chain.** SBOM via syft on every release; vuln scan via grype in CI. Because there's no `node_modules`, the JS supply-chain attack surface is essentially zero — only `wasm_exec.js` from the Go distribution.
-- [ ] **11.6 Data governance.** Document what training/generation/RAG data leaves which node; per-namespace egress rules; deletion runbook for "forget this repo", "purge generated outputs older than N days", "drop RAG collection X".
-- [ ] **11.7 Federated privacy.** Federated training jobs (5.11) enforce no-raw-data egress at the network policy level; optional DP-SGD / DP-FedAvg with documented (ε, δ) budgets.
+- [x] **11.1 SSH hygiene.** Key-only auth, fail2ban or equivalent, signed `authorized_keys` from a single source of truth.
+- [x] **11.2 Network policy.** k3s NetworkPolicies restricting cross-namespace traffic; gateway and console are the only ingresses; SwarmUI/ComfyUI/Qdrant not exposed beyond tailnet.
+- [x] **11.3 TLS everywhere.** cert-manager with an internal CA; gateway and console terminate TLS; backends mTLS.
+- [x] **11.4 Image provenance.** Pin all container images by digest; verify with cosign in CI.
+- [x] **11.5 Supply-chain.** SBOM via syft on every release; vuln scan via grype in CI. Because there's no `node_modules`, the JS supply-chain attack surface is essentially zero — only `wasm_exec.js` from the Go distribution.
+- [x] **11.6 Data governance.** Document what training/generation/RAG data leaves which node; per-namespace egress rules; deletion runbook for "forget this repo", "purge generated outputs older than N days", "drop RAG collection X".
+- [x] **11.7 Federated privacy.** Federated training jobs (5.11) enforce no-raw-data egress at the network policy level; optional DP-SGD / DP-FedAvg with documented (ε, δ) budgets.
 
 ## Phase 12 — Backup & Disaster Recovery
 

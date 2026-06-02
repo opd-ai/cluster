@@ -1,0 +1,371 @@
+# cluster/overlays/production/network-policies.yaml
+#
+# Kubernetes NetworkPolicies for the AI cluster.
+#
+# Design:
+#   • Default-deny all ingress and egress in ai-cluster and monitoring namespaces.
+#   • Gateway and console are the only services reachable from outside the cluster
+#     (internet / tailnet).
+#   • Backend services (SwarmUI, ComfyUI, Qdrant, Ollama, RAG) are reachable only
+#     from within ai-cluster namespace — never directly from outside.
+#   • Monitoring namespace can scrape ai-cluster pods (Prometheus) and receive
+#     logs/traces from ai-cluster pods.
+#   • DNS (port 53) is always permitted so service discovery works.
+#   • training namespace may not egress raw data; only gradient updates are
+#     allowed to leave (enforced by allowedPort 8443 to the federation aggregator).
+---
+# ── ai-cluster: default deny all ────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: ai-cluster
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# ── ai-cluster: allow DNS egress ────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: ai-cluster
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# ── ai-cluster: gateway ingress (external traffic) ──────────────────────────
+# Gateway is the sole external-facing API endpoint.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-ingress
+  namespace: ai-cluster
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+---
+# ── ai-cluster: console ingress (external traffic, tailnet only) ─────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: console-ingress
+  namespace: ai-cluster
+spec:
+  podSelector:
+    matchLabels:
+      app: console
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+---
+# ── ai-cluster: gateway → backends egress ───────────────────────────────────
+# Gateway may reach Ollama (11434), RAG (8081), Qdrant (6333), SwarmUI (7801),
+# ComfyUI (8188), and MinIO (9000/9001).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-to-backends
+  namespace: ai-cluster
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: rag
+      ports:
+        - port: 8081
+    - to:
+        - podSelector:
+            matchLabels:
+              app: qdrant
+      ports:
+        - port: 6333
+    - to:
+        - podSelector:
+            matchLabels:
+              app: swarmui
+      ports:
+        - port: 7801
+    - to:
+        - podSelector:
+            matchLabels:
+              app: comfyui
+      ports:
+        - port: 8188
+    - to:
+        - podSelector:
+            matchLabels:
+              app: minio
+      ports:
+        - port: 9000
+    # Ollama runs on host-network nodes; allow egress on the Ollama port.
+    - ports:
+        - port: 11434
+---
+# ── ai-cluster: RAG → Qdrant + Ollama ───────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rag-to-backends
+  namespace: ai-cluster
+spec:
+  podSelector:
+    matchLabels:
+      app: rag
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - port: 8081
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: qdrant
+      ports:
+        - port: 6333
+    - ports:
+        - port: 11434
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# ── ai-cluster: Qdrant restricted ingress ───────────────────────────────────
+# Qdrant accepts connections only from RAG and gateway pods.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: qdrant-restricted-ingress
+  namespace: ai-cluster
+spec:
+  podSelector:
+    matchLabels:
+      app: qdrant
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: rag
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - port: 6333
+        - port: 6334
+---
+# ── ai-cluster: SwarmUI/ComfyUI restricted ingress ──────────────────────────
+# Only reachable via gateway — never directly from outside the cluster.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: swarmui-restricted-ingress
+  namespace: ai-cluster
+spec:
+  podSelector:
+    matchLabels:
+      app: swarmui
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - port: 7801
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: comfyui-restricted-ingress
+  namespace: ai-cluster
+spec:
+  podSelector:
+    matchLabels:
+      app: comfyui
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - port: 8188
+---
+# ── monitoring: default deny all ────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# ── monitoring: DNS egress ───────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# ── monitoring: Prometheus scrape egress → ai-cluster ───────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-scrape-egress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-cluster
+      ports:
+        - port: 9090
+        - port: 8080
+        - port: 8081
+        - port: 9100
+        - port: 9401
+        - port: 6333
+        - port: 11434
+    # node-exporter runs on host network
+    - ports:
+        - port: 9100
+        - port: 9401
+---
+# ── monitoring: Promtail ingress from ai-cluster pods ───────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: loki-ingress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: loki
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - port: 3100
+---
+# ── monitoring: Tempo ingress (OTLP traces) ──────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tempo-ingress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: tempo
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - port: 4317
+        - port: 4318
+---
+# ── training: default deny all + no raw-data egress ─────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: training
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: training
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# Training pods may egress only on port 8443 (federation aggregator).
+# This prevents raw training data from leaving the node while allowing
+# gradient updates to reach the central aggregator.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: training-gradient-egress
+  namespace: training
+spec:
+  podSelector:
+    matchLabels:
+      role: federated-worker
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 8443
+          protocol: TCP

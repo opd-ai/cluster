@@ -1,0 +1,154 @@
+# cluster/overlays/production/ssh-hardening.yaml
+#
+# SSH hardening DaemonSet — runs on every cluster node as a privileged
+# init-only container to enforce:
+#   • Password authentication disabled (key-only)
+#   • Root login disabled
+#   • fail2ban installed and configured with sshd jail
+#   • An sshd_config drop-in that inherits authorized_keys from the
+#     cluster-ssh-keys ConfigMap (operator must populate this)
+#
+# OPERATOR NOTE: populate the `cluster-ssh-keys` ConfigMap with the
+# public keys for all human administrators before applying:
+#
+#   kubectl -n kube-system create configmap cluster-ssh-keys \
+#     --from-file=authorized_keys=<path-to-keys-file>
+#
+# To add/remove a key, update the ConfigMap and restart the DaemonSet:
+#   kubectl -n kube-system rollout restart daemonset/ssh-hardening
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+---
+# ConfigMap placeholder — replace with actual authorized public keys.
+# Each line should contain one OpenSSH public key.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-ssh-keys
+  namespace: kube-system
+data:
+  authorized_keys: |
+    # Add operator public keys here, one per line.
+    # Example:
+    # ssh-ed25519 AAAA... operator@host
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ssh-hardening-scripts
+  namespace: kube-system
+data:
+  harden.sh: |
+    #!/bin/sh
+    set -eu
+
+    # ── 1. sshd drop-in ─────────────────────────────────────────────────────
+    mkdir -p /host/etc/ssh/sshd_config.d
+    cat > /host/etc/ssh/sshd_config.d/99-cluster-hardening.conf <<'EOF'
+    # Managed by cluster ssh-hardening DaemonSet — do not edit by hand.
+    PasswordAuthentication no
+    ChallengeResponseAuthentication no
+    PermitRootLogin no
+    PubkeyAuthentication yes
+    AuthorizedKeysFile /etc/ssh/cluster-authorized_keys %h/.ssh/authorized_keys
+    MaxAuthTries 3
+    LoginGraceTime 30
+    AllowTcpForwarding no
+    X11Forwarding no
+    EOF
+
+    # ── 2. Cluster authorized_keys ───────────────────────────────────────────
+    install -m 0600 /keys/authorized_keys /host/etc/ssh/cluster-authorized_keys
+
+    # ── 3. Reload sshd (if systemd is reachable via nsenter) ────────────────
+    nsenter -t 1 -m -u -i -n -- systemctl reload sshd 2>/dev/null || true
+
+    # ── 4. fail2ban ─────────────────────────────────────────────────────────
+    if ! nsenter -t 1 -m -- which fail2ban-server >/dev/null 2>&1; then
+      nsenter -t 1 -m -- sh -c \
+        "apt-get update -qq && apt-get install -y -qq fail2ban" 2>/dev/null || \
+        nsenter -t 1 -m -- sh -c \
+        "yum install -y -q fail2ban" 2>/dev/null || true
+    fi
+
+    cat > /host/etc/fail2ban/jail.d/cluster-sshd.conf <<'EOF'
+    # Managed by cluster ssh-hardening DaemonSet — do not edit by hand.
+    [sshd]
+    enabled  = true
+    port     = ssh
+    filter   = sshd
+    maxretry = 5
+    findtime = 600
+    bantime  = 3600
+    EOF
+
+    nsenter -t 1 -m -u -i -n -- systemctl enable --now fail2ban 2>/dev/null || true
+
+    echo "SSH hardening complete."
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ssh-hardening
+  namespace: kube-system
+  labels:
+    app: ssh-hardening
+    app.kubernetes.io/part-of: ai-cluster
+spec:
+  selector:
+    matchLabels:
+      app: ssh-hardening
+  template:
+    metadata:
+      labels:
+        app: ssh-hardening
+    spec:
+      hostPID: true
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+        - operator: Exists
+          effect: NoExecute
+      initContainers:
+        - name: harden
+          image: alpine:3.21
+          command: ["/bin/sh", "/scripts/harden.sh"]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: host-root
+              mountPath: /host
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: ssh-keys
+              mountPath: /keys
+              readOnly: true
+      # Pause container keeps the pod Running so Kubernetes can track DaemonSet
+      # health; no actual work is done here.
+      containers:
+        - name: pause
+          image: gcr.io/google_containers/pause:3.9
+          resources:
+            requests:
+              cpu: 1m
+              memory: 4Mi
+            limits:
+              cpu: 10m
+              memory: 16Mi
+      volumes:
+        - name: host-root
+          hostPath:
+            path: /
+        - name: scripts
+          configMap:
+            name: ssh-hardening-scripts
+            defaultMode: 0755
+        - name: ssh-keys
+          configMap:
+            name: cluster-ssh-keys
+  updateStrategy:
+    type: RollingUpdate

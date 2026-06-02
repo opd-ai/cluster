@@ -1,0 +1,221 @@
+# cluster/overlays/production/cert-manager.yaml
+#
+# cert-manager installation and cluster-wide PKI configuration.
+#
+# Architecture:
+#   • cert-manager runs in the cert-manager namespace (installed via the
+#     upstream static manifest; referenced here as a kustomize remote resource).
+#   • A self-signed bootstrap ClusterIssuer creates the cluster root CA.
+#   • A CA ClusterIssuer signs leaf certificates for all in-cluster services.
+#   • Gateway and console terminate external TLS.
+#   • Internal services (RAG, Qdrant, Prometheus, Loki, Tempo) use mTLS certs
+#     issued by the cluster CA.
+#
+# Prerequisites:
+#   Apply cert-manager CRDs first:
+#     kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.crds.yaml
+#   Then apply cert-manager itself:
+#     kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
+#   Wait for cert-manager pods to be ready before applying this overlay.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    app.kubernetes.io/part-of: cert-manager
+---
+# Step 1: Bootstrap self-signed issuer to create the cluster root CA cert.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+spec:
+  selfSigned: {}
+---
+# Step 2: Cluster root CA certificate (10-year lifetime, stored as a Secret).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cluster-root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: cluster-root-ca
+  subject:
+    organizations:
+      - opd-ai-cluster
+  secretName: cluster-root-ca-tls
+  duration: 87600h  # 10 years
+  renewBefore: 720h # renew 30 days before expiry
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Step 3: CA ClusterIssuer backed by the root CA — used for all leaf certs.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cluster-ca
+spec:
+  ca:
+    secretName: cluster-root-ca-tls
+---
+# ── Gateway TLS certificate ──────────────────────────────────────────────────
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gateway-tls
+  namespace: ai-cluster
+spec:
+  secretName: gateway-tls
+  duration: 2160h   # 90 days
+  renewBefore: 360h # renew 15 days before expiry
+  commonName: gateway.ai-cluster.svc.cluster.local
+  dnsNames:
+    - gateway.ai-cluster.svc.cluster.local
+    - gateway.ai-cluster.svc
+    - gateway
+  issuerRef:
+    name: cluster-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# ── Console TLS certificate ──────────────────────────────────────────────────
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: console-tls
+  namespace: ai-cluster
+spec:
+  secretName: console-tls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: console.ai-cluster.svc.cluster.local
+  dnsNames:
+    - console.ai-cluster.svc.cluster.local
+    - console.ai-cluster.svc
+    - console
+  issuerRef:
+    name: cluster-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# ── RAG mTLS certificate ─────────────────────────────────────────────────────
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rag-mtls
+  namespace: ai-cluster
+spec:
+  secretName: rag-mtls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: rag.ai-cluster.svc.cluster.local
+  dnsNames:
+    - rag.ai-cluster.svc.cluster.local
+    - rag.ai-cluster.svc
+    - rag
+  usages:
+    - server auth
+    - client auth
+  issuerRef:
+    name: cluster-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# ── Qdrant mTLS certificate ───────────────────────────────────────────────────
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: qdrant-mtls
+  namespace: ai-cluster
+spec:
+  secretName: qdrant-mtls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: qdrant.ai-cluster.svc.cluster.local
+  dnsNames:
+    - qdrant.ai-cluster.svc.cluster.local
+    - qdrant.ai-cluster.svc
+    - qdrant
+  usages:
+    - server auth
+    - client auth
+  issuerRef:
+    name: cluster-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# ── Prometheus mTLS certificate ───────────────────────────────────────────────
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prometheus-mtls
+  namespace: monitoring
+spec:
+  secretName: prometheus-mtls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: prometheus.monitoring.svc.cluster.local
+  dnsNames:
+    - prometheus.monitoring.svc.cluster.local
+    - prometheus.monitoring.svc
+    - prometheus
+  usages:
+    - server auth
+    - client auth
+  issuerRef:
+    name: cluster-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# ── Loki mTLS certificate ─────────────────────────────────────────────────────
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: loki-mtls
+  namespace: monitoring
+spec:
+  secretName: loki-mtls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: loki.monitoring.svc.cluster.local
+  dnsNames:
+    - loki.monitoring.svc.cluster.local
+    - loki.monitoring.svc
+    - loki
+  usages:
+    - server auth
+    - client auth
+  issuerRef:
+    name: cluster-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# ── Tempo mTLS certificate ────────────────────────────────────────────────────
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tempo-mtls
+  namespace: monitoring
+spec:
+  secretName: tempo-mtls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: tempo.monitoring.svc.cluster.local
+  dnsNames:
+    - tempo.monitoring.svc.cluster.local
+    - tempo.monitoring.svc
+    - tempo
+  usages:
+    - server auth
+    - client auth
+  issuerRef:
+    name: cluster-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
