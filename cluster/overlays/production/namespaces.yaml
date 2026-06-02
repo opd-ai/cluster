@@ -1,0 +1,24 @@
+# cluster/overlays/production/namespaces.yaml
+#
+# Kubernetes namespaces for the AI cluster services.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-cluster
+  labels:
+    app.kubernetes.io/part-of: ai-cluster
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/part-of: ai-cluster
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: training
+  labels:
+    app.kubernetes.io/part-of: ai-cluster

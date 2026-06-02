@@ -1,0 +1,38 @@
+# cluster/overlays/production/kustomization.yaml
+#
+# Production overlay — wires together all cluster service manifests.
+# Applied by the `cluster-services` Flux Kustomization (cluster/flux-system/gotk-sync.yaml).
+#
+# Apply manually with:
+#   kubectl apply -k cluster/overlays/production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+resources:
+  - ../../base
+  - namespaces.yaml
+  - minio.yaml
+  - gateway.yaml
+  - rag.yaml
+  - console.yaml
+  - registry.yaml
+  - qdrant.yaml
+  - monitoring.yaml
+  - prometheus-config.yaml
+  - dcgm-exporter.yaml
+  - grafana-dashboards.yaml
+  - logging.yaml
+  - tracing.yaml
+  - alerting.yaml
+  - ssh-hardening.yaml
+  - network-policies.yaml
+  - cert-manager.yaml
+  - backup.yaml
+
+configMapGenerator:
+  - name: grafana-dashboards-json
+    namespace: monitoring
+    files:
+      - ../../dashboards/cluster-overview.json
+      - ../../dashboards/gpu-vram-per-node.json
+      - ../../dashboards/gateway-qps-latency.json

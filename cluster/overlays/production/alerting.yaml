@@ -1,0 +1,225 @@
+# cluster/overlays/production/alerting.yaml
+#
+# Alertmanager + Prometheus alerting rules for the AI cluster.
+# Rules cover: node health, GPU OOM, disk pressure, gateway errors,
+# training job failures, Qdrant replica lag, and SwarmUI health.
+---
+# Alertmanager configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'default'
+
+    receivers:
+      - name: 'default'
+        # Add webhook / email / PagerDuty config here.
+        # Example webhook:
+        # webhook_configs:
+        #   - url: 'http://alertmanager-webhook:5001/alert'
+
+    inhibit_rules:
+      - source_matchers:
+          - severity = critical
+        target_matchers:
+          - severity = warning
+        equal: ['alertname']
+---
+# Alertmanager Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.28.1
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+          ports:
+            - containerPort: 9093
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+            - name: data
+              mountPath: /alertmanager
+      volumes:
+        - name: config
+          configMap:
+            name: alertmanager-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  selector:
+    app: alertmanager
+  ports:
+    - name: http
+      port: 9093
+      targetPort: 9093
+---
+# Prometheus alerting rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  cluster-rules.yml: |
+    groups:
+      - name: node
+        rules:
+          - alert: NodeDown
+            expr: up{job="node-exporter"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Node {{ $labels.instance }} is unreachable"
+              description: "node-exporter on {{ $labels.instance }} has been down for more than 2 minutes."
+
+          - alert: NodeDiskUsageHigh
+            expr: |
+              (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"})
+              / node_filesystem_size_bytes{mountpoint="/"} > 0.85
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Disk usage above 85% on {{ $labels.instance }}"
+              description: "Disk usage on {{ $labels.instance }} ({{ $labels.mountpoint }}) is {{ $value | humanizePercentage }}."
+
+          - alert: NodeMemoryPressure
+            expr: |
+              node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Low memory on {{ $labels.instance }}"
+              description: "Less than 10% memory available on {{ $labels.instance }}."
+
+      - name: gpu
+        rules:
+          - alert: GpuOOM
+            expr: DCGM_FI_DEV_FB_FREE == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "GPU OOM on {{ $labels.instance }} ({{ $labels.gpu }})"
+              description: "GPU {{ $labels.gpu }} on {{ $labels.instance }} has zero free VRAM."
+
+          - alert: GpuTemperatureHigh
+            expr: DCGM_FI_DEV_GPU_TEMP > 90
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "GPU temperature high on {{ $labels.instance }}"
+              description: "GPU {{ $labels.gpu }} on {{ $labels.instance }} is at {{ $value }}°C."
+
+          - alert: AppleSiliconThermalPressure
+            expr: powermetrics_thermal_pressure >= 2
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Thermal pressure on {{ $labels.instance }}"
+              description: "Apple Silicon node {{ $labels.instance }} thermal pressure is {{ $value }} (2=Serious, 3=Critical)."
+
+      - name: gateway
+        rules:
+          - alert: GatewayErrorRateHigh
+            expr: |
+              rate(gateway_request_errors_total[5m])
+              / rate(gateway_requests_total[5m]) > 0.05
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Gateway error rate above 5%"
+              description: "Gateway 5xx error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+          - alert: GatewayNoHealthyBackends
+            expr: gateway_backends_healthy == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "No healthy Ollama backends"
+              description: "All gateway backends are unhealthy; inference is unavailable."
+
+          - alert: GatewayBackendsDegraded
+            expr: gateway_backends_healthy < gateway_backends_total
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Some Ollama backends are unhealthy"
+              description: "{{ $value }} of {{ query \"gateway_backends_total\" | first | value }} backends are unhealthy."
+
+      - name: swarmui
+        rules:
+          - alert: SwarmUIDown
+            expr: up{job="swarmui"} == 0
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "SwarmUI backend is unreachable"
+              description: "SwarmUI on {{ $labels.instance }} has been unreachable for 2 minutes."
+
+      - name: qdrant
+        rules:
+          - alert: QdrantDown
+            expr: up{job="qdrant"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Qdrant vector database is unreachable"
+              description: "Qdrant on {{ $labels.instance }} has been unreachable for 2 minutes; RAG queries will fail."
+
+      - name: rag
+        rules:
+          - alert: RAGDown
+            expr: up{job="rag"} == 0
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "RAG service is unreachable"
+              description: "RAG service on {{ $labels.instance }} has been unreachable for 2 minutes."

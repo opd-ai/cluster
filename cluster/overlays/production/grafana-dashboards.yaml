@@ -1,0 +1,26 @@
+# cluster/overlays/production/grafana-dashboards.yaml
+#
+# Grafana sidecar provisioning: auto-loads all dashboards committed under
+# cluster/dashboards/ via the Grafana dashboard provisioner.
+# Dashboard JSON files are generated into a ConfigMap by kustomize.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provisioner
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: cluster-dashboards
+        orgId: 1
+        folder: Cluster
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards

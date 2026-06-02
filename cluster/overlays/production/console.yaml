@@ -1,0 +1,56 @@
+# cluster/overlays/production/console.yaml
+#
+# Web console — serves the Ebitengine WASM client and proxies gateway/RAG APIs.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console
+  namespace: ai-cluster
+  labels:
+    app: console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: console
+  template:
+    metadata:
+      labels:
+        app: console
+    spec:
+      containers:
+        - name: console
+          image: ghcr.io/opd-ai/cluster/console:latest
+          args:
+            - -addr
+            - :8888
+          env:
+            - name: GATEWAY_URL
+              value: "http://gateway.ai-cluster.svc.cluster.local"
+            - name: RAG_URL
+              value: "http://rag.ai-cluster.svc.cluster.local"
+          ports:
+            - containerPort: 8888
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8888
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: console
+  namespace: ai-cluster
+  labels:
+    app: console
+spec:
+  selector:
+    app: console
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8888

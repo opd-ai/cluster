@@ -1,0 +1,75 @@
+# cluster/overlays/production/gateway.yaml
+#
+# Inference gateway — OpenAI-compatible API front-end routing to Ollama
+# backends.  Serves /v1/chat/completions, /v1/completions, /v1/models,
+# /v1/embeddings, /v1/images/generations, /v1/videos/generations.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: ai-cluster
+  labels:
+    app: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: ghcr.io/opd-ai/cluster/gateway:latest
+          args:
+            - -inventory
+            - /etc/cluster/inventory.yaml
+            - -keys-file
+            - /etc/gateway/keys
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: inventory
+              mountPath: /etc/cluster
+              readOnly: true
+            - name: gateway-api-keys
+              mountPath: /etc/gateway
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: inventory
+          configMap:
+            name: cluster-inventory
+        - name: gateway-api-keys
+          secret:
+            secretName: gateway-api-keys
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: ai-cluster
+  labels:
+    app: gateway
+spec:
+  selector:
+    app: gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

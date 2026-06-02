@@ -49,30 +49,33 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/opd-ai/cluster/internal/tracing"
 )
 
 // Backend represents a single Ollama node.
 type Backend struct {
-	URL    string
-	Models []string
+	URL     string
+	Models  []string
 	Healthy bool
-	mu     sync.RWMutex
+	mu      sync.RWMutex
 }
 
 // Gateway is the main gateway state.
 type Gateway struct {
-	backends      []*Backend
-	apiKeys       map[string]struct{}
-	sticky        map[string]int // (key+model) → backend index
-	loraAdapters  map[string]LoRAAdapter
-	swarmURL      string
-	swarmHealthy  bool
-	ragURL        string
-	quotaCfg      *quotaConfig
-	mu            sync.RWMutex
-	httpClient    *http.Client  // shared client for connection pooling
-	rrIdx         atomic.Uint64 // round-robin counter for pickBackend
-	speculative   bool
+	backends     []*Backend
+	apiKeys      map[string]struct{}
+	sticky       map[string]int // (key+model) → backend index
+	loraAdapters map[string]LoRAAdapter
+	swarmURL     string
+	swarmHealthy bool
+	ragURL       string
+	quotaCfg     *quotaConfig
+	mu           sync.RWMutex
+	httpClient   *http.Client  // shared client for connection pooling
+	rrIdx        atomic.Uint64 // round-robin counter for pickBackend
+	speculative  bool
+	reqTotal     atomic.Int64 // total requests handled
+	reqErrors    atomic.Int64 // total gateway request failures
 }
 
 // maxStickyEntries limits the sticky session map size to prevent unbounded growth.
@@ -91,7 +94,19 @@ func main() {
 	maxVideos := flag.Int("max-videos-per-key-per-day", 0, "Daily video quota per API key (0=unlimited)")
 	nsfwFilter := flag.Bool("nsfw-filter", false, "Enable NSFW prompt filter (off by default in self-hosted)")
 	ragURL := flag.String("rag-url", "", "RAG service base URL (e.g. http://rag:8081)")
+	otelEndpoint := flag.String("otel-endpoint", "", "OTLP/HTTP collector endpoint (e.g. http://otel-collector:4318); empty disables tracing")
+	telemetry := flag.Bool("telemetry", false, "Send anonymous usage ping (opt-in; disabled by default)")
 	flag.Parse()
+
+	ctx := context.Background()
+	if *otelEndpoint != "" {
+		shutdown, err := tracing.Init(ctx, "gateway", *otelEndpoint)
+		if err != nil {
+			log.Printf("tracing init: %v (continuing without traces)", err)
+		} else {
+			defer shutdown(ctx) //nolint:errcheck
+		}
+	}
 
 	gw := &Gateway{
 		apiKeys:      make(map[string]struct{}),
@@ -150,10 +165,16 @@ func main() {
 		defer close(stopLora)
 	}
 
+	// Start anonymous usage ping (opt-in, off by default).
+	if *telemetry {
+		go telemetryPing(ctx, len(gw.backends))
+	}
+
 	// Build router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(tracing.Middleware("gateway"))
 	r.Use(gw.authMiddleware)
 
 	r.Get("/healthz", handleHealthz)
@@ -190,10 +211,53 @@ func main() {
 	<-quit
 
 	log.Println("gateway shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := httpSrv.Shutdown(ctx); err != nil {
+	if err := httpSrv.Shutdown(shutCtx); err != nil {
 		log.Printf("http shutdown: %v", err)
+	}
+}
+
+// -------------------------------------------------------------------------
+// Telemetry (opt-in; disabled by default via --telemetry=false)
+// -------------------------------------------------------------------------
+
+// telemetryPing sends an anonymous usage ping once on startup and then every
+// 24 hours. The payload contains only aggregate, non-identifying information:
+// number of backends and the Go runtime GOOS/GOARCH. No user data, prompts,
+// API keys, or model outputs are ever included.
+//
+// Enabled only when the --telemetry flag is explicitly set to true.
+func telemetryPing(ctx context.Context, backendCount int) {
+	const endpoint = "https://telemetry.opd-ai.com/v1/ping"
+	const interval = 24 * time.Hour
+
+	payload := fmt.Sprintf(`{"product":"cluster-gateway","backends":%d}`, backendCount)
+
+	send := func() {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint,
+			strings.NewReader(payload))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return
+		}
+		resp.Body.Close()
+	}
+
+	send()
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			send()
+		}
 	}
 }
 
@@ -208,6 +272,8 @@ func (gw *Gateway) authMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+
+		gw.reqTotal.Add(1)
 
 		if len(gw.apiKeys) == 0 {
 			// No keys configured — open mode
@@ -293,12 +359,22 @@ func (gw *Gateway) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	}
 	gw.mu.RUnlock()
 
+	reqTotal := gw.reqTotal.Load()
+	reqErrors := gw.reqErrors.Load()
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "# HELP gateway_backends_total Total configured backends\n")
 	fmt.Fprintf(w, "# TYPE gateway_backends_total gauge\n")
 	fmt.Fprintf(w, "gateway_backends_total %d\n", total)
 	fmt.Fprintf(w, "# HELP gateway_backends_healthy Healthy backends\n")
 	fmt.Fprintf(w, "# TYPE gateway_backends_healthy gauge\n")
 	fmt.Fprintf(w, "gateway_backends_healthy %d\n", healthy)
+	fmt.Fprintf(w, "# HELP gateway_requests_total Total authenticated API requests\n")
+	fmt.Fprintf(w, "# TYPE gateway_requests_total counter\n")
+	fmt.Fprintf(w, "gateway_requests_total %d\n", reqTotal)
+	fmt.Fprintf(w, "# HELP gateway_request_errors_total Total gateway transport and internal request failures\n")
+	fmt.Fprintf(w, "# TYPE gateway_request_errors_total counter\n")
+	fmt.Fprintf(w, "gateway_request_errors_total %d\n", reqErrors)
 }
 
 // -------------------------------------------------------------------------
@@ -315,8 +391,8 @@ func (gw *Gateway) handleListModels(w http.ResponseWriter, _ *http.Request) {
 			if _, ok := seen[m]; !ok {
 				seen[m] = struct{}{}
 				models = append(models, map[string]any{
-					"id":      m,
-					"object":  "model",
+					"id":       m,
+					"object":   "model",
 					"owned_by": "local",
 				})
 			}
@@ -485,12 +561,14 @@ func containsModel(models []string, model string) bool {
 func (gw *Gateway) proxyTo(url string, w http.ResponseWriter, r *http.Request, body map[string]json.RawMessage) {
 	data, err := json.Marshal(body)
 	if err != nil {
+		gw.reqErrors.Add(1)
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
 		return
 	}
 
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, strings.NewReader(string(data)))
 	if err != nil {
+		gw.reqErrors.Add(1)
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
 		return
 	}
@@ -498,6 +576,7 @@ func (gw *Gateway) proxyTo(url string, w http.ResponseWriter, r *http.Request, b
 
 	resp, err := gw.httpClient.Do(req)
 	if err != nil {
+		gw.reqErrors.Add(1)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadGateway)
 		return
 	}

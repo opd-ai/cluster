@@ -1,0 +1,73 @@
+# cluster/overlays/production/qdrant.yaml
+#
+# Qdrant vector store — collections per "knowledge namespace", snapshots to MinIO.
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  namespace: ai-cluster
+  labels:
+    app: qdrant
+spec:
+  serviceName: qdrant
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qdrant
+  template:
+    metadata:
+      labels:
+        app: qdrant
+    spec:
+      nodeSelector:
+        role: storage
+      containers:
+        - name: qdrant
+          image: qdrant/qdrant:latest
+          ports:
+            - containerPort: 6333
+              name: http
+            - containerPort: 6334
+              name: grpc
+          volumeMounts:
+            - name: data
+              mountPath: /qdrant/storage
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 6333
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 6333
+            initialDelaySeconds: 30
+            periodSeconds: 20
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant
+  namespace: ai-cluster
+  labels:
+    app: qdrant
+spec:
+  selector:
+    app: qdrant
+  ports:
+    - name: http
+      port: 6333
+      targetPort: 6333
+    - name: grpc
+      port: 6334
+      targetPort: 6334
