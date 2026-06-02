@@ -49,6 +49,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/opd-ai/cluster/internal/tracing"
 )
 
 // Backend represents a single Ollama node.
@@ -73,6 +74,8 @@ type Gateway struct {
 	httpClient    *http.Client  // shared client for connection pooling
 	rrIdx         atomic.Uint64 // round-robin counter for pickBackend
 	speculative   bool
+	reqTotal      atomic.Int64 // total requests handled
+	reqErrors     atomic.Int64 // total 5xx responses
 }
 
 // maxStickyEntries limits the sticky session map size to prevent unbounded growth.
@@ -91,7 +94,18 @@ func main() {
 	maxVideos := flag.Int("max-videos-per-key-per-day", 0, "Daily video quota per API key (0=unlimited)")
 	nsfwFilter := flag.Bool("nsfw-filter", false, "Enable NSFW prompt filter (off by default in self-hosted)")
 	ragURL := flag.String("rag-url", "", "RAG service base URL (e.g. http://rag:8081)")
+	otelEndpoint := flag.String("otel-endpoint", "", "OTLP/HTTP collector endpoint (e.g. http://otel-collector:4318); empty disables tracing")
 	flag.Parse()
+
+	ctx := context.Background()
+	if *otelEndpoint != "" {
+		shutdown, err := tracing.Init(ctx, "gateway", *otelEndpoint)
+		if err != nil {
+			log.Printf("tracing init: %v (continuing without traces)", err)
+		} else {
+			defer shutdown(ctx) //nolint:errcheck
+		}
+	}
 
 	gw := &Gateway{
 		apiKeys:      make(map[string]struct{}),
@@ -154,6 +168,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(tracing.Middleware("gateway"))
 	r.Use(gw.authMiddleware)
 
 	r.Get("/healthz", handleHealthz)
@@ -190,9 +205,9 @@ func main() {
 	<-quit
 
 	log.Println("gateway shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := httpSrv.Shutdown(ctx); err != nil {
+	if err := httpSrv.Shutdown(shutCtx); err != nil {
 		log.Printf("http shutdown: %v", err)
 	}
 }
@@ -208,6 +223,8 @@ func (gw *Gateway) authMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+
+		gw.reqTotal.Add(1)
 
 		if len(gw.apiKeys) == 0 {
 			// No keys configured — open mode
@@ -293,12 +310,22 @@ func (gw *Gateway) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	}
 	gw.mu.RUnlock()
 
+	reqTotal := gw.reqTotal.Load()
+	reqErrors := gw.reqErrors.Load()
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "# HELP gateway_backends_total Total configured backends\n")
 	fmt.Fprintf(w, "# TYPE gateway_backends_total gauge\n")
 	fmt.Fprintf(w, "gateway_backends_total %d\n", total)
 	fmt.Fprintf(w, "# HELP gateway_backends_healthy Healthy backends\n")
 	fmt.Fprintf(w, "# TYPE gateway_backends_healthy gauge\n")
 	fmt.Fprintf(w, "gateway_backends_healthy %d\n", healthy)
+	fmt.Fprintf(w, "# HELP gateway_requests_total Total authenticated API requests\n")
+	fmt.Fprintf(w, "# TYPE gateway_requests_total counter\n")
+	fmt.Fprintf(w, "gateway_requests_total %d\n", reqTotal)
+	fmt.Fprintf(w, "# HELP gateway_request_errors_total Total 5xx responses returned\n")
+	fmt.Fprintf(w, "# TYPE gateway_request_errors_total counter\n")
+	fmt.Fprintf(w, "gateway_request_errors_total %d\n", reqErrors)
 }
 
 // -------------------------------------------------------------------------
@@ -485,12 +512,14 @@ func containsModel(models []string, model string) bool {
 func (gw *Gateway) proxyTo(url string, w http.ResponseWriter, r *http.Request, body map[string]json.RawMessage) {
 	data, err := json.Marshal(body)
 	if err != nil {
+		gw.reqErrors.Add(1)
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
 		return
 	}
 
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, strings.NewReader(string(data)))
 	if err != nil {
+		gw.reqErrors.Add(1)
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
 		return
 	}
@@ -498,6 +527,7 @@ func (gw *Gateway) proxyTo(url string, w http.ResponseWriter, r *http.Request, b
 
 	resp, err := gw.httpClient.Do(req)
 	if err != nil {
+		gw.reqErrors.Add(1)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadGateway)
 		return
 	}

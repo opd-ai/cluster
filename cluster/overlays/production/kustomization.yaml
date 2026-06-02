@@ -10,6 +10,7 @@ kind: Kustomization
 namespace: default
 resources:
   - ../../base
+  - namespaces.yaml
   - minio.yaml
   - gateway.yaml
   - rag.yaml
@@ -17,4 +18,17 @@ resources:
   - registry.yaml
   - qdrant.yaml
   - monitoring.yaml
-  - namespaces.yaml
+  - prometheus-config.yaml
+  - dcgm-exporter.yaml
+  - grafana-dashboards.yaml
+  - logging.yaml
+  - tracing.yaml
+  - alerting.yaml
+
+configMapGenerator:
+  - name: grafana-dashboards-json
+    namespace: monitoring
+    files:
+      - ../../dashboards/cluster-overview.json
+      - ../../dashboards/gpu-vram-per-node.json
+      - ../../dashboards/gateway-qps-latency.json

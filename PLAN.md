@@ -128,11 +128,11 @@ The console is **one Go module** with two build targets: a server binary and a W
 
 ## Phase 10 — Observability
 
-- [ ] **10.1 Metrics.** Prometheus + node-exporter + dcgm-exporter (NVIDIA) / Apple `powermetrics` shim. Scrape Ollama, gateway, SwarmUI, ComfyUI, Qdrant, and console `/metrics` (every Go service uses `prometheus/client_golang`; we write small exporters in Go where upstream lacks `/metrics`).
-- [ ] **10.2 Dashboards.** Grafana dashboards committed as JSON: cluster overview, per-node GPU/VRAM, gateway QPS/latency, speculative decode acceptance rate, LoRA hot-swap cache hits, training job progress, federated round status, SwarmUI queue depth, video-gen long-job progress, RAG retrieval latency / recall, console request rate, **WASM bundle size & TTI trend**.
-- [ ] **10.3 Logs.** Loki + Promtail (or Vector) shipping container/systemd logs to warm storage; retention policy in config.
-- [ ] **10.4 Traces.** OpenTelemetry SDK (Go) in the gateway, console server, and RAG service; collector to Tempo; trace IDs surfaced in the Ebitengine console for any user request.
-- [ ] **10.5 Alerts.** Alertmanager rules for: node down, GPU OOM, disk > 85%, training job failed, eval regression, federated round divergence, gateway 5xx rate, SwarmUI backend unhealthy, video job stuck, Qdrant replica lag, WASM bundle bloat.
+- [x] **10.1 Metrics.** Prometheus + node-exporter + dcgm-exporter (NVIDIA) / Apple `powermetrics` shim. Scrape Ollama, gateway, SwarmUI, ComfyUI, Qdrant, and console `/metrics` (every Go service uses `prometheus/client_golang`; we write small exporters in Go where upstream lacks `/metrics`).
+- [x] **10.2 Dashboards.** Grafana dashboards committed as JSON: cluster overview, per-node GPU/VRAM, gateway QPS/latency, speculative decode acceptance rate, LoRA hot-swap cache hits, training job progress, federated round status, SwarmUI queue depth, video-gen long-job progress, RAG retrieval latency / recall, console request rate, **WASM bundle size & TTI trend**.
+- [x] **10.3 Logs.** Loki + Promtail (or Vector) shipping container/systemd logs to warm storage; retention policy in config.
+- [x] **10.4 Traces.** OpenTelemetry SDK (Go) in the gateway, console server, and RAG service; collector to Tempo; trace IDs surfaced in the Ebitengine console for any user request.
+- [x] **10.5 Alerts.** Alertmanager rules for: node down, GPU OOM, disk > 85%, training job failed, eval regression, federated round divergence, gateway 5xx rate, SwarmUI backend unhealthy, video job stuck, Qdrant replica lag, WASM bundle bloat.
 
 ## Phase 11 — Security & Hardening
 

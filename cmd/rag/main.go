@@ -23,10 +23,12 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
 	qdrant "github.com/qdrant/go-client/qdrant"
+	"github.com/opd-ai/cluster/internal/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -102,10 +104,12 @@ type result struct {
 
 // server holds the RAG service state.
 type server struct {
-	cfg        config
-	conn       *grpc.ClientConn
-	qPoints    qdrant.PointsClient
-	httpClient *http.Client
+	cfg          config
+	conn         *grpc.ClientConn
+	qPoints      qdrant.PointsClient
+	httpClient   *http.Client
+	queriesTotal atomic.Int64
+	answersTotal atomic.Int64
 }
 
 func newServer(cfg config, conn *grpc.ClientConn) *server {
@@ -167,6 +171,7 @@ func (s *server) handleQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.queriesTotal.Add(1)
 	writeJSON(w, queryResponse{Results: results})
 }
 
@@ -228,6 +233,23 @@ func (s *server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, answerResponse{Answer: answer, Citations: hits})
+	s.answersTotal.Add(1)
+}
+
+// -------------------------------------------------------------------------
+// /metrics — Prometheus text format
+// -------------------------------------------------------------------------
+
+func (s *server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
+	q := s.queriesTotal.Load()
+	a := s.answersTotal.Load()
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	fmt.Fprintf(w, "# HELP rag_queries_total Total /rag/query requests served\n")
+	fmt.Fprintf(w, "# TYPE rag_queries_total counter\n")
+	fmt.Fprintf(w, "rag_queries_total %d\n", q)
+	fmt.Fprintf(w, "# HELP rag_answers_total Total /rag/answer requests served\n")
+	fmt.Fprintf(w, "# TYPE rag_answers_total counter\n")
+	fmt.Fprintf(w, "rag_answers_total %d\n", a)
 }
 
 // -------------------------------------------------------------------------
@@ -473,7 +495,18 @@ func main() {
 	topK := flag.Int("top-k", 5, "Default number of results to return")
 	bm25Weight := flag.Float64("bm25-weight", 0.3, "BM25 weight in hybrid score (0=dense only, 1=BM25 only)")
 	apiKeyEnv := flag.String("api-key-env", "GATEWAY_API_KEYS", "Env var containing comma-separated API keys")
+	otelEndpoint := flag.String("otel-endpoint", "", "OTLP/HTTP collector endpoint; empty disables tracing")
 	flag.Parse()
+
+	ctx := context.Background()
+	if *otelEndpoint != "" {
+		shutdown, err := tracing.Init(ctx, "rag", *otelEndpoint)
+		if err != nil {
+			log.Printf("tracing init: %v (continuing without traces)", err)
+		} else {
+			defer shutdown(ctx) //nolint:errcheck
+		}
+	}
 
 	cfg := config{
 		addr:           *addr,
@@ -518,12 +551,16 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/rag/query", srv.handleQuery)
 	mux.HandleFunc("/rag/answer", srv.handleAnswer)
+	mux.HandleFunc("/metrics", srv.handleMetrics)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
 	log.Printf("rag service listening on %s", cfg.addr)
-	httpSrv := &http.Server{Addr: cfg.addr, Handler: mux}
+	httpSrv := &http.Server{
+		Addr:    cfg.addr,
+		Handler: tracing.Middleware("rag")(mux),
+	}
 
 	go func() {
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -536,9 +573,9 @@ func main() {
 	<-quit
 
 	log.Println("shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := httpSrv.Shutdown(ctx); err != nil {
+	if err := httpSrv.Shutdown(shutCtx); err != nil {
 		log.Printf("http shutdown: %v", err)
 	}
 }

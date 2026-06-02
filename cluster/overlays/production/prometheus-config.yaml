@@ -1,0 +1,139 @@
+# cluster/overlays/production/prometheus-config.yaml
+#
+# Prometheus scrape configuration for the AI cluster.
+# Covers: node-exporter, dcgm-exporter, powermetrics-exporter,
+# gateway, rag, Qdrant, Ollama, SwarmUI, ComfyUI, and the console server.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      # Node-level hardware metrics (all nodes)
+      - job_name: node-exporter
+        static_configs:
+          - targets: []
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__address__]
+            regex: '(.+):.*'
+            replacement: '${1}:9100'
+            target_label: __address__
+
+      # NVIDIA GPU metrics (NVIDIA nodes only — labelled hardware=nvidia)
+      - job_name: dcgm-exporter
+        static_configs:
+          - targets: []
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_label_hardware]
+            regex: nvidia
+            action: keep
+          - source_labels: [__address__]
+            regex: '(.+):.*'
+            replacement: '${1}:9400'
+            target_label: __address__
+
+      # Apple Silicon power metrics (macOS nodes — labelled os=darwin)
+      - job_name: powermetrics-exporter
+        static_configs:
+          - targets: []
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_label_beta_kubernetes_io_os]
+            regex: darwin
+            action: keep
+          - source_labels: [__address__]
+            regex: '(.+):.*'
+            replacement: '${1}:9401'
+            target_label: __address__
+
+      # AI cluster gateway
+      - job_name: gateway
+        metrics_path: /metrics
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [ai-cluster]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: gateway
+            action: keep
+
+      # RAG service
+      - job_name: rag
+        metrics_path: /metrics
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [ai-cluster]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: rag
+            action: keep
+
+      # Qdrant vector database (built-in Prometheus metrics on port 6333)
+      - job_name: qdrant
+        metrics_path: /metrics
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [ai-cluster]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: qdrant
+            action: keep
+          - source_labels: [__address__]
+            regex: '(.+):.*'
+            replacement: '${1}:6333'
+            target_label: __address__
+
+      # Ollama inference engine (each node runs its own Ollama on port 11434)
+      - job_name: ollama
+        metrics_path: /metrics
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__address__]
+            regex: '(.+):.*'
+            replacement: '${1}:11434'
+            target_label: __address__
+
+      # SwarmUI backend (port 7860) — basic up/down probe via /healthz
+      - job_name: swarmui
+        metrics_path: /healthz
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [ai-cluster]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: swarmui
+            action: keep
+
+      # ComfyUI backend (port 8188) — basic up/down probe via /queue
+      - job_name: comfyui
+        metrics_path: /queue
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [ai-cluster]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: comfyui
+            action: keep
+
+      # Prometheus self-monitoring
+      - job_name: prometheus
+        static_configs:
+          - targets: ['localhost:9090']
