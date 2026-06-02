@@ -64,6 +64,43 @@ Thumbs.db
 *.wasm
 !web/*.wasm
 
+# Root-level compiled binaries (built by `make build`, output belongs in bin/)
+/bootstrap
+/cache-gc
+/cluster-bootstrap
+/cluster-join
+/cluster-label
+/cluster-probe
+/console
+/console-wasm
+/dataset-build
+/doctor
+/drain
+/eval-harness
+/fedcoord
+/gateway
+/k8s-trainer
+/modelfile-gen
+/pipeline
+/placeholder
+/placer
+/powermetrics-exporter
+/rag
+/rag-eval
+/rag-ingest
+/rag-reindex
+/registry
+/repo-sync
+/status
+
+# Analysis / stats generator outputs
+*-cleanup.json
+pre-cleanup.json
+post-cleanup.json
+*-baseline.json
+*-post.json
+diff-report*.json
+
 # ---- Cluster state ----------------------------------------------------
 cluster/kubeconfig
 cluster/*.kubeconfig
