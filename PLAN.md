@@ -152,12 +152,12 @@ The console is **one Go module** with two build targets: a server binary and a W
 
 ## Phase 13 — Examples, Docs, & Quickstart
 
-- [ ] **13.1 Two-node quickstart.** `examples/quickstart-2node/` with a Vagrantfile or Multipass script that brings up two VMs, runs full bootstrap, trains a tiny model, generates a sample SDXL image, ingests a tiny RAG corpus, queries the gateway, and loads the Ebitengine console end-to-end. Should complete in < 60 minutes on a laptop.
-- [ ] **13.2 Mixed-fleet example.** `examples/mixed-fleet/` showing a Linux GPU box (LLM + image + video) + a Mac mini (LLM + embeddings) + a CPU-only node (RAG ingestion) working together.
-- [ ] **13.3 Architecture docs.** `docs/architecture.md` with diagrams: data flow, training flow (incl. federated), LLM inference flow (incl. speculative + hot-swap), image/video flow, RAG flow, console flow (including the Ebitengine WASM render path), failure modes.
-- [ ] **13.4 Runbooks.** `docs/runbooks/` for every common op: add node, replace failed disk, rotate keys, retrain a namespace, roll back a model, add a SwarmUI backend, install a new SDXL/Flux/video checkpoint, recover Qdrant, recover from a failed federated round, debug a frozen WASM canvas.
-- [ ] **13.5 Tuning guide.** `docs/tuning.md`: when per-repo LoRAs help, choosing rank/epochs, evaluating regressions, sizing VRAM for SDXL vs Flux vs video, picking schnell vs dev, draft-model selection for speculative decode, chunking strategies for RAG, WASM size-vs-feature tradeoffs.
-- [ ] **13.6 ADRs.** `docs/adr/` recording every load-bearing decision: k3s vs Nomad, Ollama vs vLLM for hot-swap, Tailscale vs WireGuard, SwarmUI vs raw ComfyUI, Qdrant vs Weaviate, **Ebitengine WASM vs SvelteKit/Next.js (and the accessibility tradeoff that drove Phase 8.14)**, FedAvg vs FedProx, etc.
+- [x] **13.1 Two-node quickstart.** `examples/quickstart-2node/` with a Vagrantfile or Multipass script that brings up two VMs, runs full bootstrap, trains a tiny model, generates a sample SDXL image, ingests a tiny RAG corpus, queries the gateway, and loads the Ebitengine console end-to-end. Should complete in < 60 minutes on a laptop.
+- [x] **13.2 Mixed-fleet example.** `examples/mixed-fleet/` showing a Linux GPU box (LLM + image + video) + a Mac mini (LLM + embeddings) + a CPU-only node (RAG ingestion) working together.
+- [x] **13.3 Architecture docs.** `docs/architecture.md` with diagrams: data flow, training flow (incl. federated), LLM inference flow (incl. speculative + hot-swap), image/video flow, RAG flow, console flow (including the Ebitengine WASM render path), failure modes.
+- [x] **13.4 Runbooks.** `docs/runbooks/` for every common op: add node, replace failed disk, rotate keys, retrain a namespace, roll back a model, add a SwarmUI backend, install a new SDXL/Flux/video checkpoint, recover Qdrant, recover from a failed federated round, debug a frozen WASM canvas.
+- [x] **13.5 Tuning guide.** `docs/tuning.md`: when per-repo LoRAs help, choosing rank/epochs, evaluating regressions, sizing VRAM for SDXL vs Flux vs video, picking schnell vs dev, draft-model selection for speculative decode, chunking strategies for RAG, WASM size-vs-feature tradeoffs.
+- [x] **13.6 ADRs.** `docs/adr/` recording every load-bearing decision: k3s vs Nomad, Ollama vs vLLM for hot-swap, Tailscale vs WireGuard, SwarmUI vs raw ComfyUI, Qdrant vs Weaviate, **Ebitengine WASM vs SvelteKit/Next.js (and the accessibility tradeoff that drove Phase 8.14)**, FedAvg vs FedProx, etc.
 
 ## Phase 14 — Release Engineering
 
