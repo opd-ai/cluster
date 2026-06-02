@@ -64,8 +64,7 @@ jobs:
           # Start gateway with a mock Ollama backend
           /tmp/e2e-gateway \
             -inventory cluster/inventory.yaml \
-            -addr 127.0.0.1:18080 \
-            -api-keys-path cluster/overlays/production/secrets-example.yaml &
+            -addr 127.0.0.1:18080 &
           GATEWAY_PID=$!
           echo "GATEWAY_PID=${GATEWAY_PID}" >> "$GITHUB_ENV"
 

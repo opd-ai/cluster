@@ -58,17 +58,18 @@ Python build dependencies (trainer nodes only) on the new node.
 ### 3. Join the node to the k3s cluster
 
 ```bash
-make join HOST=worker-3
-# or equivalently:
+mkdir -p /tmp/join-scripts
 go run ./cmd/cluster-join \
   --inventory cluster/inventory.yaml \
-  --kubeconfig cluster/kubeconfig
+  --script /tmp/join-scripts
+scp /tmp/join-scripts/worker-3-join.sh worker-3:/tmp/worker-3-join.sh
+ssh worker-3 'sudo sh /tmp/worker-3-join.sh'
 ```
 
 `cluster-join` will:
 1. SSH to the k3s control node to fetch a fresh one-shot join token.
-2. SSH to `worker-3` and run the k3s agent install with that token.
-3. Wait for the node to appear as `Ready` in `kubectl get nodes`.
+2. Generate a per-worker k3s join script for each Linux worker in the inventory.
+3. Write those scripts to the directory passed with `--script`.
 
 ---
 

@@ -4,12 +4,9 @@
 //
 //  1. Cordon — marks the node unschedulable so no new workloads land on it.
 //  2. Drain — evicts all pods (respects PodDisruptionBudgets).
-//  3. Replicate — ensures any node-local adapter or vector-shard data is
-//     copied to peer nodes before removal.
-//  4. Deregister — removes the node from the gateway backend list,
-//     the SwarmUI backend list (image-gen nodes), and the Qdrant cluster.
-//  5. Leave tailnet — runs `tailscale logout` on the node via SSH.
-//  6. Delete — removes the node object from k3s with `kubectl delete node`.
+//  3. Deregister — removes the node from the gateway backend list.
+//  4. Leave tailnet — runs `tailscale logout` on the node via SSH.
+//  5. Delete — removes the node object from k3s with `kubectl delete node`.
 //
 // Usage:
 //

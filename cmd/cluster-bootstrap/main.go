@@ -160,8 +160,14 @@ func bringUpCluster(nodes []NodeConfig, signer ssh.Signer, config BootstrapConfi
 
 	fmt.Printf("\n✓ k3s control-plane is up. Kubeconfig saved.\n")
 	fmt.Printf("\nTo join additional workers manually:\n")
-	fmt.Printf("  curl -sfL https://get.k3s.io | K3S_URL=https://%s:6443 K3S_TOKEN=%s sh -\n\n",
-		controlNode.Address, token)
+	sshUser := controlNode.SSHUser
+	if sshUser == "" {
+		sshUser = "root"
+	}
+	fmt.Printf("  TOKEN=$(ssh %s@%s 'sudo cat /var/lib/rancher/k3s/server/node-token')\n",
+		sshUser, controlNode.Address)
+	fmt.Printf("  curl -sfL https://get.k3s.io | K3S_URL=https://%s:6443 K3S_TOKEN=\"$TOKEN\" sh -\n\n",
+		controlNode.Address)
 	return nil
 }
 

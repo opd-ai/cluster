@@ -22,6 +22,9 @@ spec:
       containers:
         - name: console
           image: ghcr.io/opd-ai/cluster/console:latest
+          args:
+            - -addr
+            - :8888
           env:
             - name: GATEWAY_URL
               value: "http://gateway.ai-cluster.svc.cluster.local"

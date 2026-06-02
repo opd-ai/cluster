@@ -65,10 +65,11 @@ data:
     TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
     WORKDIR="/tmp/backup-${TIMESTAMP}"
     mkdir -p "${WORKDIR}"
+    mkdir -p "${WORKDIR}/qdrant"
 
     # ── 1. MinIO buckets snapshot ────────────────────────────────────────────
     echo "=== MinIO snapshot ==="
-    mc alias set local "http://minio:9000" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
+    mc alias set local "http://storage:9000" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
     # Sync all buckets except outputs (re-fetchable) and checkpoints (configurable)
     for bucket in models datasets adapters rag; do
       mc mirror --overwrite "local/${bucket}" "${WORKDIR}/minio/${bucket}/"
@@ -92,30 +93,21 @@ data:
       echo "Qdrant: saved ${col}"
     done
 
-    # ── 3. k3s etcd snapshot ─────────────────────────────────────────────────
-    echo "=== etcd snapshot ==="
-    if [ -S /var/run/k3s/containerd/containerd.sock ]; then
-      k3s etcd-snapshot save \
-        --etcd-snapshot-dir "${WORKDIR}/etcd" \
-        --name "etcd-${TIMESTAMP}" 2>/dev/null || \
-        echo "etcd snapshot skipped (not a k3s etcd node)"
-    fi
-
-    # ── 4. Encrypt with age ──────────────────────────────────────────────────
+    # ── 3. Encrypt with age ──────────────────────────────────────────────────
     echo "=== Encrypting ==="
     ARCHIVE="${WORKDIR}.tar"
-    tar -cf "${ARCHIVE}" -C "$(dirname ${WORKDIR})" "$(basename ${WORKDIR})"
+    tar -cf "${ARCHIVE}" -C "$(dirname "${WORKDIR}")" "$(basename "${WORKDIR}")"
     age -r "${AGE_RECIPIENT}" -o "${ARCHIVE}.age" "${ARCHIVE}"
     rm -rf "${WORKDIR}" "${ARCHIVE}"
 
-    # ── 5. Ship to cold storage ──────────────────────────────────────────────
+    # ── 4. Ship to cold storage ──────────────────────────────────────────────
     echo "=== Uploading ==="
     mc alias set cold "${COLD_STORAGE_ENDPOINT}" \
       "${COLD_STORAGE_ACCESS_KEY}" "${COLD_STORAGE_SECRET_KEY}"
     mc cp "${ARCHIVE}.age" "cold/${COLD_STORAGE_BUCKET}/cluster-backup-${TIMESTAMP}.tar.age"
     rm -f "${ARCHIVE}.age"
 
-    # ── 6. Prune backups older than retention period ─────────────────────────
+    # ── 5. Prune backups older than retention period ─────────────────────────
     RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-30}"
     mc find "cold/${COLD_STORAGE_BUCKET}" \
       --older-than "${RETAIN_DAYS}d" \
@@ -147,7 +139,15 @@ spec:
           containers:
             - name: backup
               image: alpine:3.21
-              command: ["/bin/sh", "/scripts/backup.sh"]
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  apk add --no-cache age curl jq tar wget
+                  wget -q -O /usr/local/bin/mc \
+                    https://dl.min.io/client/mc/release/linux-amd64/mc
+                  chmod +x /usr/local/bin/mc
+                  exec /bin/sh /scripts/backup.sh
               env:
                 - name: MINIO_ROOT_USER
                   valueFrom:
@@ -199,25 +199,8 @@ spec:
                 limits:
                   cpu: 500m
                   memory: 512Mi
-          initContainers:
-            - name: install-tools
-              image: alpine:3.21
-              command:
-                - sh
-                - -c
-                - |
-                  apk add --no-cache age curl jq tar
-                  # Install MinIO client
-                  wget -q -O /usr/local/bin/mc \
-                    https://dl.min.io/client/mc/release/linux-amd64/mc
-                  chmod +x /usr/local/bin/mc
-              volumeMounts:
-                - name: tools
-                  mountPath: /usr/local/bin
           volumes:
             - name: scripts
               configMap:
                 name: backup-scripts
                 defaultMode: 0755
-            - name: tools
-              emptyDir: {}

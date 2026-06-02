@@ -78,15 +78,15 @@ rag: ## Start the RAG service locally
 status: ## Diff declared vs actual cluster state
 	$(GO) run $(GOFLAGS) ./cmd/status
 
-join: ## Join a new node: make join HOST=<hostname>
-	$(GO) run $(GOFLAGS) ./cmd/cluster-join --inventory $(INVENTORY) $(if $(HOST),--host $(HOST),)
+join: ## Generate k3s join scripts for worker nodes in cluster/inventory.yaml
+	$(GO) run $(GOFLAGS) ./cmd/cluster-join --inventory $(INVENTORY)
 
 drain: ## Drain and remove a node: make drain HOST=<hostname>
 	$(GO) run $(GOFLAGS) ./cmd/drain $(if $(HOST),$(HOST),)
 
 restore-test: ## Quarterly DR drill: verify latest backup restores cleanly in an ephemeral namespace
-	@echo "==> Starting restore drill in ephemeral namespace restore-test-$$(date +%s)"
-	@NS="restore-test-$$(date +%s)"; \
+	@TS="$$(date +%s)"; NS="restore-test-$$TS"; \
+	  echo "==> Starting restore drill in ephemeral namespace $$NS"; \
 	  kubectl create namespace "$$NS"; \
 	  kubectl -n "$$NS" run restore-verify \
 	    --image=alpine:3.21 \

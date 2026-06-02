@@ -84,7 +84,9 @@ For permanent removal:
 To re-add the same node after draining:
 
 ```bash
-make join HOST=<hostname>
+go run ./cmd/cluster-join --inventory cluster/inventory.yaml --script /tmp/join-scripts
+scp /tmp/join-scripts/<hostname>-join.sh <hostname>:/tmp/<hostname>-join.sh
+ssh <hostname> 'sudo sh /tmp/<hostname>-join.sh'
 ```
 
 See `docs/runbooks/add-node.md` for the full add-a-node procedure.

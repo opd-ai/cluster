@@ -124,17 +124,23 @@ jobs:
       - name: Verify third-party images are pinned by digest
         run: |
           set -euo pipefail
+          unpinned=0
           # Extract all image references from cluster manifests
-          grep -rh 'image:' cluster/overlays/production/ | \
-            awk '{print $2}' | sort -u | \
-            grep -v '^ghcr.io/opd-ai/' | \
-            while read img; do
-              if echo "$img" | grep -qE '^[^:@]+:[^@]+@sha256:'; then
-                echo "OK (pinned): $img"
-              else
-                echo "WARN: $img is not pinned by digest" >&2
-              fi
-            done
+          while read -r img; do
+            if echo "$img" | grep -qE '.+@sha256:[a-f0-9]{64}$'; then
+              echo "OK (pinned): $img"
+            else
+              echo "WARN: $img is not pinned by digest" >&2
+              unpinned=1
+            fi
+          done < <(
+            grep -rh 'image:' cluster/overlays/production/ | \
+              awk '{print $2}' | sort -u | \
+              grep -v '^ghcr.io/opd-ai/'
+          )
+          if [ "$unpinned" -ne 0 ]; then
+            exit 1
+          fi
       - name: Sign built images with cosign (keyless)
         run: |
           set -euo pipefail

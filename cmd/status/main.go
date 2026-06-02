@@ -64,10 +64,10 @@ type ServiceStatus struct {
 
 // DriftReport is the result of comparing declared vs actual state.
 type DriftReport struct {
-	Timestamp    string          `json:"timestamp"`
-	NodeDrift    []NodeDrift     `json:"node_drift,omitempty"`
-	ServiceDrift []ServiceDrift  `json:"service_drift,omitempty"`
-	HasDrift     bool            `json:"has_drift"`
+	Timestamp    string         `json:"timestamp"`
+	NodeDrift    []NodeDrift    `json:"node_drift,omitempty"`
+	ServiceDrift []ServiceDrift `json:"service_drift,omitempty"`
+	HasDrift     bool           `json:"has_drift"`
 }
 
 // NodeDrift describes a mismatch between declared and actual node state.
@@ -84,10 +84,10 @@ type ServiceDrift struct {
 
 func main() {
 	var (
-		inventoryPath = flag.String("inventory", "cluster/inventory.yaml", "Path to inventory YAML")
+		inventoryPath  = flag.String("inventory", "cluster/inventory.yaml", "Path to inventory YAML")
 		kubeconfigPath = flag.String("kubeconfig", "cluster/kubeconfig", "Path to kubeconfig")
-		format        = flag.String("format", "text", "Output format: text|json")
-		gatewayURL    = flag.String("gateway-url", "http://localhost:8080", "Gateway base URL")
+		format         = flag.String("format", "text", "Output format: text|json")
+		gatewayURL     = flag.String("gateway-url", "http://localhost:8080", "Gateway base URL")
 	)
 	flag.Parse()
 
@@ -147,7 +147,7 @@ func loadDeclaredNodes(path string) ([]DeclaredNode, error) {
 // parses the output into a list of ActualNode values.
 func fetchActualNodes(kubeconfig string) ([]ActualNode, error) {
 	args := []string{"get", "nodes", "--no-headers",
-		"-o", "custom-columns=NAME:.metadata.name,READY:.status.conditions[-1].status"}
+		"-o", `jsonpath={range .items[*]}{.metadata.name}{"\t"}{range .status.conditions[?(@.type=="Ready")]}{.status}{end}{"\n"}{end}`}
 	if kubeconfig != "" {
 		args = append([]string{"--kubeconfig", kubeconfig}, args...)
 	}

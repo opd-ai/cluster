@@ -72,7 +72,7 @@ NEW_PASS=$(openssl rand -hex 32)
 
 kubectl -n ai-cluster create secret generic minio-credentials \
   --from-literal=root-user="${NEW_USER}" \
-  --from-literal=root-****** \
+  --from-literal=root-password="${NEW_PASS}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl -n ai-cluster rollout restart deployment/minio

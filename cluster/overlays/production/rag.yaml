@@ -22,6 +22,9 @@ spec:
       containers:
         - name: rag
           image: ghcr.io/opd-ai/cluster/rag:latest
+          args:
+            - -addr
+            - :8090
           env:
             - name: QDRANT_ADDR
               value: "qdrant.ai-cluster.svc.cluster.local:6334"

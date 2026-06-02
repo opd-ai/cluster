@@ -54,28 +54,28 @@ import (
 
 // Backend represents a single Ollama node.
 type Backend struct {
-	URL    string
-	Models []string
+	URL     string
+	Models  []string
 	Healthy bool
-	mu     sync.RWMutex
+	mu      sync.RWMutex
 }
 
 // Gateway is the main gateway state.
 type Gateway struct {
-	backends      []*Backend
-	apiKeys       map[string]struct{}
-	sticky        map[string]int // (key+model) → backend index
-	loraAdapters  map[string]LoRAAdapter
-	swarmURL      string
-	swarmHealthy  bool
-	ragURL        string
-	quotaCfg      *quotaConfig
-	mu            sync.RWMutex
-	httpClient    *http.Client  // shared client for connection pooling
-	rrIdx         atomic.Uint64 // round-robin counter for pickBackend
-	speculative   bool
-	reqTotal      atomic.Int64 // total requests handled
-	reqErrors     atomic.Int64 // total 5xx responses
+	backends     []*Backend
+	apiKeys      map[string]struct{}
+	sticky       map[string]int // (key+model) → backend index
+	loraAdapters map[string]LoRAAdapter
+	swarmURL     string
+	swarmHealthy bool
+	ragURL       string
+	quotaCfg     *quotaConfig
+	mu           sync.RWMutex
+	httpClient   *http.Client  // shared client for connection pooling
+	rrIdx        atomic.Uint64 // round-robin counter for pickBackend
+	speculative  bool
+	reqTotal     atomic.Int64 // total requests handled
+	reqErrors    atomic.Int64 // total gateway request failures
 }
 
 // maxStickyEntries limits the sticky session map size to prevent unbounded growth.
@@ -372,7 +372,7 @@ func (gw *Gateway) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "# HELP gateway_requests_total Total authenticated API requests\n")
 	fmt.Fprintf(w, "# TYPE gateway_requests_total counter\n")
 	fmt.Fprintf(w, "gateway_requests_total %d\n", reqTotal)
-	fmt.Fprintf(w, "# HELP gateway_request_errors_total Total 5xx responses returned\n")
+	fmt.Fprintf(w, "# HELP gateway_request_errors_total Total gateway transport and internal request failures\n")
 	fmt.Fprintf(w, "# TYPE gateway_request_errors_total counter\n")
 	fmt.Fprintf(w, "gateway_request_errors_total %d\n", reqErrors)
 }
@@ -391,8 +391,8 @@ func (gw *Gateway) handleListModels(w http.ResponseWriter, _ *http.Request) {
 			if _, ok := seen[m]; !ok {
 				seen[m] = struct{}{}
 				models = append(models, map[string]any{
-					"id":      m,
-					"object":  "model",
+					"id":       m,
+					"object":   "model",
 					"owned_by": "local",
 				})
 			}

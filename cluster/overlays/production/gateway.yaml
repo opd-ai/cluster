@@ -27,15 +27,17 @@ spec:
           args:
             - -inventory
             - /etc/cluster/inventory.yaml
-          env:
-            - name: GATEWAY_API_KEYS_PATH
-              value: /etc/cluster/api-keys.yaml
+            - -keys-file
+            - /etc/gateway/keys
           ports:
             - containerPort: 8080
               name: http
           volumeMounts:
             - name: inventory
               mountPath: /etc/cluster
+              readOnly: true
+            - name: gateway-api-keys
+              mountPath: /etc/gateway
               readOnly: true
           readinessProbe:
             httpGet:
@@ -53,6 +55,9 @@ spec:
         - name: inventory
           configMap:
             name: cluster-inventory
+        - name: gateway-api-keys
+          secret:
+            secretName: gateway-api-keys
 ---
 apiVersion: v1
 kind: Service

@@ -63,9 +63,9 @@ func Init(ctx context.Context, serviceName, endpoint string) (func(context.Conte
 	return tp.Shutdown, nil
 }
 
-// Start begins a new span under the global tracer for serviceName.
+// Start begins a new span under the shared tracing package tracer.
 func Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return otel.Tracer("").Start(ctx, spanName, opts...)
+	return otel.Tracer("github.com/opd-ai/cluster/internal/tracing").Start(ctx, spanName, opts...)
 }
 
 // Middleware wraps an http.Handler, extracting incoming trace context from
