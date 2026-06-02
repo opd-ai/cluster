@@ -1,0 +1,66 @@
+# cluster/flux-system/gotk-sync.yaml
+#
+# FluxCD GitRepository + Kustomization that reconciles the cluster state
+# from the `cluster/` directory of this repository.
+#
+# Bootstrap steps (run once from a machine with kubectl access):
+#
+#   # Install the Flux CLI
+#   curl -s https://fluxcd.io/install.sh | bash
+#
+#   # Bootstrap Flux into the cluster, pointing at this repo
+#   flux bootstrap github \
+#     --owner=<GITHUB_ORG> \
+#     --repository=cluster \
+#     --branch=main \
+#     --path=cluster/ \
+#     --personal
+#
+# After bootstrapping Flux manages itself from this file and will reconcile
+# any changes to cluster/ automatically on every git push.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: cluster
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/opd-ai/cluster
+  ref:
+    branch: main
+  secretRef:
+    name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cluster-base
+  namespace: flux-system
+spec:
+  interval: 5m
+  path: ./cluster/base
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: coredns
+      namespace: kube-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cluster-services
+  namespace: flux-system
+spec:
+  interval: 5m
+  path: ./cluster/overlays/production
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  dependsOn:
+    - name: cluster-base

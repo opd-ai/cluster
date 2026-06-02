@@ -1,0 +1,53 @@
+# cluster/overlays/production/rag.yaml
+#
+# RAG service — exposes /rag/query and /rag/answer backed by Qdrant + BM25.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag
+  namespace: ai-cluster
+  labels:
+    app: rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag
+  template:
+    metadata:
+      labels:
+        app: rag
+    spec:
+      containers:
+        - name: rag
+          image: ghcr.io/opd-ai/cluster/rag:latest
+          env:
+            - name: QDRANT_ADDR
+              value: "qdrant.ai-cluster.svc.cluster.local:6334"
+            - name: GATEWAY_URL
+              value: "http://gateway.ai-cluster.svc.cluster.local"
+          ports:
+            - containerPort: 8090
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag
+  namespace: ai-cluster
+  labels:
+    app: rag
+spec:
+  selector:
+    app: rag
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8090

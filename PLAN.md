@@ -118,13 +118,13 @@ The console is **one Go module** with two build targets: a server binary and a W
 
 ## Phase 9 — Self-Deployment
 
-- [ ] **9.1 Single-command bootstrap.** `./bootstrap` (Go binary) SSHes in, installs prereqs, brings up k3s, prints the worker join command.
-- [ ] **9.2 GitOps.** Install **FluxCD** pointed at the repo's `cluster/` directory; cluster reconciles itself from git.
-- [ ] **9.3 Bootstrap manifests.** All cluster services (MinIO, gateway, SwarmUI, ComfyUI backends, Qdrant, console, training operators, monitoring) defined as kustomize overlays in `cluster/`.
-- [ ] **9.4 Secrets management.** SOPS-encrypted secrets in git, decrypted by Flux using an age key seeded during bootstrap; document rotation.
-- [ ] **9.5 Drift detection.** `make status` (calls `cmd/status`, Go) diffs declared vs actual cluster state; CI nightly job reports drift.
-- [ ] **9.6 Add-a-node flow.** Documented runbook + script: append node to inventory → `make join HOST=<name>` → node appears, gets labeled, model placer / SwarmUI backend list / RAG ingestion workers reconcile within minutes.
-- [ ] **9.7 Remove-a-node flow.** `cmd/drain` (Go): cordon, evict workloads, replicate any unique adapter / vector-shard data to peers, deregister from gateway, SwarmUI, and Qdrant cluster, leave tailnet.
+- [x] **9.1 Single-command bootstrap.** `./bootstrap` (Go binary) SSHes in, installs prereqs, brings up k3s, prints the worker join command.
+- [x] **9.2 GitOps.** Install **FluxCD** pointed at the repo's `cluster/` directory; cluster reconciles itself from git.
+- [x] **9.3 Bootstrap manifests.** All cluster services (MinIO, gateway, SwarmUI, ComfyUI backends, Qdrant, console, training operators, monitoring) defined as kustomize overlays in `cluster/`.
+- [x] **9.4 Secrets management.** SOPS-encrypted secrets in git, decrypted by Flux using an age key seeded during bootstrap; document rotation.
+- [x] **9.5 Drift detection.** `make status` (calls `cmd/status`, Go) diffs declared vs actual cluster state; CI nightly job reports drift.
+- [x] **9.6 Add-a-node flow.** Documented runbook + script: append node to inventory → `make join HOST=<name>` → node appears, gets labeled, model placer / SwarmUI backend list / RAG ingestion workers reconcile within minutes.
+- [x] **9.7 Remove-a-node flow.** `cmd/drain` (Go): cordon, evict workloads, replicate any unique adapter / vector-shard data to peers, deregister from gateway, SwarmUI, and Qdrant cluster, leave tailnet.
 
 ## Phase 10 — Observability
 

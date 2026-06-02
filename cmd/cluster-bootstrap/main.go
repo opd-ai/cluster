@@ -159,6 +159,9 @@ func bringUpCluster(nodes []NodeConfig, signer ssh.Signer, config BootstrapConfi
 	}
 
 	fmt.Printf("\n✓ k3s control-plane is up. Kubeconfig saved.\n")
+	fmt.Printf("\nTo join additional workers manually:\n")
+	fmt.Printf("  curl -sfL https://get.k3s.io | K3S_URL=https://%s:6443 K3S_TOKEN=%s sh -\n\n",
+		controlNode.Address, token)
 	return nil
 }
 

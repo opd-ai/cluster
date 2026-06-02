@@ -29,7 +29,7 @@ PYTHON_DIR  := python
 INVENTORY   ?= cluster/inventory.yaml
 
 .PHONY: help bootstrap up down sync train serve console console-wasm rag \
-        status clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
+        status join drain clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
         docs build tidy
 
 # --------------------------------------------------------------------------
@@ -77,6 +77,12 @@ rag: ## Start the RAG service locally
 
 status: ## Diff declared vs actual cluster state
 	$(GO) run $(GOFLAGS) ./cmd/status
+
+join: ## Join a new node: make join HOST=<hostname>
+	$(GO) run $(GOFLAGS) ./cmd/cluster-join --inventory $(INVENTORY) $(if $(HOST),--host $(HOST),)
+
+drain: ## Drain and remove a node: make drain HOST=<hostname>
+	$(GO) run $(GOFLAGS) ./cmd/drain $(if $(HOST),$(HOST),)
 
 # --------------------------------------------------------------------------
 # Build all Go binaries

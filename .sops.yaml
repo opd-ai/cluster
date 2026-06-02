@@ -1,0 +1,12 @@
+# .sops.yaml — SOPS creation rules for the cluster repository.
+#
+# Replace the `age` value below with the public key generated during bootstrap
+# (see docs/secrets-management.md for the full procedure).
+#
+# IMPORTANT: Commit this file.  It contains only the PUBLIC key, which is safe.
+# Never commit the private key (age.key / keys.txt).
+creation_rules:
+  - path_regex: cluster/overlays/.*\.yaml$
+    # Replace with your actual age public key from `age-keygen`:
+    age: age1REPLACEME
+    encrypted_regex: "^(data|stringData)$"
