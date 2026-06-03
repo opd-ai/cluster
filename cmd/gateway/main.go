@@ -43,6 +43,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -62,27 +63,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Backend represents a single Ollama node.
-type Backend struct {
-	URL     string
-	Models  []string
-	Healthy bool
-	mu      sync.RWMutex
-}
-
 // Gateway is the main gateway state.
 type Gateway struct {
-	backends          []*Backend
+	lbRegistry        *lb.BackendRegistry
 	apiKeys           map[string]struct{}
-	sticky            map[string]int // (key+model) → backend index
+	sticky            map[string]string // (key+model) → backend address
 	loraAdapters      map[string]LoRAAdapter
 	swarmURL          string
 	swarmHealthy      bool
 	ragURL            string
 	quotaCfg          *quotaConfig
 	mu                sync.RWMutex
-	httpClient        *http.Client  // shared client for connection pooling
-	rrIdx             atomic.Uint64 // round-robin counter for pickBackend
+	httpClient        *http.Client // shared client for connection pooling
 	speculative       bool
 	reqTotal          atomic.Int64 // total requests handled
 	reqErrors         atomic.Int64 // total gateway request failures
@@ -125,7 +117,7 @@ func main() {
 
 	gw := &Gateway{
 		apiKeys:           make(map[string]struct{}),
-		sticky:            make(map[string]int),
+		sticky:            make(map[string]string),
 		loraAdapters:      make(map[string]LoRAAdapter),
 		pipelineResults:   make(map[string]*pipeline.PipelineExecution),
 		speculative:       *speculative,
@@ -151,6 +143,7 @@ func main() {
 		picker = lb.NewWeightedRoundRobin(nil)
 	}
 	lbRegistry := lb.NewBackendRegistry(picker)
+	gw.lbRegistry = lbRegistry
 	gw.pipelineExecutor = NewPipelineExecutor(lbRegistry)
 
 	// Shared HTTP client with connection pooling (H8).
@@ -163,20 +156,28 @@ func main() {
 		},
 	}
 
-	// Load backends
+	// Load backends into the lb registry
 	if *backendsStr != "" {
 		for _, u := range strings.Split(*backendsStr, ",") {
 			u = strings.TrimSpace(u)
 			if u != "" {
-				gw.backends = append(gw.backends, &Backend{URL: u, Healthy: true})
+				host, port := parseHostPort(u)
+				record := &lb.BackendRecord{
+					Address:  host,
+					Roles:    []string{"chat"},
+					Services: []inventory.ServiceBinding{{Role: "chat", Port: port}},
+					Healthy:  true,
+				}
+				if err := lbRegistry.Register(record); err != nil {
+					log.Printf("warning: failed to register backend %s: %v", u, err)
+				}
 			}
 		}
 	} else {
-		discovered := discoverBackends(*inventoryPath)
-		gw.backends = append(gw.backends, discovered...)
+		discoverAndRegisterBackends(*inventoryPath, lbRegistry)
 	}
 
-	if len(gw.backends) == 0 {
+	if len(lbRegistry.GetAll()) == 0 {
 		log.Println("Warning: no backends configured; gateway will start but cannot serve requests")
 	}
 
@@ -216,7 +217,7 @@ func main() {
 
 	// Start anonymous usage ping (opt-in, off by default).
 	if *telemetry {
-		go telemetryPing(ctx, len(gw.backends))
+		go telemetryPing(ctx, len(gw.lbRegistry.GetAll()))
 	}
 
 	// Build router
@@ -250,7 +251,7 @@ func main() {
 	r.Get("/v1/pipelines/{id}", gw.handleGetPipelineStatus)
 
 	log.Printf("gateway listening on %s (backends: %d, speculative: %v)",
-		*addr, len(gw.backends), *speculative)
+		*addr, len(lbRegistry.GetAll()), *speculative)
 	httpSrv := &http.Server{Addr: *addr, Handler: r}
 
 	go func() {
@@ -373,28 +374,29 @@ func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 
 func (gw *Gateway) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	gw.mu.RLock()
-	defer gw.mu.RUnlock()
+	swarmHealthy := gw.swarmHealthy
+	speculative := gw.speculative
+	gw.mu.RUnlock()
 
 	type backendStatus struct {
 		URL     string   `json:"url"`
 		Healthy bool     `json:"healthy"`
 		Models  []string `json:"models"`
 	}
-	var statuses []backendStatus
-	for _, b := range gw.backends {
-		b.mu.RLock()
+	backends := gw.lbRegistry.GetAll()
+	statuses := make([]backendStatus, 0, len(backends))
+	for _, b := range backends {
 		statuses = append(statuses, backendStatus{
-			URL:     b.URL,
+			URL:     backendURLForRole(b, "chat"),
 			Healthy: b.Healthy,
 			Models:  b.Models,
 		})
-		b.mu.RUnlock()
 	}
 
 	writeJSON(w, map[string]any{
 		"backends":      statuses,
-		"speculative":   gw.speculative,
-		"swarm_healthy": gw.swarmHealthy,
+		"speculative":   speculative,
+		"swarm_healthy": swarmHealthy,
 	})
 }
 
@@ -403,17 +405,14 @@ func (gw *Gateway) handleStatus(w http.ResponseWriter, _ *http.Request) {
 // -------------------------------------------------------------------------
 
 func (gw *Gateway) handleMetrics(w http.ResponseWriter, _ *http.Request) {
-	gw.mu.RLock()
+	backends := gw.lbRegistry.GetAll()
+	total := len(backends)
 	healthy := 0
-	total := len(gw.backends)
-	for _, b := range gw.backends {
-		b.mu.RLock()
+	for _, b := range backends {
 		if b.Healthy {
 			healthy++
 		}
-		b.mu.RUnlock()
 	}
-	gw.mu.RUnlock()
 
 	reqTotal := gw.reqTotal.Load()
 	reqErrors := gw.reqErrors.Load()
@@ -441,8 +440,7 @@ func (gw *Gateway) handleListModels(w http.ResponseWriter, _ *http.Request) {
 	seen := make(map[string]struct{})
 	var models []map[string]any
 
-	for _, b := range gw.backends {
-		b.mu.RLock()
+	for _, b := range gw.lbRegistry.GetAll() {
 		for _, m := range b.Models {
 			if _, ok := seen[m]; !ok {
 				seen[m] = struct{}{}
@@ -453,7 +451,6 @@ func (gw *Gateway) handleListModels(w http.ResponseWriter, _ *http.Request) {
 				})
 			}
 		}
-		b.mu.RUnlock()
 	}
 
 	writeJSON(w, map[string]any{"object": "list", "data": models})
@@ -491,13 +488,13 @@ func (gw *Gateway) handleChatCompletions(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	backend := gw.pickBackend(extractBearerToken(r), model)
+	backend := gw.pickBackend(extractBearerToken(r), "chat", model)
 	if backend == nil {
 		http.Error(w, `{"error":"no healthy backend for model"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	gw.proxyTo(backend.URL+"/api/chat", w, r, req)
+	gw.proxyTo(backendURLForRole(backend, "chat")+"/api/chat", w, r, req)
 }
 
 // -------------------------------------------------------------------------
@@ -516,13 +513,13 @@ func (gw *Gateway) handleCompletions(w http.ResponseWriter, r *http.Request) {
 		_ = json.Unmarshal(raw, &model)
 	}
 
-	backend := gw.pickBackend(extractBearerToken(r), model)
+	backend := gw.pickBackend(extractBearerToken(r), "chat", model)
 	if backend == nil {
 		http.Error(w, `{"error":"no healthy backend for model"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	gw.proxyTo(backend.URL+"/api/generate", w, r, req)
+	gw.proxyTo(backendURLForRole(backend, "chat")+"/api/generate", w, r, req)
 }
 
 // -------------------------------------------------------------------------
@@ -541,66 +538,65 @@ func (gw *Gateway) handleEmbeddings(w http.ResponseWriter, r *http.Request) {
 		_ = json.Unmarshal(raw, &model)
 	}
 
-	backend := gw.pickBackend(extractBearerToken(r), model)
+	backend := gw.pickBackend(extractBearerToken(r), "chat", model)
 	if backend == nil {
 		http.Error(w, `{"error":"no healthy backend for model"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	gw.proxyTo(backend.URL+"/api/embeddings", w, r, req)
+	gw.proxyTo(backendURLForRole(backend, "chat")+"/api/embeddings", w, r, req)
 }
 
 // -------------------------------------------------------------------------
 // Routing helpers
 // -------------------------------------------------------------------------
 
-// pickBackend returns a healthy backend for the given model using sticky
-// sessions per (key+model) with round-robin fallback.
-func (gw *Gateway) pickBackend(key, model string) *Backend {
-	gw.mu.Lock()
-	defer gw.mu.Unlock()
+// pickBackend returns a healthy BackendRecord for the given role and model using
+// sticky sessions per (key+role+model) with lb-strategy fallback.
+func (gw *Gateway) pickBackend(key, role, model string) *lb.BackendRecord {
+	stickyKey := key + ":" + role + ":" + model
 
-	// Collect healthy backends that have the model loaded.
-	var candidates []*Backend
-	var candidateIdx []int
-	for i, b := range gw.backends {
-		b.mu.RLock()
-		healthy := b.Healthy
-		hasModel := model == "" || containsModel(b.Models, model)
-		b.mu.RUnlock()
-		if healthy && hasModel {
-			candidates = append(candidates, b)
-			candidateIdx = append(candidateIdx, i)
+	gw.mu.Lock()
+	if addr, ok := gw.sticky[stickyKey]; ok {
+		gw.mu.Unlock()
+		if rec := gw.lbRegistry.GetByAddress(addr); rec != nil && rec.Healthy && (model == "" || containsModel(rec.Models, model)) {
+			return rec
 		}
+	} else {
+		gw.mu.Unlock()
 	}
 
-	if len(candidates) == 0 {
+	rec := gw.lbRegistry.Pick(role, model, "")
+	if rec == nil {
 		return nil
 	}
 
-	// Sticky session: reuse same backend if it's still healthy.
-	stickyKey := key + ":" + model
-	if idx, ok := gw.sticky[stickyKey]; ok {
-		for i, ci := range candidateIdx {
-			if ci == idx {
-				return candidates[i]
-			}
-		}
-	}
-
-	// Round-robin across candidates using an atomic counter (M5).
-	idx := int(gw.rrIdx.Add(1)-1) % len(candidates)
-	chosen := candidateIdx[idx]
-
-	// Evict an arbitrary entry if the sticky map exceeds the size cap (M4).
+	gw.mu.Lock()
 	if len(gw.sticky) >= maxStickyEntries {
 		for k := range gw.sticky {
 			delete(gw.sticky, k)
 			break
 		}
 	}
-	gw.sticky[stickyKey] = chosen
-	return candidates[idx]
+	gw.sticky[stickyKey] = rec.Address
+	gw.mu.Unlock()
+	return rec
+}
+
+// backendURLForRole returns the full URL for a role on the given BackendRecord.
+// It checks ServiceBinding entries first, then falls back to well-known ports.
+func backendURLForRole(rec *lb.BackendRecord, role string) string {
+	for _, svc := range rec.Services {
+		if svc.Role == role {
+			return fmt.Sprintf("http://%s:%s", rec.Address, svc.Port)
+		}
+	}
+	switch role {
+	case "image-gen":
+		return fmt.Sprintf("http://%s:7860", rec.Address)
+	default:
+		return fmt.Sprintf("http://%s:11434", rec.Address)
+	}
 }
 
 func containsModel(models []string, model string) bool {
@@ -678,39 +674,36 @@ func (gw *Gateway) probeLoop(interval time.Duration, stop <-chan struct{}) {
 	}
 }
 
-// discoveryLoop listens for UDP multicast beacons from node-agents and adds them as backends.
+// discoveryLoop listens for UDP multicast beacons from node-agents and registers them as backends.
 func (gw *Gateway) discoveryLoop(listener *discovery.Listener, stop <-chan struct{}) {
 	for {
 		select {
 		case beacon, ok := <-listener.MessagesCh():
 			if !ok {
-				// Channel closed; listener has stopped.
 				return
 			}
-			// Find the Ollama (chat) port from the beacon's service bindings.
-			// Fall back to the standard Ollama port 11434 if not advertised.
-			ollamaPort := "11434"
+			var services []inventory.ServiceBinding
 			for _, svc := range beacon.Services {
-				if svc.Role == "chat" {
-					ollamaPort = svc.Port
-					break
-				}
+				services = append(services, inventory.ServiceBinding{Role: svc.Role, Port: svc.Port})
 			}
-			backendURL := fmt.Sprintf("http://%s:%s", beacon.Address, ollamaPort)
-			gw.mu.Lock()
-			// Check if backend already exists
-			exists := false
-			for _, b := range gw.backends {
-				if b.URL == backendURL {
-					exists = true
-					break
-				}
+			if len(services) == 0 {
+				services = []inventory.ServiceBinding{{Role: "chat", Port: "11434"}}
 			}
-			if !exists {
-				log.Printf("Discovery: adding backend %s from beacon", backendURL)
-				gw.backends = append(gw.backends, &Backend{URL: backendURL, Healthy: true})
+			var roles []string
+			for _, svc := range services {
+				roles = append(roles, svc.Role)
 			}
-			gw.mu.Unlock()
+			rec := &lb.BackendRecord{
+				Address:  beacon.Address,
+				Roles:    roles,
+				Services: services,
+				Healthy:  true,
+			}
+			if err := gw.lbRegistry.Register(rec); err != nil {
+				log.Printf("Discovery: failed to register backend %s: %v", beacon.Address, err)
+			} else {
+				log.Printf("Discovery: registered backend %s (roles: %v)", beacon.Address, roles)
+			}
 		case <-stop:
 			return
 		}
@@ -718,19 +711,19 @@ func (gw *Gateway) discoveryLoop(listener *discovery.Listener, stop <-chan struc
 }
 
 func (gw *Gateway) probeAll() {
+	backends := gw.lbRegistry.GetAll()
 	gw.mu.RLock()
-	backends := make([]*Backend, len(gw.backends))
-	copy(backends, gw.backends)
 	swarmURL := gw.swarmURL
 	gw.mu.RUnlock()
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	for _, b := range backends {
-		models, healthy := probeBackend(client, b.URL)
-		b.mu.Lock()
-		b.Healthy = healthy
-		b.Models = models
-		b.mu.Unlock()
+		chatURL := backendURLForRole(b, "chat")
+		models, healthy := probeBackend(client, chatURL)
+		updated := *b
+		updated.Healthy = healthy
+		updated.Models = models
+		gw.lbRegistry.Register(&updated) //nolint:errcheck // re-register to propagate updated fields
 	}
 
 	if swarmURL != "" {
@@ -803,46 +796,75 @@ func probeSwarm(client *http.Client, swarmURL string) (healthy bool, queueDepth 
 // Backend discovery & API key loading
 // -------------------------------------------------------------------------
 
-func discoverBackends(inventoryPath string) []*Backend {
+// discoverAndRegisterBackends reads the inventory file and registers all nodes in the lb registry.
+func discoverAndRegisterBackends(inventoryPath string, reg *lb.BackendRegistry) {
 	data, err := os.ReadFile(inventoryPath)
 	if err != nil {
-		return nil
+		return
 	}
 
 	var doc map[string]interface{}
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil
+		return
 	}
 
 	nodesRaw, ok := doc["nodes"]
 	if !ok {
-		return nil
+		return
 	}
 
-	// Parse nodes using inventory.Node
 	nodeData, err := yaml.Marshal(map[string]interface{}{"nodes": nodesRaw})
 	if err != nil {
-		return nil
+		return
 	}
 
 	var nodesDoc struct {
 		Nodes []*inventory.Node `yaml:"nodes"`
 	}
 	if err := yaml.Unmarshal(nodeData, &nodesDoc); err != nil {
-		return nil
+		return
 	}
 
-	var backends []*Backend
 	for _, node := range nodesDoc.Nodes {
-		if node.Address != "" {
-			backend := &Backend{
-				URL:     "http://" + node.Address + ":11434",
-				Healthy: true,
-			}
-			backends = append(backends, backend)
+		if node.Address == "" {
+			continue
+		}
+		var services []inventory.ServiceBinding
+		var roles []string
+		for _, svc := range node.Services {
+			services = append(services, svc)
+			roles = append(roles, svc.Role)
+		}
+		if len(services) == 0 {
+			services = []inventory.ServiceBinding{{Role: "chat", Port: "11434"}}
+			roles = []string{"chat"}
+		}
+		rec := &lb.BackendRecord{
+			Address:  node.Address,
+			Roles:    roles,
+			Services: services,
+			Healthy:  true,
+		}
+		if err := reg.Register(rec); err != nil {
+			log.Printf("inventory: failed to register backend %s: %v", node.Address, err)
 		}
 	}
-	return backends
+}
+
+// parseHostPort extracts the host and port from a raw URL like "http://host:11434".
+// Returns host without port, and port as a string. Falls back to "11434" if not present.
+func parseHostPort(rawURL string) (host, port string) {
+	rawURL = strings.TrimPrefix(rawURL, "http://")
+	rawURL = strings.TrimPrefix(rawURL, "https://")
+	// Strip any path component.
+	if idx := strings.Index(rawURL, "/"); idx >= 0 {
+		rawURL = rawURL[:idx]
+	}
+	h, p, err := net.SplitHostPort(rawURL)
+	if err != nil {
+		return rawURL, "11434"
+	}
+	return h, p
 }
 
 func loadAPIKeys(gw *Gateway, keysFile string) {

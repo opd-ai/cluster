@@ -25,14 +25,17 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/opd-ai/cluster/internal/nodeapi"
 	"github.com/opd-ai/cluster/internal/uiapi"
 )
 
@@ -56,13 +59,14 @@ type Server struct {
 	wasmDir    string
 	apiKeys    map[string]uiapi.Role
 
-	mu       sync.RWMutex
-	state    uiapi.ClusterState
-	jobs     []uiapi.JobState
-	logBuf   []uiapi.LogLine
-	clients  map[chan uiapi.Message]struct{}
-	audit    *auditLog
-	sessions map[string]sessionEntry
+	mu             sync.RWMutex
+	state          uiapi.ClusterState
+	jobs           []uiapi.JobState
+	logBuf         []uiapi.LogLine
+	clients        map[chan uiapi.Message]struct{}
+	audit          *auditLog
+	sessions       map[string]sessionEntry
+	nodeAgentURLs  []string // derived from gateway /status backends
 }
 
 func newServer(addr, gatewayURL, wasmDir, keyFile string) (*Server, error) {
@@ -311,6 +315,72 @@ func (s *Server) broadcast(msg uiapi.Message) {
 // Polling loop — pull cluster state from gateway /status endpoint
 // -------------------------------------------------------------------------
 
+// pollNodeAgents periodically fetches metrics from all known node-agents
+// and broadcasts an AggregateMetrics message to connected WebSocket clients.
+func (s *Server) pollNodeAgents(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.fetchAndBroadcastAggMetrics(client)
+		}
+	}
+}
+
+func (s *Server) fetchAndBroadcastAggMetrics(client *http.Client) {
+	s.mu.RLock()
+	agentURLs := make([]string, len(s.nodeAgentURLs))
+	copy(agentURLs, s.nodeAgentURLs)
+	s.mu.RUnlock()
+
+	if len(agentURLs) == 0 {
+		return
+	}
+
+	agg := uiapi.AggregateMetrics{
+		Timestamp:      time.Now(),
+		PerRoleMetrics: make(map[string]uiapi.AggRoleMetrics),
+	}
+
+	for _, baseURL := range agentURLs {
+		url := baseURL + "/api/v1/metrics"
+		resp, err := client.Get(url) // #nosec G107 — operator-supplied URL
+		if err != nil {
+			continue
+		}
+		var m nodeapi.NodeMetricsExt
+		decErr := json.NewDecoder(resp.Body).Decode(&m)
+		resp.Body.Close()
+		if decErr != nil {
+			continue
+		}
+		agg.TotalCPUPct += m.CPUPct
+		agg.TotalMemPct += m.MemPct
+		for role, rm := range m.PerRole {
+			cur := agg.PerRoleMetrics[role]
+			cur.Role = role
+			cur.NodesActive++
+			cur.TotalQueueDepth += rm.QueueDepth
+			cur.TotalVRAMUsedMB += rm.VRAMUsedMB
+			cur.TotalVRAMBudgetMB += rm.VRAMTotalMB
+			agg.TotalVRAMUsedMB += rm.VRAMUsedMB
+			available := rm.VRAMTotalMB - rm.VRAMUsedMB
+			if available < 0 {
+				available = 0
+			}
+			agg.TotalVRAMAvailableMB += available
+			agg.PerRoleMetrics[role] = cur
+		}
+	}
+
+	s.broadcast(uiapi.Message{Type: uiapi.MsgAggregateMetrics, Payload: agg})
+}
+
 // pollGateway periodically fetches cluster state from the gateway.
 func (s *Server) pollGateway(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
@@ -344,6 +414,7 @@ func (s *Server) fetchGatewayState(client *http.Client) {
 
 	// Build a minimal ClusterState from gateway /status.
 	state := uiapi.ClusterState{UpdatedAt: time.Now()}
+	var agentURLs []string
 	if backendsRaw, ok := raw["backends"]; ok {
 		var backends []struct {
 			URL     string   `json:"url"`
@@ -358,15 +429,35 @@ func (s *Server) fetchGatewayState(client *http.Client) {
 					Healthy: b.Healthy,
 					Models:  b.Models,
 				})
+				// Derive node-agent URL from backend host (port 9977).
+				host := backendHost(b.URL)
+				if host != "" {
+					agentURLs = append(agentURLs, "http://"+host+":9977")
+				}
 			}
 		}
 	}
 
 	s.mu.Lock()
 	s.state = state
+	s.nodeAgentURLs = agentURLs
 	s.mu.Unlock()
 
 	s.broadcast(uiapi.Message{Type: uiapi.MsgClusterState, Payload: state})
+}
+
+// backendHost extracts just the hostname from a URL like "http://host:11434".
+func backendHost(rawURL string) string {
+	rawURL = strings.TrimPrefix(rawURL, "http://")
+	rawURL = strings.TrimPrefix(rawURL, "https://")
+	if idx := strings.Index(rawURL, "/"); idx >= 0 {
+		rawURL = rawURL[:idx]
+	}
+	h, _, err := net.SplitHostPort(rawURL)
+	if err != nil {
+		return rawURL // no port present
+	}
+	return h
 }
 
 // -------------------------------------------------------------------------
@@ -444,6 +535,7 @@ func main() {
 	defer cancel()
 
 	go srv.pollGateway(ctx, *pollInterval)
+	go srv.pollNodeAgents(ctx, *pollInterval)
 
 	httpSrv := &http.Server{
 		Addr:         *addr,

@@ -355,6 +355,9 @@ func (gw *Gateway) generateVideo(ctx context.Context, req videoGenerationRequest
 	if req.Image != "" {
 		swarmReq["init_image"] = req.Image
 	}
+	if req.Video != "" {
+		swarmReq["init_video"] = req.Video
+	}
 
 	data, err := json.Marshal(swarmReq)
 	if err != nil {
