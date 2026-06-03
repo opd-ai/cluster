@@ -274,7 +274,7 @@ func runConvert(cfg *pipelineConfig, ns NamespaceConfig) error {
 		}
 	} else {
 		// In dry-run mode, use a placeholder
-		convertScript = "python3 /path/to/convert_lora_to_gguf.py"
+		convertScript = "/path/to/convert_lora_to_gguf.py"
 	}
 
 	var convErrs []error

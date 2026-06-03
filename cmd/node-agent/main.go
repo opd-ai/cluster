@@ -32,7 +32,8 @@ func main() {
 	address := flag.String("address", "", "Node address/IP (required)")
 	vramGB := flag.Int("vram-gb", 0, "Total VRAM in GB")
 	ramGB := flag.Int("ram-gb", 0, "Total RAM in GB")
-	apiKey := flag.String("api-key", "", "****** for API authentication (optional; if empty, no auth required)")
+	apiKey := flag.String("api-key", "", "Bearer token required for /api/v1/* requests")
+	openAccess := flag.Bool("open", false, "Allow unauthenticated access to /api/v1/* endpoints")
 	flag.Parse()
 
 	if *rolesStr == "" {
@@ -40,6 +41,12 @@ func main() {
 	}
 	if *address == "" {
 		log.Fatal("--address is required")
+	}
+	if *apiKey == "" && !*openAccess {
+		log.Fatal("either --api-key or --open is required")
+	}
+	if *apiKey != "" && *openAccess {
+		log.Fatal("--api-key and --open cannot be used together")
 	}
 
 	roles := strings.Split(*rolesStr, ",")
@@ -112,6 +119,7 @@ func main() {
 		jobs:     make(map[string]pipelineJob),
 		jobsMu:   &sync.RWMutex{},
 		apiKey:   *apiKey,
+		open:     *openAccess,
 	}
 
 	// Process discovered beacons: reconcile to inventory and populate peers list
@@ -219,7 +227,8 @@ type apiHandlers struct {
 	jobs       map[string]pipelineJob
 	jobsMu     *sync.RWMutex
 	jobCounter atomic.Int64
-	apiKey     string // API key for bearer token auth (empty = no auth required)
+	apiKey     string
+	open       bool
 }
 
 type pipelineJob struct {
@@ -233,11 +242,10 @@ type pipelineJob struct {
 	UpdatedAt time.Time
 }
 
-// authMiddleware checks for bearer token if API key is configured.
+// authMiddleware checks for bearer token unless open access is explicitly enabled.
 func (h *apiHandlers) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If no API key configured, auth is not required
-		if h.apiKey == "" {
+		if h.open {
 			next.ServeHTTP(w, r)
 			return
 		}
