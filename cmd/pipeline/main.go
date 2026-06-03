@@ -254,20 +254,27 @@ func runConvert(cfg *pipelineConfig, ns NamespaceConfig) error {
 	if _, err := os.Stat(setupScript); err != nil {
 		return fmt.Errorf("setup-llama-cpp.sh not found: %w", err)
 	}
-	// The script prints CONVERT_SCRIPT=<path> as its last line.
-	out, err := exec.Command("bash", setupScript).Output()
-	if err != nil {
-		return fmt.Errorf("setup-llama-cpp: %w", err)
-	}
-	convertScript := ""
-	for _, line := range strings.Split(string(out), "\n") {
-		if strings.HasPrefix(line, "CONVERT_SCRIPT=") {
-			convertScript = strings.TrimPrefix(line, "CONVERT_SCRIPT=")
-			convertScript = strings.TrimSpace(convertScript)
+
+	// In dry-run mode, skip setup script execution
+	var convertScript string
+	if !cfg.DryRun {
+		// The script prints CONVERT_SCRIPT=<path> as its last line.
+		out, err := exec.Command("bash", setupScript).Output()
+		if err != nil {
+			return fmt.Errorf("setup-llama-cpp: %w", err)
 		}
-	}
-	if convertScript == "" {
-		return fmt.Errorf("CONVERT_SCRIPT not found in setup-llama-cpp.sh output")
+		for _, line := range strings.Split(string(out), "\n") {
+			if strings.HasPrefix(line, "CONVERT_SCRIPT=") {
+				convertScript = strings.TrimPrefix(line, "CONVERT_SCRIPT=")
+				convertScript = strings.TrimSpace(convertScript)
+			}
+		}
+		if convertScript == "" {
+			return fmt.Errorf("CONVERT_SCRIPT not found in setup-llama-cpp.sh output")
+		}
+	} else {
+		// In dry-run mode, use a placeholder
+		convertScript = "python3 /path/to/convert_lora_to_gguf.py"
 	}
 
 	var convErrs []error

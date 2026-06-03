@@ -136,7 +136,7 @@ func main() {
 		}
 
 		for _, repo := range ns.Repos {
-			repoDir := filepath.Join(*repoCache, repo.Label)
+			repoDir := filepath.Join(*repoCache, sanitizeLabel(repo.Label))
 			if _, err := os.Stat(repoDir); err != nil {
 				log.Printf("repo %s: cache dir %s not found, skipping", repo.Label, repoDir)
 				continue
@@ -359,4 +359,10 @@ func loadNamespaces(path string) (*NamespacesFile, error) {
 		return nil, err
 	}
 	return &nsf, nil
+}
+
+// sanitizeLabel replaces path separators and spaces with underscores.
+func sanitizeLabel(label string) string {
+	r := strings.NewReplacer("/", "_", " ", "_", ":", "_")
+	return r.Replace(label)
 }

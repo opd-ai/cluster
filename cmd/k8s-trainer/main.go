@@ -49,7 +49,6 @@ type jobSpec struct {
 	GPUCount    int
 	DatasetPath string
 	CkptPath    string
-	NSFilePath  string
 }
 
 // stageToMode maps k8s-trainer stage names to train.py --mode values.
@@ -131,7 +130,6 @@ spec:
 `))
 
 func main() {
-	namespacesPath := flag.String("namespaces", "configs/namespaces.yaml", "Path to namespaces.yaml")
 	repo := flag.String("repo", "", "Repo label (required for train-repo)")
 	kubeconfig := flag.String("kubeconfig", "cluster/kubeconfig", "Path to kubeconfig")
 	image := flag.String("image", "ghcr.io/opd-ai/cluster-trainer:latest", "Trainer image")
@@ -181,7 +179,6 @@ func main() {
 		GPUCount:    *gpu,
 		DatasetPath: *datasets,
 		CkptPath:    *checkpoints,
-		NSFilePath:  *namespacesPath,
 	}
 
 	// Write Job manifest to a temp file with secure random name.
@@ -202,6 +199,15 @@ func main() {
 	// Apply the Job.
 	if err := kubectlRun(env, "apply", "-f", tmpFile); err != nil {
 		log.Fatalf("kubectl apply: %v", err)
+	}
+
+	// Defer cleanup to ensure it runs even if job fails.
+	if *cleanup {
+		defer func() {
+			if err := kubectlRun(env, "delete", "job", jobName); err != nil {
+				log.Printf("cleanup: %v", err)
+			}
+		}()
 	}
 
 	log.Printf("Job %s submitted; waiting (timeout: %d min)...", jobName, *timeout)
@@ -232,13 +238,6 @@ func main() {
 
 	// Stream final logs.
 	streamLogs(env, jobName)
-
-	// Cleanup.
-	if *cleanup {
-		if err := kubectlRun(env, "delete", "job", jobName); err != nil {
-			log.Printf("cleanup: %v", err)
-		}
-	}
 }
 
 // safeLabel matches Kubernetes label-safe identifiers and DNS subdomain
