@@ -5,9 +5,17 @@
 
 ## Overview
 
+The cluster uses a **zero-configuration architecture** by default. Nodes automatically discover each other via UDP multicast beacons on `239.77.0.1:9977`. The gateway joins the discovery multicast group and routes requests to discovered backends without requiring manual inventory configuration.
+
 ```
                     ┌─────────────────────────────────────────────┐
                     │                 Tailnet (VPN)                │
+                    │                                              │
+                    │  ┌────────────────────────────────────────┐ │
+                    │  │  UDP Multicast Discovery (239.77.0.1)  │ │
+                    │  │  • node-agent broadcasts every 10s     │ │
+                    │  │  • gateway/peers auto-discover nodes   │ │
+                    │  └────────────────────────────────────────┘ │
                     │                                              │
   Client ──HTTPS──► │  Gateway :8080 (ai-cluster namespace)       │
                     │    │                                         │
@@ -23,17 +31,43 @@
                     └─────────────────────────────────────────────┘
 ```
 
+## Node Discovery Flow
+
+Zero-configuration deployment uses the following discovery mechanism:
+
+```
+Node A (node-agent)
+  │  Start node-agent with --roles and --address
+  │  UDP beacon every 10s → 239.77.0.1:9977
+  │    Payload: {hostname, roles, address, port, seq}
+  ▼
+Multicast Group (239.77.0.1:9977)
+  │  Gateway and other node-agents join group
+  ▼
+Gateway / Peer Nodes
+  │  Receive beacon, deduplicate by (address, seq)
+  │  HTTP GET /api/v1/info → Node A (full capability metadata)
+  │  internal/discovery/reconciler.go merges into inventory
+  ▼
+Node registered in lb.BackendRegistry
+  │  Available for request routing
+```
+
+**Fallback:** If link-local multicast is filtered (corporate networks), discovery falls back to tailnet unicast.
+
 ## Data Flow
 
-### LLM Inference
+### LLM Inference (Zero-Conf Path)
 
 ```
 Client
   │  POST /v1/chat/completions {model, messages}
   ▼
-Gateway (cmd/gateway)
+Gateway (cmd/gateway) [--discovery=true by default]
   │  auth via API key (Authorization: Bearer)
-  │  select backend via Placer (inventory health check)
+  │  select backend via lb.BackendRegistry
+  │    → auto-discovered backends from multicast
+  │    → or manually configured inventory
   ▼
 Ollama :11434 (Linux/GPU node or Mac node)
   │  POST /api/chat
@@ -46,7 +80,8 @@ CPU-only node and verification to the full model on a GPU node. Draft and
 full model run in separate Ollama processes on different tailnet addresses.
 
 Hot-swap: Gateway re-reads inventory on SIGHUP; in-flight requests drain to
-old backend while new requests are routed to the new backend.
+old backend while new requests are routed to the new backend. Auto-discovered
+nodes are registered immediately without SIGHUP.
 
 ### Federated Training Flow
 

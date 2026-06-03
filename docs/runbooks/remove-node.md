@@ -1,20 +1,56 @@
 # Runbook: Remove a Node
 
-This runbook describes how to safely remove a node from a running cluster
-using `cmd/drain`.
+This runbook describes how to safely remove a node from a running cluster.
+For **zero-conf nodes**, simply stop the node-agent. For nodes with k3s integration, use `cmd/drain`.
 
 ---
 
 ## Prerequisites
 
-- The cluster is reachable via `cluster/kubeconfig`.
-- You have SSH access to the target node.
+- For zero-conf removal: Access to the node to stop services.
+- For k3s removal: The cluster is reachable via `cluster/kubeconfig`.
 - All stateful data on the node (adapters, vector shards) has a replica on
   at least one peer node, **or** you accept the data loss.
 
 ---
 
-## Steps
+## Zero-Configuration Removal (Recommended)
+
+For nodes added via zero-conf deployment, removal is straightforward:
+
+### 1. Stop the node-agent
+
+```bash
+# Linux
+sudo systemctl stop node-agent
+sudo systemctl disable node-agent
+
+# macOS
+sudo launchctl unload /Library/LaunchDaemons/ai.node-agent.plist
+```
+
+### 2. Verify removal
+
+The gateway and other nodes will stop receiving beacons from this node. After the health check timeout (default: 30 seconds), the node is automatically removed from routing.
+
+```bash
+# Verify the node is no longer being routed to
+curl http://localhost:8080/v1/models | jq '.data[].id'
+```
+
+### 3. Optional: Clean up services
+
+```bash
+# Stop Ollama and other services
+sudo systemctl stop ollama
+sudo systemctl stop swarmui  # if image-gen role
+```
+
+---
+
+## Manual Inventory / k3s Removal (Legacy)
+
+For nodes configured via manual inventory or integrated with k3s:
 
 ### 1. Verify the node is healthy enough to drain
 

@@ -1,6 +1,6 @@
 # Mixed-Fleet Example
 
-This example demonstrates a heterogeneous three-node cluster:
+This example demonstrates a heterogeneous three-node cluster using **zero-configuration deployment**. Nodes automatically discover each other via UDP multicast beacons.
 
 | Node | Hardware | Workloads |
 |------|----------|-----------|
@@ -8,7 +8,69 @@ This example demonstrates a heterogeneous three-node cluster:
 | `mac-mini` | macOS, Apple M2 Pro | LLM (13B), embeddings |
 | `cpu-node` | Linux, CPU-only | RAG ingestion, Qdrant |
 
-## Inventory
+## Zero-Configuration Setup (Recommended)
+
+With zero-conf, each node auto-discovers the others. No inventory file needed.
+
+### 1. Deploy on gpu-box (Linux + NVIDIA)
+
+```bash
+# On gpu-box
+git clone https://github.com/opd-ai/cluster.git && cd cluster
+make build
+
+# Deploy services (auto-detects NVIDIA GPU and VRAM)
+make deploy ROLES=chat,image-generation
+
+# Start node-agent for discovery
+make agent ROLES=chat,image-generation ADDRESS=$(tailscale ip -4)
+```
+
+### 2. Deploy on mac-mini (macOS + Apple Silicon)
+
+```bash
+# On mac-mini
+git clone https://github.com/opd-ai/cluster.git && cd cluster
+make build
+
+# Deploy services (auto-detects Apple Silicon)
+make deploy ROLES=chat
+
+# Start node-agent for discovery
+make agent ROLES=chat ADDRESS=$(tailscale ip -4)
+```
+
+### 3. Deploy on cpu-node (Linux, CPU-only)
+
+```bash
+# On cpu-node
+git clone https://github.com/opd-ai/cluster.git && cd cluster
+make build
+
+# Deploy RAG/Qdrant services
+make deploy ROLES=rag
+
+# Start node-agent for discovery
+make agent ROLES=rag ADDRESS=$(tailscale ip -4)
+```
+
+### 4. Verify discovery
+
+All nodes automatically discover each other. From any node:
+
+```bash
+# Check discovered peers
+curl http://localhost:9977/api/v1/peers | jq
+
+# Check gateway has all backends
+curl http://gpu-box:8080/v1/models | jq '.data[].id'
+```
+
+---
+
+## Manual Inventory (Legacy)
+
+For environments requiring explicit configuration:
 
 ```yaml
 # cluster/inventory.yaml
@@ -46,9 +108,9 @@ nodes:
     models: []
 ```
 
-## Routing behaviour
+## Routing Behaviour
 
-The gateway routes requests to the appropriate backend:
+The gateway routes requests to the appropriate backend (auto-discovered or from inventory):
 
 - `/v1/chat/completions` with `model: llama3.3:70b` → `gpu-box:11434`
 - `/v1/chat/completions` with `model: llama3.2:13b` → `mac-mini:11434`
@@ -57,7 +119,9 @@ The gateway routes requests to the appropriate backend:
 - `/v1/videos/generations` → `gpu-box:7801` (SwarmUI/video model)
 - RAG ingest → `cpu-node` (Qdrant via RAG service)
 
-## Bootstrap
+## Bootstrap (Legacy Manual Path)
+
+For manual inventory deployments:
 
 ```bash
 # From the control node (or any node with SSH access to all three)

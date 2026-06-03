@@ -20,21 +20,28 @@ This plan describes the design, implementation, and validation of multi-role nod
 
 ## Summary
 
-This plan extends the `opd-ai/cluster` Go 1.25 monorepo to deliver single-command, zero-config
-node deployment with automatic LAN peer discovery, intelligent load balancing, cross-node
-WebUI observability, and generative pipeline chaining. A central design constraint is that
-**a single physical host must be able to run any combination of node types simultaneously**
-(`chat`, `image-generation`, `training`); the inventory `Node` schema supports a `Roles []string`
-list, and resource budgeting logic in `internal/autotuner` partitions GPU/VRAM, CPU, and RAM
-across co-located roles at deploy time. Manual `cluster/inventory.yaml` editing remains fully
-supported; auto-discovery is additive and reconciles into the same schema via
-`internal/discovery/reconciler.go`.
+**Zero-configuration deployment is now the default path for the cluster.** This plan documents
+the design, implementation, and validation of the auto-discovery system that enables single-command,
+zero-config node deployment with automatic LAN peer discovery, intelligent load balancing, cross-node
+WebUI observability, and generative pipeline chaining.
+
+A central design constraint is that **a single physical host must be able to run any combination of
+node types simultaneously** (`chat`, `image-generation`, `training`); the inventory `Node` schema
+supports a `Roles []string` list, and resource budgeting logic in `internal/autotuner` partitions
+GPU/VRAM, CPU, and RAM across co-located roles at deploy time.
+
+**Deployment Paths:**
+- **Zero-Configuration (Default):** Run `make deploy` + `make agent` on each node. Nodes
+  auto-discover via UDP multicast (`239.77.0.1:9977`) and are automatically added to the gateway's
+  backend registry.
+- **Manual Inventory (Legacy):** Edit `cluster/inventory.yaml` and run `make bootstrap` + `make up`.
+  Auto-discovery reconciles into the same schema via `internal/discovery/reconciler.go`.
 
 **Current Status (2026-06-03):** Core infrastructure is implemented—the schema changes,
 `cmd/node-deploy`, `cmd/node-agent`, `internal/discovery`, `internal/lb`, `internal/pipeline`,
-and ADRs 008–011 are in place. Remaining work focuses on integration testing, completing
-gateway routing with `lb.BackendRegistry`, WebUI aggregation loops, and fixing known gaps
-documented in `GAPS.md`.
+and ADRs 008–011 are in place. Zero-conf is now the documented default deployment path.
+Remaining work focuses on integration testing, completing gateway routing with `lb.BackendRegistry`,
+WebUI aggregation loops, and fixing known gaps documented in `GAPS.md`.
 
 **Recent Documentation Improvements:**
 - Consolidated phase status with clear completion percentages

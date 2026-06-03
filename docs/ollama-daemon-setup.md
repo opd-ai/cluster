@@ -2,12 +2,32 @@
 
 Each GPU worker node in the cluster runs a local [Ollama](https://ollama.ai)
 daemon that serves models over the Ollama HTTP API on port **11434**.  
-The gateway (`cmd/gateway`) and placer (`cmd/placer`) communicate with these
-daemons directly over the Tailscale mesh network.
+The gateway (`cmd/gateway`) discovers these daemons automatically via the
+**zero-configuration discovery protocol** (UDP multicast on `239.77.0.1:9977`).
 
-## Linux — systemd Unit
+## Zero-Configuration Setup (Recommended)
 
-Deploy the included drop-in to every Ubuntu/Debian and RHEL worker:
+The easiest way to set up Ollama is through `cmd/node-deploy`:
+
+```bash
+# Deploy Ollama and configure systemd/launchd automatically
+make deploy ROLES=chat
+
+# Start node-agent for discovery (broadcasts to gateway and peers)
+make agent ROLES=chat ADDRESS=$(tailscale ip -4)
+```
+
+This will:
+1. Install Ollama if not present.
+2. Create systemd unit (Linux) or launchd plist (macOS).
+3. Configure resource budgets via `internal/autotuner`.
+4. Start the node-agent for automatic discovery.
+
+The gateway will automatically discover this node and route requests to it.
+
+## Manual Linux Setup — systemd Unit (Legacy)
+
+For manual configuration, deploy the included drop-in to every Ubuntu/Debian and RHEL worker:
 
 ```ini
 # /etc/systemd/system/ollama.service
@@ -57,11 +77,9 @@ curl http://localhost:11434/api/tags
 | `OLLAMA_FLASH_ATTENTION` | `1` | Enable Flash Attention (A100/H100) |
 | `CUDA_VISIBLE_DEVICES` | _(all)_ | Restrict to specific GPU indices |
 
-## macOS — launchd Plist
+## Manual macOS Setup — launchd Plist (Legacy)
 
-macOS nodes join as external workers.  Ollama must be installed manually
-from <https://ollama.ai/download/mac> and the following plist enables
-auto-start at login:
+For manual configuration on macOS nodes:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -102,11 +120,11 @@ sudo cp configs/ollama/ai.ollama.daemon.plist /Library/LaunchDaemons/
 sudo launchctl load -w /Library/LaunchDaemons/ai.ollama.daemon.plist
 ```
 
-## Automated Provisioning
+## Automated Provisioning (Legacy Inventory Path)
 
 `cmd/cluster-bootstrap` installs Ollama automatically on Linux workers via
-the `bootstrapUbuntuDebian` and `bootstrapRHEL` paths.  After bootstrap,
-run:
+the `bootstrapUbuntuDebian` and `bootstrapRHEL` paths when using manual inventory.
+After bootstrap, run:
 
 ```bash
 cluster-bootstrap --inventory cluster/inventory.yaml
@@ -114,14 +132,29 @@ cluster-bootstrap --inventory cluster/inventory.yaml
 
 The daemon is started automatically as part of the bootstrap sequence.
 
+**Note:** For zero-conf deployments, use `make deploy ROLES=chat` instead.
+
 ## Health Verification
 
+With zero-conf, the gateway automatically discovers and health-checks backends.
 The gateway probes `/api/tags` on each backend every 15 seconds (configurable
 via `--probe-interval`).  A node is marked unhealthy if the probe fails or
 returns a non-200 status.
 
+### Zero-Conf Health Check
+
 ```bash
-# Manual check from the control node
+# Check node-agent health endpoint
+curl http://localhost:9977/api/v1/health | jq
+
+# Check discovered peers
+curl http://localhost:9977/api/v1/peers | jq
+```
+
+### Manual Health Check (Legacy)
+
+```bash
+# Manual check using inventory file
 for node in $(grep 'address:' cluster/inventory.yaml | awk '{print $2}'); do
   echo -n "$node: "
   curl -s "http://$node:11434/api/tags" | jq '.models | length' 2>/dev/null || echo "UNREACHABLE"
