@@ -210,14 +210,14 @@ func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW *bufio.Write
 
 		rel, err := filepath.Rel(repoDir, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("filepath rel for %q: %w", path, err)
 		}
 		src := repoLabel + "/" + rel
 
 		ex := example{Text: text, Source: src}
 		line, err := json.Marshal(ex)
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal example for %q: %w", src, err)
 		}
 
 		if _, seen := repoSeen[hash]; !seen {

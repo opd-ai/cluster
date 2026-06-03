@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -27,6 +28,7 @@ type ragQueryResponse struct {
 
 // ragAdminScene lets operators browse/ingest RAG collections.
 type ragAdminScene struct {
+	mu         sync.Mutex
 	onBack     func()
 	backBtn    *ui.Button
 	queryBtn   *ui.Button
@@ -54,44 +56,69 @@ func newRAGAdminScene(onBack func()) *ragAdminScene {
 
 func (s *ragAdminScene) runQuery() {
 	q := strings.TrimSpace(s.queryInput)
-	if q == "" || s.busy {
+	if q == "" {
+		return
+	}
+
+	s.mu.Lock()
+	if s.busy {
+		s.mu.Unlock()
 		return
 	}
 	s.busy = true
+	s.mu.Unlock()
+
 	go func() {
-		defer func() { s.busy = false }()
 		url := fmt.Sprintf("/rag/query?collection=%s&q=%s&top_k=10",
 			s.collection, q)
 		resp, err := http.Get(url) // #nosec G107
 		if err != nil {
+			s.mu.Lock()
 			s.statusMsg = "query error: " + err.Error()
+			s.busy = false
+			s.mu.Unlock()
 			return
 		}
 		defer resp.Body.Close()
 		var result ragQueryResponse
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			s.mu.Lock()
 			s.statusMsg = "decode error"
+			s.busy = false
+			s.mu.Unlock()
 			return
 		}
+		s.mu.Lock()
 		s.chunks = result.Chunks
 		s.statusMsg = fmt.Sprintf("%d chunks", len(s.chunks))
+		s.busy = false
+		s.mu.Unlock()
 	}()
 }
 
 func (s *ragAdminScene) triggerReindex() {
+	s.mu.Lock()
 	if s.busy {
+		s.mu.Unlock()
 		return
 	}
 	s.busy = true
+	s.mu.Unlock()
+
 	go func() {
-		defer func() { s.busy = false }()
 		resp, err := http.Post("/api/reindex", "application/json", nil)
 		if err != nil {
+			s.mu.Lock()
 			s.statusMsg = "reindex error: " + err.Error()
+			s.busy = false
+			s.mu.Unlock()
 			return
 		}
 		resp.Body.Close()
+		s.mu.Lock()
 		s.statusMsg = "re-index triggered"
+		s.busy = false
+		s.mu.Unlock()
 	}()
 }
 
@@ -112,8 +139,12 @@ func (s *ragAdminScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	// Chunks list area.
 	vector.DrawFilledRect(screen, 16, 60, 1248, 660, color.RGBA{18, 18, 30, 255}, false)
 
+	s.mu.Lock()
+	chunks := append([]ragChunk(nil), s.chunks...)
+	s.mu.Unlock()
+
 	// Draw up to 8 chunk rows.
-	for i, chunk := range s.chunks {
+	for i, chunk := range chunks {
 		if i >= 8 {
 			break
 		}
