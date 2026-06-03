@@ -559,7 +559,7 @@ func (gw *Gateway) pickBackend(key, role, model string) *lb.BackendRecord {
 	gw.mu.Lock()
 	if addr, ok := gw.sticky[stickyKey]; ok {
 		gw.mu.Unlock()
-		if rec := gw.lbRegistry.GetByAddress(addr); rec != nil && rec.Healthy {
+		if rec := gw.lbRegistry.GetByAddress(addr); rec != nil && rec.Healthy && (model == "" || containsModel(rec.Models, model)) {
 			return rec
 		}
 	} else {
@@ -720,9 +720,10 @@ func (gw *Gateway) probeAll() {
 	for _, b := range backends {
 		chatURL := backendURLForRole(b, "chat")
 		models, healthy := probeBackend(client, chatURL)
-		b.Healthy = healthy
-		b.Models = models
-		gw.lbRegistry.Register(b) //nolint:errcheck // re-register to propagate updated fields
+		updated := *b
+		updated.Healthy = healthy
+		updated.Models = models
+		gw.lbRegistry.Register(&updated) //nolint:errcheck // re-register to propagate updated fields
 	}
 
 	if swarmURL != "" {

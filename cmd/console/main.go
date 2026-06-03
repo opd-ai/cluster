@@ -368,12 +368,12 @@ func (s *Server) fetchAndBroadcastAggMetrics(client *http.Client) {
 			cur.TotalQueueDepth += rm.QueueDepth
 			cur.TotalVRAMUsedMB += rm.VRAMUsedMB
 			cur.TotalVRAMBudgetMB += rm.VRAMTotalMB
-			if cur.NodesActive > 0 {
-				cur.AvgLatencyEMAms = (cur.AvgLatencyEMAms*float64(cur.NodesActive-1) +
-					0) / float64(cur.NodesActive)
-			}
 			agg.TotalVRAMUsedMB += rm.VRAMUsedMB
-			agg.TotalVRAMAvailableMB += rm.VRAMTotalMB
+			available := rm.VRAMTotalMB - rm.VRAMUsedMB
+			if available < 0 {
+				available = 0
+			}
+			agg.TotalVRAMAvailableMB += available
 			agg.PerRoleMetrics[role] = cur
 		}
 	}
