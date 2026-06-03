@@ -255,9 +255,9 @@ always returns an empty list.
 can be routed to backends that don't serve the requested model.
 
 **Remaining Tasks:**
-- [ ] Replace `pickBackend()` / `discoverBackends()` with `lb.BackendRegistry`
-- [ ] Update pickers to filter by `Models` when model is specified
-- [ ] Ensure multi-role routing uses `ServiceBinding.Port` for correct role dispatch
+- [x] Replace `pickBackend()` / `discoverBackends()` with `lb.BackendRegistry`
+- [x] Update pickers to filter by `Models` when model is specified
+- [x] Ensure multi-role routing uses `ServiceBinding.Port` for correct role dispatch
 
 ---
 
@@ -276,10 +276,11 @@ can be routed to backends that don't serve the requested model.
 | `cmd/console-wasm/*` | ⚠️ | Not updated to render multi-role nodes |
 
 **Remaining Tasks:**
-- [ ] Add aggregation loop in `cmd/console/main.go` polling all node-agents every 5 s
-- [ ] Push `MsgAggregateMetrics`, `MsgGenerationEvent` via WebSocket in `ws.go`
-- [ ] Update `cmd/console-wasm` to render `Roles []string` and per-role VRAM bars
-- [ ] Rebuild WASM: `make console-wasm`
+- [x] Add aggregation loop in `cmd/console/main.go` polling all node-agents every 5 s
+- [x] Push `MsgAggregateMetrics` via WebSocket in `ws.go`
+- [ ] Push `MsgGenerationEvent` via WebSocket in `ws.go`
+- [x] Update `cmd/console-wasm` to render `Roles []string` and per-role VRAM bars
+- [x] Rebuild WASM: `make console-wasm`
 
 ---
 
@@ -302,8 +303,8 @@ can be routed to backends that don't serve the requested model.
 execution persistence by ID.
 
 **Remaining Tasks:**
-- [ ] Store pipeline executions by ID in gateway
-- [ ] Return actual status from `GET /v1/pipelines/{id}` (404 for unknown)
+- [x] Store pipeline executions by ID in gateway
+- [x] Return actual status from `GET /v1/pipelines/{id}` (404 for unknown)
 - [ ] Push `MsgPipelineState` WebSocket messages during execution
 
 ---
