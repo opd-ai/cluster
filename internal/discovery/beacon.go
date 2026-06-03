@@ -15,6 +15,8 @@ const (
 	MulticastAddr = "239.77.0.1"
 	// MulticastPort is the UDP port for discovery beacons.
 	MulticastPort = 9977
+	// DefaultNodeAgentPort is the default HTTP port for node-agent endpoints.
+	DefaultNodeAgentPort = 9977
 )
 
 // Beacon sends periodic UDP multicast discovery messages.

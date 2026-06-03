@@ -49,6 +49,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/opd-ai/cluster/internal/discovery"
 	"github.com/opd-ai/cluster/internal/inventory"
 	"github.com/opd-ai/cluster/internal/tracing"
 	"gopkg.in/yaml.v3"
@@ -100,6 +101,7 @@ func main() {
 	ragURL := flag.String("rag-url", "", "RAG service base URL (e.g. http://rag:8081)")
 	otelEndpoint := flag.String("otel-endpoint", "", "OTLP/HTTP collector endpoint (e.g. http://otel-collector:4318); empty disables tracing")
 	telemetry := flag.Bool("telemetry", false, "Send anonymous usage ping (opt-in; disabled by default)")
+	discoveryFlag := flag.Bool("discovery", false, "Enable UDP multicast discovery for node-agents")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -161,6 +163,18 @@ func main() {
 	stopProbe := make(chan struct{})
 	go gw.probeLoop(time.Duration(*probeInterval)*time.Second, stopProbe)
 	defer close(stopProbe)
+
+	// Start discovery listener if enabled
+	if *discoveryFlag {
+		stopDiscovery := make(chan struct{})
+		listener, err := discovery.NewListener(100)
+		if err != nil {
+			log.Printf("Warning: discovery listener failed: %v", err)
+		} else {
+			go gw.discoveryLoop(listener, stopDiscovery)
+			defer close(stopDiscovery)
+		}
+	}
 
 	// Start LoRA adapter watcher if manifest path is set.
 	if *loraManifest != "" {
@@ -625,6 +639,33 @@ func (gw *Gateway) probeLoop(interval time.Duration, stop <-chan struct{}) {
 		select {
 		case <-ticker.C:
 			gw.probeAll()
+		case <-stop:
+			return
+		}
+	}
+}
+
+// discoveryLoop listens for UDP multicast beacons from node-agents and adds them as backends.
+func (gw *Gateway) discoveryLoop(listener *discovery.Listener, stop <-chan struct{}) {
+	for {
+		select {
+		case beacon := <-listener.MessagesCh():
+			// Convert beacon to a backend node; use node-agent HTTP endpoint
+			agentURL := fmt.Sprintf("http://%s:%d", beacon.Address, discovery.DefaultNodeAgentPort)
+			gw.mu.Lock()
+			// Check if backend already exists
+			exists := false
+			for _, b := range gw.backends {
+				if b.URL == agentURL {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				log.Printf("Discovery: adding backend %s from beacon", agentURL)
+				gw.backends = append(gw.backends, &Backend{URL: agentURL, Healthy: true})
+			}
+			gw.mu.Unlock()
 		case <-stop:
 			return
 		}
