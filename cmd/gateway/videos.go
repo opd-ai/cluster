@@ -88,6 +88,19 @@ func (s *videoJobStore) getSnapshot(id string) (videoJob, bool) {
 	return *j, true
 }
 
+// pruneOldJobs removes completed and failed jobs older than the given retention window.
+// This prevents unbounded memory growth from long-running gateway processes.
+func (s *videoJobStore) pruneOldJobs(retentionWindow time.Duration) {
+	cutoff := time.Now().UTC().Add(-retentionWindow)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id, job := range s.jobs {
+		if (job.Status == jobCompleted || job.Status == jobFailed) && job.UpdatedAt.Before(cutoff) {
+			delete(s.jobs, id)
+		}
+	}
+}
+
 // -------------------------------------------------------------------------
 // Request / response types
 // -------------------------------------------------------------------------
@@ -357,5 +370,20 @@ func swarmVideoModel(model string) string {
 		return "" // SwarmUI picks default
 	default:
 		return model
+	}
+}
+
+// pruneVideoJobsLoop periodically removes old completed/failed video jobs
+// to prevent unbounded memory growth.
+func pruneVideoJobsLoop(stop <-chan struct{}) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			globalVideoJobs.pruneOldJobs(24 * time.Hour)
+		}
 	}
 }

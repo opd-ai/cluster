@@ -54,8 +54,10 @@ type config struct {
 // -------------------------------------------------------------------------
 
 // bm25Score computes a BM25-like relevance score for text vs query tokens.
-// This is a simplified in-process implementation; production deployments can
-// use bleve or a dedicated search service.
+// This is a simplified in-process implementation (TF-based, not corpus IDF):
+// document frequency (df) is inferred per-document (0 or 1) rather than
+// from a corpus index, so IDF does not down-weight common terms.
+// Production deployments should use bleve or a dedicated search service.
 func bm25Score(text, query string) float64 {
 	const k1, b, avgdl = 1.5, 0.75, 500.0
 	tokens := strings.Fields(strings.ToLower(query))
@@ -70,7 +72,8 @@ func bm25Score(text, query string) float64 {
 
 	// IDF approximation: log((N-df+0.5)/(df+0.5)+1) where N=corpus size proxy
 	// and df is inferred from whether the term appears in the document (df=1)
-	// or not (df=0). This mirrors BM25 IDF without a corpus index.
+	// or not (df=0). For corpus IDF, maintain a document-frequency map from
+	// indexed documents.
 	const N = 1000.0 // assumed corpus size
 	score := 0.0
 	for _, t := range tokens {
@@ -155,6 +158,12 @@ func (s *server) handleQuery(w http.ResponseWriter, r *http.Request) {
 	if req.TopK <= 0 {
 		req.TopK = s.cfg.topK
 	}
+	if req.TopK < 1 {
+		req.TopK = 1
+	}
+	if req.TopK > 100 {
+		req.TopK = 100
+	}
 	if req.Collection == "" {
 		http.Error(w, `{"error":"collection required"}`, http.StatusBadRequest)
 		return
@@ -203,6 +212,12 @@ func (s *server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.TopK <= 0 {
 		req.TopK = s.cfg.topK
+	}
+	if req.TopK < 1 {
+		req.TopK = 1
+	}
+	if req.TopK > 100 {
+		req.TopK = 100
 	}
 	if req.Collection == "" {
 		http.Error(w, `{"error":"collection required"}`, http.StatusBadRequest)
@@ -427,7 +442,7 @@ func (s *server) collectionAllowed(r *http.Request, collection string) bool {
 	}
 	key := extractBearer(r)
 	allowed, ok := s.cfg.collectionACL[key]
-	return !ok || allowed == "" || allowed == collection
+	return ok && (allowed == "" || allowed == collection)
 }
 
 func extractBearer(r *http.Request) string {

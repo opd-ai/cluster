@@ -148,13 +148,13 @@ func main() {
 		// Per-repo Modelfiles.
 		for _, repo := range ns.Repos {
 			repoGGUF := filepath.Join(*checkpointsDir, ns.Name, "repos", repo.Label, "model.gguf")
-			nsBase := filepath.Join(*checkpointsDir, ns.Name, "namespace", "merged")
+			nsGGUF := filepath.Join(*checkpointsDir, ns.Name, "namespace", "model.gguf")
 
 			if err := writeModelfile(
 				filepath.Join(*outDir, ns.Name, repo.Label, "Modelfile"),
 				repoMF,
 				modelfileData{
-					From:         ggufPathOrOllamaTag(nsBase, baseModel),
+					From:         ggufPathOrOllamaTag(nsGGUF, baseModel),
 					Adapter:      adapterPath(repoGGUF),
 					Quantization: quant,
 				},

@@ -89,9 +89,22 @@ func main() {
 	// Probe all nodes in parallel.
 	probeNodes(nodes)
 
+	// Warn if no VRAM-bearing nodes found.
+	var vramNodes int
+	for _, n := range nodes {
+		if n.VRAM > 0 {
+			vramNodes++
+		}
+	}
+	if vramNodes == 0 && len(nodes) > 0 {
+		log.Printf("warning: no VRAM-bearing nodes found in inventory; GPU placement unavailable")
+	}
+
 	state := loadState(*stateFile)
 	state.AccessCount[model]++
-	_ = saveState(*stateFile, state)
+	if err := saveState(*stateFile, state); err != nil {
+		log.Printf("warning: save state: %v", err)
+	}
 
 	plan := buildPlan(model, nodes, state, *multiDevice, *maxDevices)
 
@@ -279,8 +292,11 @@ func parseInventory(path string) []*Node {
 		switch kv[0] {
 		case "address":
 			current.Address = kv[1]
-		case "vram":
-			v, _ := strconv.Atoi(kv[1])
+		case "vram_gb":
+			v, err := strconv.Atoi(kv[1])
+			if err != nil {
+				log.Printf("warning: node %q has invalid vram_gb value %q: %v; defaulting to 0", current.Name, kv[1], err)
+			}
 			current.VRAM = v
 			current.FreeVRAM = v
 		case "arch":
@@ -311,7 +327,9 @@ func loadState(path string) *placerState {
 	if err != nil {
 		return s
 	}
-	_ = json.Unmarshal(data, s)
+	if err := json.Unmarshal(data, s); err != nil {
+		log.Printf("warning: unmarshal state: %v", err)
+	}
 	if s.AccessCount == nil {
 		s.AccessCount = make(map[string]int)
 	}

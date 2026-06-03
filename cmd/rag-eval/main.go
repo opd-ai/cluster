@@ -87,7 +87,10 @@ func (c *ragClient) query(ctx context.Context, question, collection string, topK
 		"top_k":      topK,
 	}
 	start := time.Now()
-	data, _ := json.Marshal(body)
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, time.Since(start), fmt.Errorf("marshal query: %w", err)
+	}
 	resp, err := c.post(ctx, c.ragURL+"/rag/query", data)
 	elapsed := time.Since(start)
 	if err != nil {
@@ -114,7 +117,10 @@ func (c *ragClient) answer(ctx context.Context, question, collection string) (st
 		"collection": collection,
 	}
 	start := time.Now()
-	data, _ := json.Marshal(body)
+	data, err := json.Marshal(body)
+	if err != nil {
+		return "", time.Since(start), fmt.Errorf("marshal answer: %w", err)
+	}
 	resp, err := c.post(ctx, c.ragURL+"/rag/answer", data)
 	elapsed := time.Since(start)
 	if err != nil {
@@ -141,7 +147,10 @@ func (c *ragClient) judgeAnswer(ctx context.Context, question, answer, expected 
 			{"role": "user", "content": prompt},
 		},
 	}
-	data, _ := json.Marshal(body)
+	data, err := json.Marshal(body)
+	if err != nil {
+		return false, fmt.Errorf("marshal judge: %w", err)
+	}
 	resp, err := c.post(ctx, c.gatewayURL+"/v1/chat/completions", data)
 	if err != nil {
 		return false, err
@@ -255,14 +264,18 @@ func evalCollection(ctx context.Context, client *ragClient, collection, qaFile s
 }
 
 func recallHit(retrieved, expected []string) bool {
+	if len(expected) == 0 {
+		return false
+	}
 	for _, e := range expected {
 		for _, r := range retrieved {
-			if strings.HasSuffix(r, e) || strings.HasSuffix(e, r) {
+			// Exact match or path-boundary match (prevent suffix false positives).
+			if r == e || strings.HasSuffix(r, "/"+e) {
 				return true
 			}
 		}
 	}
-	return len(expected) == 0
+	return false
 }
 
 func percentile(durations []time.Duration, p int) time.Duration {

@@ -165,6 +165,11 @@ func main() {
 		defer close(stopLora)
 	}
 
+	// Start video job pruning (remove completed/failed jobs older than 24h).
+	stopVideoPrune := make(chan struct{})
+	go pruneVideoJobsLoop(stopVideoPrune)
+	defer close(stopVideoPrune)
+
 	// Start anonymous usage ping (opt-in, off by default).
 	if *telemetry {
 		go telemetryPing(ctx, len(gw.backends))
@@ -273,10 +278,9 @@ func (gw *Gateway) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		gw.reqTotal.Add(1)
-
 		if len(gw.apiKeys) == 0 {
 			// No keys configured — open mode
+			gw.reqTotal.Add(1)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -290,6 +294,7 @@ func (gw *Gateway) authMiddleware(next http.Handler) http.Handler {
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
+		gw.reqTotal.Add(1)
 		next.ServeHTTP(w, r)
 	})
 }

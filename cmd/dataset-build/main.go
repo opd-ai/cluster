@@ -145,13 +145,21 @@ func main() {
 				log.Printf("walk repo %s: %v", repo.Label, err)
 			}
 
-			_ = repoWriter.Flush()
-			_ = repoFile.Close()
+			if err := repoWriter.Flush(); err != nil {
+				log.Fatalf("flush repo writer for %s: %v", repo.Label, err)
+			}
+			if err := repoFile.Close(); err != nil {
+				log.Fatalf("close repo file for %s: %v", repo.Label, err)
+			}
 			log.Printf("namespace=%s repo=%s examples=%d", ns.Name, repo.Label, count)
 		}
 
-		_ = nsWriter.Flush()
-		_ = nsOutFile.Close()
+		if err := nsWriter.Flush(); err != nil {
+			log.Fatalf("flush namespace writer for %s: %v", ns.Name, err)
+		}
+		if err := nsOutFile.Close(); err != nil {
+			log.Fatalf("close namespace file for %s: %v", ns.Name, err)
+		}
 		log.Printf("namespace=%s dataset written to %s", ns.Name, nsOutDir)
 	}
 }

@@ -105,6 +105,9 @@ func (qs *quotaState) increment(mediaType, key string, limit int) bool {
 		counter = qs.images
 	}
 
+	if counter[key] >= limit {
+		return false
+	}
 	counter[key]++
-	return counter[key] <= limit
+	return true
 }
