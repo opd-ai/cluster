@@ -23,7 +23,7 @@ spec:
       hostPID: true
       containers:
         - name: node-exporter
-          image: prom/node-exporter:latest
+          image: prom/node-exporter@sha256:e9cff4fc67b1818f8c97adb115b9f12c9a54b533de86765d4a0effc01b357205
           args:
             - --path.rootfs=/host
           ports:
@@ -57,7 +57,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus:latest
+          image: prom/prometheus@sha256:69f5241418838263316593f7274a304b095c40bcf22e57272865da91bd60a8ac
           args:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.path=/prometheus
@@ -111,7 +111,7 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: grafana/grafana:latest
+          image: grafana/grafana@sha256:5dad0df181cb644a14e13617b913b261a54f7d4fd4510721dba420929f35bea2
           env:
             - name: GF_SECURITY_ADMIN_PASSWORD
               valueFrom:

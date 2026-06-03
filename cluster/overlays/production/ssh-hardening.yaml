@@ -114,7 +114,7 @@ spec:
           effect: NoExecute
       initContainers:
         - name: harden
-          image: alpine:3.21
+          image: alpine@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d
           command: ["/bin/sh", "/scripts/harden.sh"]
           securityContext:
             privileged: true

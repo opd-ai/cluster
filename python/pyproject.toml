@@ -35,6 +35,9 @@ ignore = ["E501"]
 [tool.ruff.lint.isort]
 known-first-party = ["cluster_training"]
 
+[tool.hatch.build.targets.wheel]
+packages = ["cluster_training"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
