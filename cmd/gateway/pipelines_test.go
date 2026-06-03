@@ -218,7 +218,48 @@ func TestPipelineAPIStructure(t *testing.T) {
 		}
 	})
 
-	// Test 5: Pipeline stage chaining (FromPrevious).
+	// Test 5: Pipeline execution errors return 500.
+	t.Run("POST /v1/pipelines execution failure returns 500", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var spec pipeline.PipelineSpec
+			if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			http.Error(w, "pipeline execution failed: backend unavailable", http.StatusInternalServerError)
+		})
+
+		spec := pipeline.PipelineSpec{
+			ID:   "failing-pipeline",
+			Name: "Failing Pipeline",
+			Stages: []pipeline.Stage{
+				{
+					ID:    "stage-0",
+					Index: 0,
+					Role:  "chat",
+					Model: "llama2",
+					Input: pipeline.StageInput{
+						Direct: "hello",
+					},
+				},
+			},
+			CreatedAt: time.Now(),
+		}
+		body, err := json.Marshal(spec)
+		if err != nil {
+			t.Fatalf("failed to marshal spec: %v", err)
+		}
+
+		req := httptest.NewRequest("POST", "/v1/pipelines", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("expected status 500, got %d", w.Code)
+		}
+	})
+
+	// Test 6: Pipeline stage chaining (FromPrevious).
 	t.Run("Pipeline stage input chaining", func(t *testing.T) {
 		spec := pipeline.PipelineSpec{
 			ID:   "chaining-test",
@@ -257,7 +298,7 @@ func TestPipelineAPIStructure(t *testing.T) {
 		}
 	})
 
-	// Test 6: Duration parsing (e.g., "30s", "1m30s").
+	// Test 7: Duration parsing (e.g., "30s", "1m30s").
 	t.Run("Duration parsing in Stage config", func(t *testing.T) {
 		jsonStr := `{
 			"id": "test",
@@ -274,4 +315,3 @@ func TestPipelineAPIStructure(t *testing.T) {
 		}
 	})
 }
-

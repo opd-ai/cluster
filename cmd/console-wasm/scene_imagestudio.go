@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -17,22 +18,23 @@ import (
 
 // imageStudioScene is the image generation studio.
 type imageStudioScene struct {
-	mu                  sync.Mutex
-	onBack              func()
-	backBtn             *ui.Button
-	genBtn              *ui.Button
-	prompt              string
-	lastURL             string
-	progress            *ui.ProgressBar
-	busy                bool
-	latestGenerationID  string
-	latestGenerationEvt *generationEventDisplay
+	mu                    sync.Mutex
+	onBack                func()
+	backBtn               *ui.Button
+	genBtn                *ui.Button
+	prompt                string
+	lastURL               string
+	progress              *ui.ProgressBar
+	busy                  bool
+	latestGenerationID    string
+	latestGenerationEvt   *generationEventDisplay
+	lastGenerationEventAt time.Time
 }
 
 type generationEventDisplay struct {
-	jobID    string
-	progress float64
-	status   string
+	jobID     string
+	progress  float64
+	status    string
 	outputURL string
 }
 
@@ -102,6 +104,10 @@ func (s *imageStudioScene) Update(state *SharedState) error {
 			// Filter for image-generation role events
 			if evt.Role == "image-generation" || evt.Role == "image-gen" {
 				s.mu.Lock()
+				if !evt.Timestamp.After(s.lastGenerationEventAt) {
+					s.mu.Unlock()
+					continue
+				}
 				s.latestGenerationID = evt.JobID
 				if s.latestGenerationEvt == nil {
 					s.latestGenerationEvt = &generationEventDisplay{}
@@ -110,6 +116,7 @@ func (s *imageStudioScene) Update(state *SharedState) error {
 				s.latestGenerationEvt.progress = evt.Progress
 				s.latestGenerationEvt.status = evt.Status
 				s.latestGenerationEvt.outputURL = evt.OutputURL
+				s.lastGenerationEventAt = evt.Timestamp
 
 				// Update progress bar
 				s.progress.Value = evt.Progress

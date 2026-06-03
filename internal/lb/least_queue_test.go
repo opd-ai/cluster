@@ -11,7 +11,7 @@ import (
 func TestLeastQueueLoadTest(t *testing.T) {
 	// Create 3 backends with different queue depths
 	backend1 := &BackendRecord{
-		Address:    "192.168.1.10:11434",
+		Address:    "192.168.1.10",
 		Roles:      []string{"chat"},
 		Models:     []string{"llama2", "neural-chat"},
 		Healthy:    true,
@@ -22,7 +22,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 	}
 
 	backend2 := &BackendRecord{
-		Address:    "192.168.1.11:11434",
+		Address:    "192.168.1.11",
 		Roles:      []string{"chat"},
 		Models:     []string{"llama2", "neural-chat"},
 		Healthy:    true,
@@ -33,7 +33,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 	}
 
 	backend3 := &BackendRecord{
-		Address:    "192.168.1.12:11434",
+		Address:    "192.168.1.12",
 		Roles:      []string{"chat"},
 		Models:     []string{"llama2", "neural-chat"},
 		Healthy:    true,
@@ -53,7 +53,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 	if selected == nil {
 		t.Fatal("picker returned nil; expected to select a backend")
 	}
-	if selected.Address != "192.168.1.10:11434" {
+	if selected.Address != "192.168.1.10" {
 		t.Errorf("expected backend1 (queue=1), got %s (queue=%d)", selected.Address, selected.QueueDepth)
 	}
 
@@ -65,7 +65,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 	if selected == nil {
 		t.Fatal("picker returned nil after queue update")
 	}
-	if selected.Address != "192.168.1.12:11434" {
+	if selected.Address != "192.168.1.12" {
 		t.Errorf("expected backend3 (queue=2), got %s (queue=%d)", selected.Address, selected.QueueDepth)
 	}
 
@@ -75,7 +75,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 		if selected == nil {
 			t.Fatal("picker returned nil in loop")
 		}
-		if selected.Address == "192.168.1.11:11434" {
+		if selected.Address == "192.168.1.11" {
 			t.Errorf("iteration %d: picker selected high-queue backend (queue=10), should avoid it", i)
 		}
 	}
@@ -88,7 +88,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 	if selected == nil {
 		t.Fatal("picker returned nil when only high-queue backend is healthy")
 	}
-	if selected.Address != "192.168.1.11:11434" {
+	if selected.Address != "192.168.1.11" {
 		t.Errorf("expected backend2 (only healthy), got %v", selected.Address)
 	}
 
@@ -102,7 +102,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 		if selected == nil {
 			t.Fatal("picker returned nil when filtering by model")
 		}
-		if selected.Address == "192.168.1.11:11434" {
+		if selected.Address == "192.168.1.11" {
 			t.Errorf("iteration %d: picker selected backend that doesn't support the model", i)
 		}
 	}
@@ -113,7 +113,7 @@ func TestLeastQueueLoadTest(t *testing.T) {
 // TestLeastQueueRoleFiltering verifies that role filtering works correctly.
 func TestLeastQueueRoleFiltering(t *testing.T) {
 	backend1 := &BackendRecord{
-		Address:    "192.168.1.10:11434",
+		Address:    "192.168.1.10",
 		Roles:      []string{"chat"},
 		Models:     []string{"llama2"},
 		Healthy:    true,
@@ -124,7 +124,7 @@ func TestLeastQueueRoleFiltering(t *testing.T) {
 	}
 
 	backend2 := &BackendRecord{
-		Address:    "192.168.1.11:7860",
+		Address:    "192.168.1.11",
 		Roles:      []string{"image-generation"},
 		Models:     []string{"stable-diffusion"},
 		Healthy:    true,
@@ -142,7 +142,7 @@ func TestLeastQueueRoleFiltering(t *testing.T) {
 	if selected == nil {
 		t.Fatal("picker returned nil for chat role")
 	}
-	if selected.Address != "192.168.1.10:11434" {
+	if selected.Address != "192.168.1.10" {
 		t.Errorf("expected chat backend, got %s", selected.Address)
 	}
 
@@ -151,7 +151,7 @@ func TestLeastQueueRoleFiltering(t *testing.T) {
 	if selected == nil {
 		t.Fatal("picker returned nil for image-generation role")
 	}
-	if selected.Address != "192.168.1.11:7860" {
+	if selected.Address != "192.168.1.11" {
 		t.Errorf("expected image-generation backend, got %s", selected.Address)
 	}
 

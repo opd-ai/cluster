@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/cluster/internal/nodeapi"
+	"github.com/opd-ai/cluster/internal/pipeline"
 	"github.com/opd-ai/cluster/internal/uiapi"
 )
 
@@ -66,7 +67,7 @@ type Server struct {
 	clients        map[chan uiapi.Message]struct{}
 	audit          *auditLog
 	sessions       map[string]sessionEntry
-	nodeAgentURLs  []string // derived from gateway /status backends
+	nodeAgentURLs  []string                       // derived from gateway /status backends
 	pipelineStates map[string]uiapi.PipelineState // pipeline ID -> state
 }
 
@@ -455,22 +456,29 @@ func (s *Server) pollPipelineStatus(ctx context.Context, interval time.Duration)
 	defer ticker.Stop()
 	client := &http.Client{Timeout: 5 * time.Second}
 
-	// Track known pipeline IDs to poll (these would come from subscriptions or gateway API)
-	var knownPipelines []string
-	knownPipelinesMu := &sync.Mutex{}
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			knownPipelinesMu.Lock()
-			for _, pipelineID := range knownPipelines {
+			for _, pipelineID := range s.trackedPipelineIDs() {
 				s.fetchAndBroadcastPipelineStatus(client, pipelineID)
 			}
-			knownPipelinesMu.Unlock()
 		}
 	}
+}
+
+func (s *Server) trackedPipelineIDs() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ids := make([]string, 0, len(s.pipelineStates))
+	for pipelineID := range s.pipelineStates {
+		if pipelineID != "" {
+			ids = append(ids, pipelineID)
+		}
+	}
+	return ids
 }
 
 func (s *Server) fetchAndBroadcastPipelineStatus(client *http.Client, pipelineID string) {
@@ -482,47 +490,59 @@ func (s *Server) fetchAndBroadcastPipelineStatus(client *http.Client, pipelineID
 	}
 	defer resp.Body.Close()
 
-	// The gateway returns PipelineExecution, which we need to convert to PipelineState
-	var exec struct {
-		ID     string    `json:"id"`
-		Status string    `json:"status"`
-		Stages []struct {
-			ID       string    `json:"id"`
-			Status   string    `json:"status"`
-			Role     string    `json:"role"`
-			Progress float64   `json:"progress"`
-		} `json:"stages"`
-		StartedAt   time.Time `json:"started_at"`
-		UpdatedAt   time.Time `json:"updated_at"`
-		CompletedAt time.Time `json:"completed_at,omitempty"`
-	}
-
+	var exec pipeline.PipelineExecution
 	if err := json.NewDecoder(resp.Body).Decode(&exec); err != nil {
 		return
 	}
 
-	// Convert to PipelineState
-	ps := uiapi.PipelineState{
-		PipelineID: exec.ID,
-		Status:     exec.Status,
-		StartedAt:  exec.StartedAt,
-		UpdatedAt:  exec.UpdatedAt,
-		Stages:     make([]uiapi.PipelineStageState, len(exec.Stages)),
+	updatedAt := exec.StartedAt
+	if !exec.CompletedAt.IsZero() && exec.CompletedAt.After(updatedAt) {
+		updatedAt = exec.CompletedAt
+	}
+	for _, stage := range exec.Results {
+		if stage.StartedAt.After(updatedAt) {
+			updatedAt = stage.StartedAt
+		}
+		if stage.CompletedAt.After(updatedAt) {
+			updatedAt = stage.CompletedAt
+		}
+	}
+	if updatedAt.IsZero() {
+		updatedAt = time.Now()
 	}
 
-	for i, stage := range exec.Stages {
+	decodedPipelineID := exec.PipelineID
+	if decodedPipelineID == "" {
+		decodedPipelineID = pipelineID
+	}
+
+	// Convert to PipelineState
+	ps := uiapi.PipelineState{
+		PipelineID:  decodedPipelineID,
+		Status:      exec.Status,
+		StartedAt:   exec.StartedAt,
+		UpdatedAt:   updatedAt,
+		CompletedAt: exec.CompletedAt,
+		Stages:      make([]uiapi.PipelineStageState, len(exec.Results)),
+	}
+
+	for i, stage := range exec.Results {
 		ps.Stages[i] = uiapi.PipelineStageState{
-			StageID:  stage.ID,
-			Index:    i,
-			Status:   stage.Status,
-			Role:     stage.Role,
-			Progress: stage.Progress,
+			StageID:     stage.ID,
+			Index:       stage.Index,
+			Status:      stage.Status,
+			Role:        stage.Role,
+			Progress:    stage.Progress,
+			Output:      stage.Output,
+			Error:       stage.Error,
+			StartedAt:   stage.StartedAt,
+			CompletedAt: stage.CompletedAt,
 		}
 	}
 
 	// Store and broadcast
 	s.mu.Lock()
-	s.pipelineStates[pipelineID] = ps
+	s.pipelineStates[ps.PipelineID] = ps
 	s.mu.Unlock()
 
 	s.broadcast(uiapi.Message{Type: uiapi.MsgPipelineState, Payload: ps})
@@ -618,6 +638,7 @@ func main() {
 
 	go srv.pollGateway(ctx, *pollInterval)
 	go srv.pollNodeAgents(ctx, *pollInterval)
+	go srv.pollPipelineStatus(ctx, *pollInterval)
 
 	httpSrv := &http.Server{
 		Addr:         *addr,
