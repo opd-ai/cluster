@@ -150,7 +150,7 @@ This table must be updated whenever a component version changes:
 |-----------|--------------|-----------|
 | Go toolchain | `go 1.25.0` in `go.mod` | `go.mod` + `GOTOOLCHAIN=local` |
 | k3s | See `cluster/inventory.yaml` `k3s_version` | inventory |
-| Flux CD | See `cluster/flux-system/gotk-components.yaml` | GitOps |
+| Flux CD | See `cluster/flux-system/gotk-sync.yaml` | GitOps |
 | cert-manager | `v1.17.2` | `cluster/overlays/production/cert-manager.yaml` |
 | Prometheus | `prom/prometheus:latest` → pin to digest | kustomization |
 | Grafana | `grafana/grafana:latest` → pin to digest | kustomization |

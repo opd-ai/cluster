@@ -45,7 +45,7 @@ if you are using GitOps.
 ### 2. Bootstrap the new node's prerequisites
 
 ```bash
-make bootstrap HOST=worker-3
+make bootstrap
 # or equivalently:
 go run ./cmd/cluster-bootstrap --inventory cluster/inventory.yaml
 ```

@@ -63,7 +63,7 @@ If the issue persists across reloads and restarts, rebuild and redeploy:
 
 ```bash
 GOOS=js GOARCH=wasm GOTOOLCHAIN=local \
-  go build -o dist/js-wasm/console.wasm ./cmd/console-wasm
+  go build -o web/console.wasm ./cmd/console-wasm
 
 # Push to the cluster's registry
 docker build -t ghcr.io/opd-ai/cluster/console:latest .
@@ -76,4 +76,4 @@ kubectl -n ai-cluster rollout restart deployment/console
 - The `<canvas>` element is not accessible to screen readers (see ADR 007).
   Users requiring accessibility should use the REST API directly.
 - WASM binaries larger than ~40 MB may fail to instantiate on low-memory
-  mobile devices. Check `dist/js-wasm/console.wasm` size with `make build`.
+  mobile devices. Check `web/console.wasm` size with `make console-wasm`.
