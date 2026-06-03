@@ -11,6 +11,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -87,7 +88,7 @@ func (gw *Gateway) handleImageGenerations(w http.ResponseWriter, r *http.Request
 		"model":     swarmModel(req.Model),
 	}
 
-	images, err := gw.callSwarm("/API/GenerateText2Image", swarmReq)
+	images, err := gw.callSwarm(r.Context(), "/API/GenerateText2Image", swarmReq)
 	if err != nil {
 		log.Printf("swarm generate: %v", err)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadGateway)
@@ -131,7 +132,7 @@ func (gw *Gateway) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 		"donotsave":  false,
 	}
 
-	images, err := gw.callSwarm("/API/GenerateImage2Image", swarmReq)
+	images, err := gw.callSwarm(r.Context(), "/API/GenerateImage2Image", swarmReq)
 	if err != nil {
 		log.Printf("swarm edit: %v", err)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadGateway)
@@ -142,13 +143,13 @@ func (gw *Gateway) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 }
 
 // callSwarm sends a request to the SwarmUI API and returns image paths/URLs.
-func (gw *Gateway) callSwarm(path string, body map[string]any) ([]string, error) {
+func (gw *Gateway) callSwarm(ctx context.Context, path string, body map[string]any) ([]string, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, gw.swarmURL+path, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, gw.swarmURL+path, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -222,11 +223,23 @@ func buildImageResponse(images []string, format, baseURL string, client *http.Cl
 
 // normalizeImageParams applies defaults to image request parameters.
 func normalizeImageParams(n int, size string) (int, string) {
+	// Cap maximum number of images per request
 	if n <= 0 {
 		n = 1
+	} else if n > 10 {
+		n = 10
 	}
-	if size == "" {
-		size = "1024x1024"
+	
+	// Allowlist valid image sizes
+	allowedSizes := map[string]bool{
+		"256x256":   true,
+		"512x512":   true,
+		"768x768":   true,
+		"1024x1024": true,
+	}
+	
+	if !allowedSizes[size] {
+		size = "1024x1024" // default
 	}
 	return n, size
 }

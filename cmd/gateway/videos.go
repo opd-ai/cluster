@@ -336,9 +336,13 @@ func (gw *Gateway) generateVideo(ctx context.Context, req videoGenerationRequest
 	h := req.Height
 	if w <= 0 {
 		w = 832
+	} else if w > 2560 {
+		w = 2560 // cap at max reasonable width
 	}
 	if h <= 0 {
 		h = 480
+	} else if h > 1440 {
+		h = 1440 // cap at max reasonable height
 	}
 
 	swarmReq := map[string]any{

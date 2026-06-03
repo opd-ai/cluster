@@ -443,7 +443,12 @@ func (s *server) collectionAllowed(r *http.Request, collection string) bool {
 	}
 	key := extractBearer(r)
 	allowed, ok := s.cfg.collectionACL[key]
-	return ok && (allowed == "" || allowed == collection)
+	if !ok {
+		// Default-allow: if the key has no ACL entry, allow access to any collection
+		return true
+	}
+	// Key has an ACL entry: check if the collection matches
+	return allowed == "" || allowed == collection
 }
 
 func extractBearer(r *http.Request) string {
