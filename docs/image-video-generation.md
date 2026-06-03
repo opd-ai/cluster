@@ -53,8 +53,9 @@ Add each node's ComfyUI URL in SwarmUI's settings:
 http://<node-tailnet-ip>:8188
 ```
 
-Install ComfyUI on each imagegen node via bootstrap. `cluster-bootstrap`
-provisions each node according to the roles declared for it in the inventory:
+Install ComfyUI on each imagegen node manually. `cluster-bootstrap` handles
+base node dependencies (for example Ollama/Tailscale), but does not install
+ComfyUI itself:
 
 ```bash
 cluster-bootstrap --inventory cluster/inventory.yaml

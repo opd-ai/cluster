@@ -12,7 +12,7 @@ layers of DNS described below.
 | `console.cluster`    | 8080 (HTTP), 8443 (HTTPS) | `cmd/console`  |
 | `registry.cluster`   | 5000         | `cmd/registry`     |
 | `storage.cluster`    | 9000 (API), 9001 (console) | MinIO |
-| `images.cluster`     | 7860         | SwarmUI            |
+| `images.cluster`     | 7801 (SwarmUI default), 7860 (also used in code) | SwarmUI |
 | `rag.cluster`        | 6333 (HTTP), 6334 (gRPC)   | Qdrant + `cmd/rag` |
 
 <!-- REVIEW: the SwarmUI port for `images.cluster` is inconsistent across the

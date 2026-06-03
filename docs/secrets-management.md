@@ -20,12 +20,9 @@ in plain text in the repository.
 
 ## Bootstrap (first-time setup)
 
-During `make bootstrap` / `./bootstrap`, the bootstrap command generates an age
-key pair on the control node and stores:
-
-- The **public key** at `.sops.yaml` in the repo root (committed to git, safe to share).
-- The **private key** as a Kubernetes Secret named `sops-age` in the
-  `flux-system` namespace (never leaves the cluster).
+`make bootstrap` / `./bootstrap` does **not** generate age keys or update
+`.sops.yaml`. Prepare the age key pair on your workstation, then create the
+`sops-age` Secret in `flux-system` manually:
 
 ```bash
 # 1. Install age (if not present on your workstation)

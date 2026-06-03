@@ -117,9 +117,9 @@ Gateway  →  pre-signed URL or base64 in response
 ```
 Browser
   │  GET /  →  HTTP server (cmd/console / Go net/http)
-  │             serves index.html + wasm_exec.js + console.wasm
+  │             serves index.html + wasm_exec.js + main.wasm
   │
-  │  WebAssembly instantiate console.wasm
+  │  WebAssembly instantiate main.wasm
   │  Ebitengine game loop (60 fps, requestAnimationFrame)
   │
   │  WS /api/ws  ←→  console server
@@ -133,10 +133,9 @@ The WASM binary is compiled with `GOOS=js GOARCH=wasm` from `cmd/console-wasm`.
 Ebitengine renders to an HTML `<canvas>` element. All API calls go through the
 WebSocket proxy to avoid CORS issues. The accessibility tradeoff (canvas vs DOM
 elements) is documented in ADR 007.
-<!-- REVIEW: the console flow above names the served binary `console.wasm`, but
-cmd/console serves it as `/main.wasm` (cmd/console/main.go:136) while the
-Makefile builds it to web/console.wasm (WASM_OUT). The build artifact and the
-served filename differ; confirm the intended canonical name. -->
+<!-- REVIEW: Makefile builds web/console.wasm (WASM_OUT), but cmd/console serves
+/main.wasm (cmd/console/main.go:136). The build artifact and served filename
+still differ; confirm the canonical name and align both paths. -->
 
 ### Console Bootstrap Assets
 
