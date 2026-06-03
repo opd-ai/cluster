@@ -1,3 +1,5 @@
+//go:build js && wasm
+
 // Package ui provides the widget library for the console WASM client.
 //
 // All widgets follow the Update(state) → Draw(screen) pattern backed by

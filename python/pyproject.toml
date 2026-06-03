@@ -19,9 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-image = [
-    "kohya-ss",
-]
+image = []
 dev = [
     "ruff",
 ]
