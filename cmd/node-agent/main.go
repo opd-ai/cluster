@@ -95,23 +95,6 @@ func main() {
 	var reconciler *discovery.Reconciler
 	if !*noReconcile {
 		reconciler = discovery.NewReconciler(*inventoryPath)
-		// Process discovered beacons
-		if listener != nil {
-			go func() {
-				for msg := range listener.MessagesCh() {
-					// Only reconcile other nodes (not self)
-					if msg.Address != *address {
-						if err := reconciler.Merge(msg); err != nil {
-							log.Printf("error merging beacon from %s: %v", msg.Hostname, err)
-							continue
-						}
-						if err := reconciler.WriteInventory(); err != nil {
-							log.Printf("error writing inventory after beacon from %s: %v", msg.Hostname, err)
-						}
-					}
-				}
-			}()
-		}
 	}
 
 	// Start HTTP API server
@@ -127,6 +110,53 @@ func main() {
 		listener: listener,
 		jobs:     make(map[string]pipelineJob),
 		jobsMu:   &sync.RWMutex{},
+	}
+
+	// Process discovered beacons: reconcile to inventory and populate peers list
+	if listener != nil {
+		go func() {
+			for msg := range listener.MessagesCh() {
+				// Only process other nodes (not self)
+				if msg.Address != *address {
+					// Reconcile to inventory if enabled
+					if reconciler != nil {
+						if err := reconciler.Merge(msg); err != nil {
+							log.Printf("error merging beacon from %s: %v", msg.Hostname, err)
+							continue
+						}
+						if err := reconciler.WriteInventory(); err != nil {
+							log.Printf("error writing inventory after beacon from %s: %v", msg.Hostname, err)
+						}
+					}
+
+					// Update peers list
+					peer := nodeapi.PeerRecord{
+						Hostname: msg.Hostname,
+						Address:  msg.Address,
+						Roles:    msg.Roles,
+						Services: msg.Services,
+						Healthy:  true, // Mark as healthy on beacon receipt
+						LastSeen: time.Now(),
+						SeqNum:   msg.SeqNum,
+					}
+
+					handlers.peersMu.Lock()
+					// Find or append peer
+					found := false
+					for i, p := range handlers.peers {
+						if p.Address == peer.Address {
+							handlers.peers[i] = peer
+							found = true
+							break
+						}
+					}
+					if !found {
+						handlers.peers = append(handlers.peers, peer)
+					}
+					handlers.peersMu.Unlock()
+				}
+			}
+		}()
 	}
 
 	mux.Get("/api/v1/info", handlers.handleInfo)
