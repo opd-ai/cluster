@@ -141,7 +141,6 @@ jobs:
                 break
               fi
             done
-             
             if [ "$in_whitelist" -eq 1 ]; then
               echo "WARN: $img is not pinned (whitelisted for manual pinning)" >&2
             elif echo "$img" | grep -qE '.+@sha256:[a-f0-9]{64}$'; then
