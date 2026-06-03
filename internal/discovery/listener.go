@@ -19,7 +19,13 @@ type Listener struct {
 	conn  *ipv4.PacketConn
 	done  chan struct{}
 	msgCh chan nodeapi.BeaconMessage
-	seen  map[string]int // address -> seq for dedup
+	seen  map[string]seenEntry // address -> {seq, timestamp} for dedup
+}
+
+// seenEntry tracks a beacon by sequence and last-seen time.
+type seenEntry struct {
+	seq       int
+	timestamp time.Time
 }
 
 // NewListener creates a new beacon listener on the multicast group.
@@ -80,7 +86,7 @@ func NewListener(bufferSize int) (*Listener, error) {
 		return nil, fmt.Errorf("join multicast group: %w", err)
 	}
 
-	if bufferSize == 0 {
+	if bufferSize <= 0 {
 		bufferSize = 100
 	}
 
@@ -88,7 +94,7 @@ func NewListener(bufferSize int) (*Listener, error) {
 		conn:  packetConn,
 		done:  make(chan struct{}),
 		msgCh: make(chan nodeapi.BeaconMessage, bufferSize),
-		seen:  make(map[string]int),
+		seen:  make(map[string]seenEntry),
 	}, nil
 }
 
@@ -115,10 +121,17 @@ func (l *Listener) run() {
 	defer close(l.msgCh)
 
 	buf := make([]byte, 1024)
+	// Run cleanup periodically (every 5 minutes) to remove old entries.
+	cleanupTicker := time.NewTicker(5 * time.Minute)
+	defer cleanupTicker.Stop()
+
 	for {
 		select {
 		case <-l.done:
 			return
+		case <-cleanupTicker.C:
+			// Clean up entries older than 30 minutes
+			l.cleanupOldEntries(30 * time.Minute)
 		default:
 		}
 
@@ -141,13 +154,13 @@ func (l *Listener) run() {
 		}
 
 		// Deduplicate by address and seq number
-		lastSeq, exists := l.seen[msg.Address]
-		if exists && lastSeq >= msg.SeqNum {
+		entry, exists := l.seen[msg.Address]
+		if exists && entry.seq >= msg.SeqNum {
 			// Already seen this or a newer beacon from this address
 			continue
 		}
 
-		l.seen[msg.Address] = msg.SeqNum
+		l.seen[msg.Address] = seenEntry{seq: msg.SeqNum, timestamp: time.Now()}
 
 		// Send on channel; if buffer is full, drop the oldest message to make room.
 		select {
@@ -162,6 +175,16 @@ func (l *Listener) run() {
 			case l.msgCh <- msg:
 			default:
 			}
+		}
+	}
+}
+
+// cleanupOldEntries removes seen entries older than the specified duration.
+func (l *Listener) cleanupOldEntries(maxAge time.Duration) {
+	now := time.Now()
+	for addr, entry := range l.seen {
+		if now.Sub(entry.timestamp) > maxAge {
+			delete(l.seen, addr)
 		}
 	}
 }

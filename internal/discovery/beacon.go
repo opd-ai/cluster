@@ -29,6 +29,11 @@ type Beacon struct {
 
 // NewBeacon creates a new beacon sender on the multicast group.
 func NewBeacon(interval time.Duration, msgFunc func() nodeapi.BeaconMessage) (*Beacon, error) {
+	// Validate interval
+	if interval <= 0 {
+		return nil, fmt.Errorf("invalid interval: %v (must be positive)", interval)
+	}
+	
 	// Connect to the multicast address (for sending, we don't bind to the group)
 	addr, err := net.ResolveUDPAddr("udp", MulticastAddr+":"+fmt.Sprintf("%d", MulticastPort))
 	if err != nil {

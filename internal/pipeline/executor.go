@@ -170,12 +170,21 @@ func (e *Executor) executeStage(ctx context.Context, backend *lb.BackendRecord, 
 	jobID := ack.JobID
 	pollURL := fmt.Sprintf("http://%s:%s/api/v1/pipeline/result/%s", backend.Address, port, jobID)
 	backoff := 100 * time.Millisecond
+	maxRetries := 360            // ~30 min at max backoff (5s)
+	maxPollDuration := time.Hour  // Cap total polling time at 1 hour
+	pollStart := time.Now()
+	retries := 0
 
 	for {
 		select {
 		case <-ctx.Done():
 			return result, ctx.Err()
 		case <-time.After(backoff):
+		}
+
+		// Check if total polling time has exceeded max
+		if time.Since(pollStart) > maxPollDuration {
+			return result, fmt.Errorf("polling timeout: exceeded max duration of %v", maxPollDuration)
 		}
 
 		// Increase backoff, cap at 5s
@@ -191,11 +200,34 @@ func (e *Executor) executeStage(ctx context.Context, backend *lb.BackendRecord, 
 		pollResp, err := e.client.Do(pollReq)
 		if err != nil {
 			// Transient network error; retry
+			retries++
+			if retries > maxRetries {
+				return result, fmt.Errorf("polling failed: exceeded max retries after network error: %w", err)
+			}
 			continue
 		}
 
-		if pollResp.StatusCode != http.StatusOK {
+		// Check status code: distinguish permanent vs transient errors
+		if pollResp.StatusCode == http.StatusNotFound {
+			// Job not found — permanent error
 			pollResp.Body.Close()
+			return result, fmt.Errorf("polling failed: job not found (404)")
+		}
+
+		if pollResp.StatusCode >= 400 && pollResp.StatusCode < 500 {
+			// Other 4xx error (except 404, already handled) — permanent error
+			body, _ := io.ReadAll(pollResp.Body)
+			pollResp.Body.Close()
+			return result, fmt.Errorf("polling failed: permanent error %d: %s", pollResp.StatusCode, string(body))
+		}
+
+		if pollResp.StatusCode != http.StatusOK {
+			// 5xx or other non-2xx — transient error, retry
+			pollResp.Body.Close()
+			retries++
+			if retries > maxRetries {
+				return result, fmt.Errorf("polling failed: exceeded max retries with status %d", pollResp.StatusCode)
+			}
 			continue
 		}
 
@@ -204,6 +236,11 @@ func (e *Executor) executeStage(ctx context.Context, backend *lb.BackendRecord, 
 		pollResp.Body.Close()
 
 		if err != nil {
+			// Decode error — transient issue
+			retries++
+			if retries > maxRetries {
+				return result, fmt.Errorf("polling failed: exceeded max retries on decode: %w", err)
+			}
 			continue
 		}
 

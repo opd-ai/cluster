@@ -71,6 +71,10 @@ func main() {
 	flag.BoolVar(&cfg.DryRun, "dry-run", false, "Log without performing operations")
 	flag.Parse()
 
+	if cfg.Jobs < 1 {
+		log.Fatalf("invalid -jobs %d: must be >= 1", cfg.Jobs)
+	}
+
 	repos, err := loadRepos(cfg.NamespacesPath)
 	if err != nil {
 		log.Fatalf("load namespaces: %v", err)
@@ -142,11 +146,16 @@ func syncRepo(repo Repo, cfg SyncConfig) error {
 }
 
 func cloneRepo(url, dest string, cfg SyncConfig) error {
+	// Validate URL doesn't look like a git option
+	if strings.HasPrefix(url, "-") {
+		return fmt.Errorf("invalid repo URL: %s (looks like a git option)", url)
+	}
+	
 	args := []string{"clone", "--bare"}
 	if cfg.Depth > 0 {
 		args = append(args, fmt.Sprintf("--depth=%d", cfg.Depth))
 	}
-	args = append(args, "--filter=blob:none", url, dest)
+	args = append(args, "--filter=blob:none", "--", url, dest)
 	return gitCmd(args, cfg.DryRun)
 }
 

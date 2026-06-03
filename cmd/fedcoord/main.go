@@ -232,9 +232,6 @@ func waitForAdapters(nodes []FedNode, roundDir string, deadline time.Time, dry b
 // aggregateAdapters merges per-node adapters using the specified algorithm
 // by invoking a Python helper (tools/fed_aggregate.py).
 func aggregateAdapters(nodes []FedNode, roundDir, outputPath, algo string, proxMu float64, dry bool) error {
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
-		return err
-	}
 	args := []string{"tools/fed_aggregate.py",
 		"--round-dir", roundDir,
 		"--output", outputPath,
@@ -247,6 +244,10 @@ func aggregateAdapters(nodes []FedNode, roundDir, outputPath, algo string, proxM
 	if dry {
 		log.Printf("  python3 %s", strings.Join(args, " "))
 		return nil
+	}
+	// Create output directory only if not in dry-run mode
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return err
 	}
 	cmd := exec.Command("python3", args...)
 	cmd.Stdout = os.Stdout

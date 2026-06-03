@@ -32,6 +32,8 @@ func main() {
 	address := flag.String("address", "", "Node address/IP (required)")
 	vramGB := flag.Int("vram-gb", 0, "Total VRAM in GB")
 	ramGB := flag.Int("ram-gb", 0, "Total RAM in GB")
+	apiKey := flag.String("api-key", "", "Bearer token required for /api/v1/* requests")
+	openAccess := flag.Bool("open", false, "Allow unauthenticated access to /api/v1/* endpoints")
 	flag.Parse()
 
 	if *rolesStr == "" {
@@ -39,6 +41,12 @@ func main() {
 	}
 	if *address == "" {
 		log.Fatal("--address is required")
+	}
+	if *apiKey == "" && !*openAccess {
+		log.Fatal("either --api-key or --open is required")
+	}
+	if *apiKey != "" && *openAccess {
+		log.Fatal("--api-key and --open cannot be used together")
 	}
 
 	roles := strings.Split(*rolesStr, ",")
@@ -110,6 +118,8 @@ func main() {
 		listener: listener,
 		jobs:     make(map[string]pipelineJob),
 		jobsMu:   &sync.RWMutex{},
+		apiKey:   *apiKey,
+		open:     *openAccess,
 	}
 
 	// Process discovered beacons: reconcile to inventory and populate peers list
@@ -158,6 +168,9 @@ func main() {
 			}
 		}()
 	}
+
+	// Add auth middleware (runs on all /api/v1/* routes)
+	mux.Use(handlers.authMiddleware)
 
 	mux.Get("/api/v1/info", handlers.handleInfo)
 	mux.Get("/api/v1/health", handlers.handleHealth)
@@ -214,6 +227,8 @@ type apiHandlers struct {
 	jobs       map[string]pipelineJob
 	jobsMu     *sync.RWMutex
 	jobCounter atomic.Int64
+	apiKey     string
+	open       bool
 }
 
 type pipelineJob struct {
@@ -225,6 +240,34 @@ type pipelineJob struct {
 	Progress  float64
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// authMiddleware checks for bearer token unless open access is explicitly enabled.
+func (h *apiHandlers) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.open {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Extract bearer token from Authorization header
+		token := extractBearerToken(r)
+		if token != h.apiKey {
+			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// extractBearerToken extracts the bearer token from the Authorization header.
+func extractBearerToken(r *http.Request) string {
+	auth := r.Header.Get("Authorization")
+	if strings.HasPrefix(auth, "Bearer ") {
+		return strings.TrimPrefix(auth, "Bearer ")
+	}
+	return ""
 }
 
 func (h *apiHandlers) handleInfo(w http.ResponseWriter, r *http.Request) {

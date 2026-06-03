@@ -45,16 +45,16 @@ type qaItem struct {
 // -------------------------------------------------------------------------
 
 type collectionResult struct {
-	Collection       string        `json:"collection"`
-	Date             string        `json:"date"`
-	RecallAtK        float64       `json:"recall_at_k"`
-	Faithfulness     float64       `json:"faithfulness"`
-	LatencyQueryP50  time.Duration `json:"latency_query_p50_ms"`
-	LatencyQueryP95  time.Duration `json:"latency_query_p95_ms"`
-	LatencyAnswerP50 time.Duration `json:"latency_answer_p50_ms"`
-	LatencyAnswerP95 time.Duration `json:"latency_answer_p95_ms"`
-	Total            int           `json:"total"`
-	Passed           int           `json:"passed"`
+	Collection       string `json:"collection"`
+	Date             string `json:"date"`
+	RecallAtK        float64 `json:"recall_at_k"`
+	Faithfulness     float64 `json:"faithfulness"`
+	LatencyQueryP50  int64  `json:"latency_query_p50_ms"`  // milliseconds
+	LatencyQueryP95  int64  `json:"latency_query_p95_ms"`  // milliseconds
+	LatencyAnswerP50 int64  `json:"latency_answer_p50_ms"` // milliseconds
+	LatencyAnswerP95 int64  `json:"latency_answer_p95_ms"` // milliseconds
+	Total            int    `json:"total"`
+	Passed           int    `json:"passed"`
 }
 
 // -------------------------------------------------------------------------
@@ -262,10 +262,10 @@ func evalCollection(ctx context.Context, client *ragClient, collection, qaFile s
 
 	result.RecallAtK = totalRecall / float64(len(items))
 	result.Faithfulness = float64(faithHits) / float64(len(items))
-	result.LatencyQueryP50 = percentile(queryLatencies, 50)
-	result.LatencyQueryP95 = percentile(queryLatencies, 95)
-	result.LatencyAnswerP50 = percentile(answerLatencies, 50)
-	result.LatencyAnswerP95 = percentile(answerLatencies, 95)
+	result.LatencyQueryP50 = percentile(queryLatencies, 50).Milliseconds()
+	result.LatencyQueryP95 = percentile(queryLatencies, 95).Milliseconds()
+	result.LatencyAnswerP50 = percentile(answerLatencies, 50).Milliseconds()
+	result.LatencyAnswerP95 = percentile(answerLatencies, 95).Milliseconds()
 
 	return result, nil
 }
@@ -352,8 +352,8 @@ func main() {
 
 		fmt.Printf("[%s] recall@%d=%.2f faithfulness=%.2f query_p50=%s answer_p50=%s\n",
 			coll, *topK, result.RecallAtK, result.Faithfulness,
-			result.LatencyQueryP50.Round(time.Millisecond),
-			result.LatencyAnswerP50.Round(time.Millisecond))
+			time.Duration(result.LatencyQueryP50)*time.Millisecond,
+			time.Duration(result.LatencyAnswerP50)*time.Millisecond)
 
 		if result.RecallAtK < *minRecall {
 			fmt.Printf("[%s] FAIL: recall@%d %.2f < %.2f\n",

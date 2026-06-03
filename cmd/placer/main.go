@@ -75,6 +75,11 @@ func main() {
 	format := flag.String("format", "text", "Output format: text|json")
 	flag.Parse()
 
+	// Validate max-devices
+	if *maxDevices < 1 {
+		log.Fatalf("-max-devices must be at least 1, got %d", *maxDevices)
+	}
+
 	model := flag.Arg(0)
 	if model == "" {
 		flag.Usage()
@@ -195,7 +200,8 @@ func buildPlan(model string, nodes []*Node, state *placerState, multi bool, maxD
 
 func containsModel(models []string, model string) bool {
 	for _, m := range models {
-		if m == model || strings.HasPrefix(m, model) {
+		// Match exact model name or model:version format
+		if m == model || strings.HasPrefix(m, model+":") {
 			return true
 		}
 	}

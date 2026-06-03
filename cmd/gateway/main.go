@@ -287,6 +287,9 @@ func telemetryPing(ctx context.Context, backendCount int) {
 
 	payload := fmt.Sprintf(`{"product":"cluster-gateway","backends":%d}`, backendCount)
 
+	// Create a client with a timeout to prevent indefinite hangs
+	client := &http.Client{Timeout: 5 * time.Second}
+
 	send := func() {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint,
 			strings.NewReader(payload))
@@ -294,7 +297,7 @@ func telemetryPing(ctx context.Context, backendCount int) {
 			return
 		}
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			return
 		}
