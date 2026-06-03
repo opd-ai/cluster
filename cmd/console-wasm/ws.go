@@ -1,3 +1,5 @@
+//go:build js && wasm
+
 // WebSocket client for the WASM build.
 // Uses nhooyr.io/websocket which supports WASM (js/wasm target).
 package main

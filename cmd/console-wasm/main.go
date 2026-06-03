@@ -1,3 +1,5 @@
+//go:build js && wasm
+
 // Command console-wasm is the WASM browser client for the cluster management
 // console.  It must be compiled with:
 //
