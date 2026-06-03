@@ -131,6 +131,20 @@ func newServer(cfg config, conn *grpc.ClientConn) *server {
 	}
 }
 
+// normalizeTopK applies default and bounds to TopK parameter.
+func (s *server) normalizeTopK(topK int) int {
+	if topK <= 0 {
+		topK = s.cfg.topK
+	}
+	if topK < 1 {
+		topK = 1
+	}
+	if topK > 100 {
+		topK = 100
+	}
+	return topK
+}
+
 // -------------------------------------------------------------------------
 // /rag/query
 // -------------------------------------------------------------------------
@@ -155,15 +169,7 @@ func (s *server) handleQuery(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"bad request"}`, http.StatusBadRequest)
 		return
 	}
-	if req.TopK <= 0 {
-		req.TopK = s.cfg.topK
-	}
-	if req.TopK < 1 {
-		req.TopK = 1
-	}
-	if req.TopK > 100 {
-		req.TopK = 100
-	}
+	req.TopK = s.normalizeTopK(req.TopK)
 	if req.Collection == "" {
 		http.Error(w, `{"error":"collection required"}`, http.StatusBadRequest)
 		return
@@ -210,15 +216,7 @@ func (s *server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"bad request"}`, http.StatusBadRequest)
 		return
 	}
-	if req.TopK <= 0 {
-		req.TopK = s.cfg.topK
-	}
-	if req.TopK < 1 {
-		req.TopK = 1
-	}
-	if req.TopK > 100 {
-		req.TopK = 100
-	}
+	req.TopK = s.normalizeTopK(req.TopK)
 	if req.Collection == "" {
 		http.Error(w, `{"error":"collection required"}`, http.StatusBadRequest)
 		return

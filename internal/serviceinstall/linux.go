@@ -2,11 +2,9 @@
 package serviceinstall
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/template"
 )
 
 // SystemdUnit represents a systemd service unit.
@@ -58,15 +56,5 @@ RestartSec=5
 WantedBy=multi-user.target
 `
 
-	t, err := template.New("systemd").Parse(tmpl)
-	if err != nil {
-		return fmt.Sprintf("; error rendering template: %v", err)
-	}
-
-	var buf bytes.Buffer
-	if err := t.Execute(&buf, unit); err != nil {
-		return fmt.Sprintf("; error executing template: %v", err)
-	}
-
-	return buf.String()
+	return renderTemplate("systemd", tmpl, unit)
 }

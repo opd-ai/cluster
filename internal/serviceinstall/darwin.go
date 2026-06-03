@@ -4,11 +4,9 @@
 package serviceinstall
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/template"
 )
 
 // WriteDarwinUnit writes a launchd plist service file for macOS.
@@ -43,7 +41,7 @@ func renderLaunchdTemplate(unit *SystemdUnit) string {
   <string>com.opd.{{.Name}}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>{{.Executable}}</string>
+   <string>{{.Executable}}</string>
 {{range .Args}}    <string>{{.}}</string>
 {{end}}  </array>
 {{if .Environment}}  <key>EnvironmentVariables</key>
@@ -59,15 +57,5 @@ func renderLaunchdTemplate(unit *SystemdUnit) string {
 </plist>
 `
 
-	t, err := template.New("launchd").Parse(tmpl)
-	if err != nil {
-		return fmt.Sprintf("<!-- error rendering template: %v -->", err)
-	}
-
-	var buf bytes.Buffer
-	if err := t.Execute(&buf, unit); err != nil {
-		return fmt.Sprintf("<!-- error executing template: %v -->", err)
-	}
-
-	return buf.String()
+	return renderTemplate("launchd", tmpl, unit)
 }
