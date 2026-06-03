@@ -409,39 +409,39 @@ with `status`, `output_text`, `output_image_url`, `output_video_url`).
 
 ### Phase 3 — lb package + gateway routing
 
-- [ ] Create `internal/lb/picker.go`: `Picker` interface; `WeightedRoundRobin` implementation
-- [ ] Create `internal/lb/least_queue.go`: `LeastQueue` implementation (polls `QueueDepth` from `BackendRecord`)
-- [ ] Create `internal/lb/latency_ewma.go`: `LatencyEWMA` implementation
-- [ ] Create `internal/lb/registry.go`: `BackendRegistry` with `Register`, `Deregister`, `Pick(role, model, hint)` methods
+- [x] Create `internal/lb/picker.go`: `Picker` interface; `WeightedRoundRobin` implementation
+- [x] Create `internal/lb/least_queue.go`: `LeastQueue` implementation (polls `QueueDepth` from `BackendRecord`)
+- [x] Create `internal/lb/latency_ewma.go`: `LatencyEWMA` implementation
+- [x] Create `internal/lb/registry.go`: `BackendRegistry` with `Register`, `Deregister`, `Pick(role, model, hint)` methods
 - [ ] Update `cmd/gateway/main.go`: replace `pickBackend` / `discoverBackends` with `lb.BackendRegistry` + `lb.Picker`
 - [ ] Add `-lb-strategy` flag to gateway
 - [ ] Ensure multi-role routing: gateway uses `ServiceBinding.Port` to route image-gen to port 7860 on a host also serving chat on 11434
-- [ ] Run `make lint` and `make test`
+- [x] Run `make lint` and `make test`
 - [ ] Load test: simulate 3 backends, one with queue=10; verify `least-queue` strategy routes away from it
 
 ### Phase 4 — uiapi extensions + console
 
-- [ ] Add `AggregateMetrics` type to `internal/uiapi/types.go`
-- [ ] Add `GenerationEvent` type to `internal/uiapi/types.go`
-- [ ] Add `PipelineState` type to `internal/uiapi/types.go`
-- [ ] Add `MsgAggregateMetrics`, `MsgGenerationEvent`, `MsgPipelineState` constants
+- [x] Add `AggregateMetrics` type to `internal/uiapi/types.go`
+- [x] Add `GenerationEvent` type to `internal/uiapi/types.go`
+- [x] Add `PipelineState` type to `internal/uiapi/types.go`
+- [x] Add `MsgAggregateMetrics`, `MsgGenerationEvent`, `MsgPipelineState` constants
 - [ ] Update `cmd/console/main.go`: aggregation loop polling all known node-agents every 5 s
 - [ ] Update `cmd/console/ws.go`: push `AggregateMetrics` and `GenerationEvent` messages
 - [ ] Update `cmd/console-wasm/scene_cluster.go`: render `Roles []string` per node; show per-role VRAM bar
 - [ ] Update `cmd/console-wasm/scene_imagestudio.go`: subscribe to `MsgGenerationEvent` for cross-node previews
 - [ ] Rebuild WASM: `make console-wasm`
-- [ ] Run `make lint` and `make test`
+- [x] Run `make lint` and `make test`
 
 ### Phase 5 — pipeline package + gateway endpoint
 
-- [ ] Create `internal/pipeline/spec.go`: `PipelineSpec`, `Stage`, `StageResult` types
-- [ ] Create `internal/pipeline/executor.go`: serial stage execution loop with per-stage timeout
-- [ ] Add `POST /v1/pipelines` route to `cmd/gateway/main.go`
-- [ ] Implement `POST /api/v1/pipeline/submit` on `cmd/node-agent/main.go`
-- [ ] Implement `GET /api/v1/pipeline/result/{id}` on node-agent
+- [x] Create `internal/pipeline/spec.go`: `PipelineSpec`, `Stage`, `StageResult` types
+- [x] Create `internal/pipeline/executor.go`: serial stage execution loop with per-stage timeout
+- [x] Add `POST /v1/pipelines` route to `cmd/gateway/main.go`
+- [x] Implement `POST /api/v1/pipeline/submit` on `cmd/node-agent/main.go`
+- [x] Implement `GET /api/v1/pipeline/result/{id}` on node-agent
 - [ ] Add `PipelineState` WebSocket push in `cmd/console/ws.go` (re-uses P4 type)
-- [ ] Write `docs/adr/011-pipeline-api.md` ADR stub
-- [ ] Run `make lint` and `make test`
+- [x] Write `docs/adr/011-pipeline-api.md` ADR stub
+- [x] Run `make lint` and `make test`
 - [ ] End-to-end test: `POST /v1/pipelines` with chat→image stages; verify image URL in response
 
 ---

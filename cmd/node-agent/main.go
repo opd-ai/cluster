@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -120,12 +121,16 @@ func main() {
 		peers:      make([]nodeapi.PeerRecord, 0),
 		peersMu:    &sync.RWMutex{},
 		listener:   listener,
+		jobs:       make(map[string]pipelineJob),
+		jobsMu:     &sync.RWMutex{},
 	}
 
 	mux.Get("/api/v1/info", handlers.handleInfo)
 	mux.Get("/api/v1/health", handlers.handleHealth)
 	mux.Get("/api/v1/metrics", handlers.handleMetrics)
 	mux.Get("/api/v1/peers", handlers.handlePeers)
+	mux.Post("/api/v1/pipeline/submit", handlers.handlePipelineSubmit)
+	mux.Get("/api/v1/pipeline/result/{jobID}", handlers.handlePipelineResult)
 
 	srv := &http.Server{
 		Addr:    ":9977",
@@ -157,14 +162,28 @@ func main() {
 }
 
 type apiHandlers struct {
-	hostname string
-	address  string
-	roles    []string
-	vramGB   int
-	ramGB    int
-	peers    []nodeapi.PeerRecord
-	peersMu  *sync.RWMutex
-	listener *discovery.Listener
+	hostname   string
+	address    string
+	roles      []string
+	vramGB     int
+	ramGB      int
+	peers      []nodeapi.PeerRecord
+	peersMu    *sync.RWMutex
+	listener   *discovery.Listener
+	jobs       map[string]pipelineJob
+	jobsMu     *sync.RWMutex
+	jobCounter atomic.Int64
+}
+
+type pipelineJob struct {
+	ID        string
+	Status    string
+	Input     any
+	Output    any
+	Error     string
+	Progress  float64
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (h *apiHandlers) handleInfo(w http.ResponseWriter, r *http.Request) {
@@ -238,6 +257,92 @@ func (h *apiHandlers) handlePeers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(peers)
+}
+
+func (h *apiHandlers) handlePipelineSubmit(w http.ResponseWriter, r *http.Request) {
+	var submitReq struct {
+		StageID string         `json:"stage_id"`
+		Role    string         `json:"role"`
+		Model   string         `json:"model"`
+		Input   any            `json:"input"`
+		Config  map[string]any `json:"config"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&submitReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Generate job ID
+	jobID := fmt.Sprintf("job-%d", h.jobCounter.Add(1))
+
+	// Store job
+	job := pipelineJob{
+		ID:        jobID,
+		Status:    "pending",
+		Input:     submitReq.Input,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	h.jobsMu.Lock()
+	h.jobs[jobID] = job
+	h.jobsMu.Unlock()
+
+	// Simulate async processing (in real implementation, would submit to role process)
+	go func() {
+		time.Sleep(100 * time.Millisecond) // Simulate work
+		h.jobsMu.Lock()
+		job.Status = "running"
+		job.UpdatedAt = time.Now()
+		h.jobs[jobID] = job
+		h.jobsMu.Unlock()
+
+		time.Sleep(500 * time.Millisecond) // More work
+		h.jobsMu.Lock()
+		job.Status = "completed"
+		job.Output = map[string]string{"result": "success"}
+		job.Progress = 1.0
+		job.UpdatedAt = time.Now()
+		h.jobs[jobID] = job
+		h.jobsMu.Unlock()
+	}()
+
+	// Return acknowledgment
+	ack := nodeapi.PipelineAck{
+		JobID:     jobID,
+		Stage:     submitReq.StageID,
+		Timestamp: time.Now(),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(ack)
+}
+
+func (h *apiHandlers) handlePipelineResult(w http.ResponseWriter, r *http.Request) {
+	jobID := chi.URLParam(r, "jobID")
+
+	h.jobsMu.RLock()
+	job, exists := h.jobs[jobID]
+	h.jobsMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "job not found", http.StatusNotFound)
+		return
+	}
+
+	result := nodeapi.PipelineResult{
+		JobID:     jobID,
+		Status:    job.Status,
+		Output:    job.Output,
+		Error:     job.Error,
+		Progress:  job.Progress,
+		Timestamp: job.UpdatedAt,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func buildServices(roles []string) []inventory.ServiceBinding {

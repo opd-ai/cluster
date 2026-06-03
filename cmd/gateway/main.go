@@ -64,20 +64,22 @@ type Backend struct {
 
 // Gateway is the main gateway state.
 type Gateway struct {
-	backends     []*Backend
-	apiKeys      map[string]struct{}
-	sticky       map[string]int // (key+model) → backend index
-	loraAdapters map[string]LoRAAdapter
-	swarmURL     string
-	swarmHealthy bool
-	ragURL       string
-	quotaCfg     *quotaConfig
-	mu           sync.RWMutex
-	httpClient   *http.Client  // shared client for connection pooling
-	rrIdx        atomic.Uint64 // round-robin counter for pickBackend
-	speculative  bool
-	reqTotal     atomic.Int64 // total requests handled
-	reqErrors    atomic.Int64 // total gateway request failures
+	backends           []*Backend
+	apiKeys            map[string]struct{}
+	sticky             map[string]int // (key+model) → backend index
+	loraAdapters       map[string]LoRAAdapter
+	swarmURL           string
+	swarmHealthy       bool
+	ragURL             string
+	quotaCfg           *quotaConfig
+	mu                 sync.RWMutex
+	httpClient         *http.Client  // shared client for connection pooling
+	rrIdx              atomic.Uint64 // round-robin counter for pickBackend
+	speculative        bool
+	reqTotal           atomic.Int64 // total requests handled
+	reqErrors          atomic.Int64 // total gateway request failures
+	pipelineIDCounter  atomic.Int64
+	pipelineExecutor   *pipelineExecutor
 }
 
 // maxStickyEntries limits the sticky session map size to prevent unbounded growth.
