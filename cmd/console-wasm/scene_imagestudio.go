@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -14,13 +15,14 @@ import (
 
 // imageStudioScene is the image generation studio.
 type imageStudioScene struct {
-	onBack    func()
-	backBtn   *ui.Button
-	genBtn    *ui.Button
-	prompt    string
-	lastURL   string
-	progress  *ui.ProgressBar
-	busy      bool
+	mu       sync.Mutex
+	onBack   func()
+	backBtn  *ui.Button
+	genBtn   *ui.Button
+	prompt   string
+	lastURL  string
+	progress *ui.ProgressBar
+	busy     bool
 }
 
 func newImageStudioScene(onBack func()) *imageStudioScene {
@@ -36,17 +38,26 @@ func newImageStudioScene(onBack func()) *imageStudioScene {
 
 func (s *imageStudioScene) generate() {
 	text := strings.TrimSpace(s.prompt)
-	if text == "" || s.busy {
+	if text == "" {
+		return
+	}
+
+	s.mu.Lock()
+	if s.busy {
+		s.mu.Unlock()
 		return
 	}
 	s.busy = true
 	s.progress.Value = 0.1
+	s.mu.Unlock()
 
 	go func() {
 		url := s.callGenerate(text)
+		s.mu.Lock()
 		s.lastURL = url
 		s.progress.Value = 1.0
 		s.busy = false
+		s.mu.Unlock()
 	}()
 }
 
@@ -80,7 +91,10 @@ func (s *imageStudioScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	vector.DrawFilledRect(screen, 0, 0, 1280, 52, color.RGBA{22, 22, 38, 255}, false)
 	s.backBtn.Draw(screen)
 	s.genBtn.Draw(screen)
+
+	s.mu.Lock()
 	s.progress.Draw(screen)
+	s.mu.Unlock()
 
 	// Image preview area.
 	vector.DrawFilledRect(screen, 16, 60, 740, 660, color.RGBA{20, 20, 32, 255}, false)

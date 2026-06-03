@@ -34,8 +34,8 @@ type imageGenerationRequest struct {
 // imageEditRequest is the OpenAI /v1/images/edits body.
 type imageEditRequest struct {
 	Prompt         string `json:"prompt"`
-	Image          string `json:"image"`  // base64 PNG
-	Mask           string `json:"mask"`   // base64 PNG mask
+	Image          string `json:"image"` // base64 PNG
+	Mask           string `json:"mask"`  // base64 PNG mask
 	N              int    `json:"n"`
 	Size           string `json:"size"`
 	ResponseFormat string `json:"response_format"`

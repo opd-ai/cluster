@@ -469,7 +469,14 @@ func checkRemoteFPSupport(client *ssh.Client) CheckResult {
 func checkRemoteDiskSpace(client *ssh.Client, threshold int) CheckResult {
 	out, err := remoteCmd(client, "df / | tail -1 | awk '{print $4}'")
 	if err == nil && out != "" {
-		kb, _ := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+		kb, parseErr := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+		if parseErr != nil {
+			return CheckResult{
+				Name:    "Disk Space",
+				Status:  "WARN",
+				Message: fmt.Sprintf("Parse error: %v (output: %s)", parseErr, strings.TrimSpace(out)),
+			}
+		}
 		free := int(kb / (1024 * 1024))
 		if free < threshold {
 			return CheckResult{
@@ -513,7 +520,14 @@ func checkRemoteMTU(client *ssh.Client) CheckResult {
 	out, err := remoteCmd(client, "ip link show | grep -oP '(?<=mtu )\\d+' | head -1")
 	if err == nil && out != "" {
 		mtu := strings.TrimSpace(out)
-		mtuVal, _ := strconv.Atoi(mtu)
+		mtuVal, parseErr := strconv.Atoi(mtu)
+		if parseErr != nil {
+			return CheckResult{
+				Name:    "MTU",
+				Status:  "WARN",
+				Message: fmt.Sprintf("Parse error: %v (output: %s)", parseErr, mtu),
+			}
+		}
 		if mtuVal >= 1500 {
 			return CheckResult{
 				Name:    "MTU",

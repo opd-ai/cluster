@@ -40,7 +40,7 @@ import (
 // Entry describes one artifact in the registry.
 type Entry struct {
 	Name       string    `json:"name"`
-	Type       string    `json:"type"`        // llm-base|adapter|gguf|checkpoint|vae|clip|lora|embedding
+	Type       string    `json:"type"` // llm-base|adapter|gguf|checkpoint|vae|clip|lora|embedding
 	SHA256     string    `json:"sha256"`
 	SizeBytes  int64     `json:"size_bytes"`
 	LicenseTag string    `json:"license_tag"` // e.g. apache-2.0, mit, cc-by-nc-4.0

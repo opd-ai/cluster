@@ -3,8 +3,8 @@
 // It reads configs/namespaces.yaml, walks each repo's bare clone under
 // repo-cache/<label>/, and emits two JSONL files:
 //
-//   dataset.jsonl                  — namespace-wide (all repos merged)
-//   repos/<label>/dataset.jsonl   — per-repo dataset
+//	dataset.jsonl                  — namespace-wide (all repos merged)
+//	repos/<label>/dataset.jsonl   — per-repo dataset
 //
 // Each JSONL line is a text/chat training example:
 //
@@ -164,6 +164,14 @@ func main() {
 	}
 }
 
+// writeLine writes data followed by a newline to the writer, returning an error if either write fails.
+func writeLine(w *bufio.Writer, data []byte) error {
+	if _, err := w.Write(data); err != nil {
+		return err
+	}
+	return w.WriteByte('\n')
+}
+
 // walkRepo walks a bare-clone or regular git repo directory and writes
 // qualifying files as JSONL examples.
 func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW *bufio.Writer, repoSeen, nsSeen map[string]struct{}) (int, error) {
@@ -200,22 +208,30 @@ func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW *bufio.Write
 		text := string(data)
 		hash := contentHash(text)
 
-		rel, _ := filepath.Rel(repoDir, path)
+		rel, err := filepath.Rel(repoDir, path)
+		if err != nil {
+			return fmt.Errorf("filepath rel for %q: %w", path, err)
+		}
 		src := repoLabel + "/" + rel
 
 		ex := example{Text: text, Source: src}
-		line, _ := json.Marshal(ex)
+		line, err := json.Marshal(ex)
+		if err != nil {
+			return fmt.Errorf("marshal example for %q: %w", src, err)
+		}
 
 		if _, seen := repoSeen[hash]; !seen {
 			repoSeen[hash] = struct{}{}
-			_, _ = repoW.Write(line)
-			_ = repoW.WriteByte('\n')
+			if err := writeLine(repoW, line); err != nil {
+				return err
+			}
 			count++
 		}
 		if _, seen := nsSeen[hash]; !seen {
 			nsSeen[hash] = struct{}{}
-			_, _ = nsW.Write(line)
-			_ = nsW.WriteByte('\n')
+			if err := writeLine(nsW, line); err != nil {
+				return err
+			}
 		}
 		return nil
 	})

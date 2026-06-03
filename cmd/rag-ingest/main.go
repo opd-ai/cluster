@@ -335,7 +335,7 @@ func (ing *ingestor) fetchURL(ctx context.Context, rawURL string) error {
 	}
 
 	// Write to a temp file and ingest as text.
-	tmp, err := os.CreateTemp("", "rag-url-*")
+	tmp, err := os.CreateTemp("", "rag-url-*.txt")
 	if err != nil {
 		return err
 	}
@@ -348,8 +348,8 @@ func (ing *ingestor) fetchURL(ctx context.Context, rawURL string) error {
 	}
 	tmp.Close()
 
-	// Treat the URL as a .txt file for extension check.
-	return ing.ingestFile(ctx, tmpPath+".txt")
+	// Ingest the file with .txt extension already present.
+	return ing.ingestFile(ctx, tmpPath)
 }
 
 // -------------------------------------------------------------------------

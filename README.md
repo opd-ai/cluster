@@ -90,6 +90,7 @@ These targets call `go run` on `./cmd/...` entry points. If those packages are n
 - **Centralized task runner** - `Makefile` provides one command surface for linting, testing, building, and runtime entry points.
 - **Multi-language linting workflow** - Lint targets exist for Go, Python (Ruff via `uv`), shell scripts, YAML, and Markdown.
 - **WASM console build hook** - `make console-wasm` defines a Go `GOOS=js GOARCH=wasm` build path and copies `wasm_exec.js` into `web/`.
+- **Web console with session auth** - The console (`cmd/console`) serves a WASM client and REST API. Bootstrap assets (index.html, main.wasm, wasm_exec.js) are public to enable login page loads; all other static assets and API routes require session token authentication (Authorization bearer token for HTTP APIs; `token` query parameter for `/api/ws`) to prevent operator misconfiguration exposures.
 - **Python training dependency set** - `cluster-training` declares PyTorch/Transformers/TRL/PEFT-style dependencies in `python/pyproject.toml`.
 - **Contributor guidance** - `CONTRIBUTING.md` documents prerequisites, workflow, branch conventions, and review expectations.
 

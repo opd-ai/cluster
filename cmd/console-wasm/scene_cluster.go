@@ -11,13 +11,13 @@ import (
 
 // clusterScene shows the cluster overview: node cards, job queue, log tail.
 type clusterScene struct {
-	onNavigate  func(target string)
-	chatBtn     *ui.Button
-	imageBtn    *ui.Button
-	videoBtn    *ui.Button
-	trainBtn    *ui.Button
-	ragBtn      *ui.Button
-	regBtn      *ui.Button
+	onNavigate     func(target string)
+	chatBtn        *ui.Button
+	imageBtn       *ui.Button
+	videoBtn       *ui.Button
+	trainBtn       *ui.Button
+	ragBtn         *ui.Button
+	regBtn         *ui.Button
 	nodeSparklines map[string]*ui.Sparkline
 }
 

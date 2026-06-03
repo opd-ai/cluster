@@ -34,9 +34,9 @@ type Message struct {
 
 // ClusterState is the full cluster snapshot pushed to connected clients.
 type ClusterState struct {
-	Nodes     []NodeState  `json:"nodes"`
-	Jobs      []JobState   `json:"jobs"`
-	UpdatedAt time.Time    `json:"updated_at"`
+	Nodes     []NodeState `json:"nodes"`
+	Jobs      []JobState  `json:"jobs"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 // NodeState represents a single cluster node.
@@ -70,12 +70,12 @@ type NodeMetrics struct {
 type JobKind string
 
 const (
-	JobKindInference  JobKind = "inference"
-	JobKindTraining   JobKind = "training"
-	JobKindImageGen   JobKind = "image_gen"
-	JobKindVideoGen   JobKind = "video_gen"
-	JobKindRAGIngest  JobKind = "rag_ingest"
-	JobKindEval       JobKind = "eval"
+	JobKindInference JobKind = "inference"
+	JobKindTraining  JobKind = "training"
+	JobKindImageGen  JobKind = "image_gen"
+	JobKindVideoGen  JobKind = "video_gen"
+	JobKindRAGIngest JobKind = "rag_ingest"
+	JobKindEval      JobKind = "eval"
 )
 
 // JobStatus is the lifecycle state of a job.

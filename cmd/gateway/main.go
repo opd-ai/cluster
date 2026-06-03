@@ -554,7 +554,7 @@ func (gw *Gateway) pickBackend(key, model string) *Backend {
 
 func containsModel(models []string, model string) bool {
 	for _, m := range models {
-		if m == model || strings.HasPrefix(m, model) {
+		if m == model {
 			return true
 		}
 	}

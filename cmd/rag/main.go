@@ -27,8 +27,8 @@ import (
 	"syscall"
 	"time"
 
-	qdrant "github.com/qdrant/go-client/qdrant"
 	"github.com/opd-ai/cluster/internal/tracing"
+	qdrant "github.com/qdrant/go-client/qdrant"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

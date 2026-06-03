@@ -91,7 +91,7 @@ type App struct {
 // NewApp creates a new App.
 func NewApp(wsURL string) *App {
 	a := &App{
-		wsURL: wsURL,
+		wsURL:  wsURL,
 		scenes: make(map[string]Scene),
 	}
 	a.registerScenes()

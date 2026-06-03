@@ -237,6 +237,8 @@ func probeNode(client *http.Client, node *Node) {
 		} `json:"models"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		log.Printf("probe %s: decode error: %v", node.Address, err)
+		node.Healthy = false
 		return
 	}
 	const bytesPerGiB = 1 << 30

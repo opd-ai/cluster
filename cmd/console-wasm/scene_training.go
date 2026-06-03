@@ -14,11 +14,11 @@ import (
 
 // trainingScene shows active training jobs with loss/lr sparklines.
 type trainingScene struct {
-	onBack     func()
-	backBtn    *ui.Button
-	lossLines  map[string]*ui.Sparkline
-	lrLines    map[string]*ui.Sparkline
-	jobs       []uiapi.JobState
+	onBack    func()
+	backBtn   *ui.Button
+	lossLines map[string]*ui.Sparkline
+	lrLines   map[string]*ui.Sparkline
+	jobs      []uiapi.JobState
 }
 
 func newTrainingScene(onBack func()) *trainingScene {

@@ -5,10 +5,10 @@
 //   - Exposes a WebSocket endpoint at /api/ws that proxies cluster state from
 //     the gateway and node agents, pushing uiapi.Message values to clients.
 //   - Provides REST endpoints:
-//       POST /api/login            — exchange an API key for a session token
-//       GET  /api/cluster          — current ClusterState snapshot
-//       GET  /api/jobs             — recent JobState list
-//       GET  /api/logs?source=…    — last N log lines
+//     POST /api/login            — exchange an API key for a session token
+//     GET  /api/cluster          — current ClusterState snapshot
+//     GET  /api/jobs             — recent JobState list
+//     GET  /api/logs?source=…    — last N log lines
 //
 // Usage:
 //
@@ -346,8 +346,8 @@ func (s *Server) fetchGatewayState(client *http.Client) {
 	state := uiapi.ClusterState{UpdatedAt: time.Now()}
 	if backendsRaw, ok := raw["backends"]; ok {
 		var backends []struct {
-			URL     string `json:"url"`
-			Healthy bool   `json:"healthy"`
+			URL     string   `json:"url"`
+			Healthy bool     `json:"healthy"`
 			Models  []string `json:"models"`
 		}
 		if err := json.Unmarshal(backendsRaw, &backends); err == nil {

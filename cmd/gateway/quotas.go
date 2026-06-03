@@ -19,10 +19,10 @@ import (
 
 // quotaState holds usage counters per API key for the current UTC day.
 type quotaState struct {
-	mu       sync.Mutex
-	day      int // unix day number (unix / 86400)
-	images   map[string]int
-	videos   map[string]int
+	mu     sync.Mutex
+	day    int // unix day number (unix / 86400)
+	images map[string]int
+	videos map[string]int
 }
 
 var globalQuota = &quotaState{

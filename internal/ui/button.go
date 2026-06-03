@@ -16,10 +16,10 @@ type Button struct {
 	pressed bool
 
 	// Colors
-	BgColor      color.Color
-	HoverColor   color.Color
-	PressColor   color.Color
-	TextColor    color.Color
+	BgColor    color.Color
+	HoverColor color.Color
+	PressColor color.Color
+	TextColor  color.Color
 }
 
 // NewButton creates a button with default colors.
