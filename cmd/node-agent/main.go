@@ -167,8 +167,12 @@ func main() {
 	mux.Get("/api/v1/pipeline/result/{jobID}", handlers.handlePipelineResult)
 
 	srv := &http.Server{
-		Addr:    ":9977",
-		Handler: mux,
+		Addr:              ":9977",
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	// Start server in background
