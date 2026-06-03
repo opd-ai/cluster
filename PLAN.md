@@ -277,9 +277,9 @@ can be routed to backends that don't serve the requested model.
 
 **Remaining Tasks:**
 - [x] Add aggregation loop in `cmd/console/main.go` polling all node-agents every 5 s
-- [ ] Push `MsgAggregateMetrics`, `MsgGenerationEvent` via WebSocket in `ws.go`
-- [ ] Update `cmd/console-wasm` to render `Roles []string` and per-role VRAM bars
-- [ ] Rebuild WASM: `make console-wasm`
+- [x] Push `MsgAggregateMetrics`, `MsgGenerationEvent` via WebSocket in `ws.go`
+- [x] Update `cmd/console-wasm` to render `Roles []string` and per-role VRAM bars
+- [x] Rebuild WASM: `make console-wasm`
 
 ---
 
