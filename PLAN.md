@@ -403,7 +403,7 @@ with `status`, `output_text`, `output_image_url`, `output_video_url`).
 - [x] Implement `GET /api/v1/peers` on node-agent
 - [x] Add `--no-reconcile` flag to node-agent
 - [ ] Update gateway to optionally join discovery multicast group (`-discovery=true` flag)
-- [ ] Add `agent` Makefile target: `go run ./cmd/node-agent --roles $(ROLES)`
+- [x] Add `agent` Makefile target: `go run ./cmd/node-agent --roles $(ROLES)`
 - [x] Run `make lint` and `make test`
 - [ ] Integration test: two node-agent instances on same LAN discover each other within 30 s
 
