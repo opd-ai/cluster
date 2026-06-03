@@ -137,6 +137,7 @@ func bringUpCluster(nodes []NodeConfig, signer ssh.Signer, config BootstrapConfi
 		return fmt.Errorf("fetch node token: %w", err)
 	}
 
+	var workerErrors []error
 	for _, node := range nodes {
 		if node.Hostname == controlNode.Hostname || node.OS == "darwin" {
 			continue
@@ -148,10 +149,12 @@ func bringUpCluster(nodes []NodeConfig, signer ssh.Signer, config BootstrapConfi
 		wc, err := createSSHClient(node.SSHUser, node.Address, "22", signer, config)
 		if err != nil {
 			log.Printf("Failed to connect to worker %s: %v", node.Hostname, err)
+			workerErrors = append(workerErrors, fmt.Errorf("worker %s connection: %w", node.Hostname, err))
 			continue
 		}
 		if err := joinK3sWorker(wc, controlNode.Address, token, config); err != nil {
 			log.Printf("Failed to join worker %s: %v", node.Hostname, err)
+			workerErrors = append(workerErrors, fmt.Errorf("worker %s join: %w", node.Hostname, err))
 		} else {
 			fmt.Printf("✓ %s joined the cluster\n", node.Hostname)
 		}
@@ -168,6 +171,10 @@ func bringUpCluster(nodes []NodeConfig, signer ssh.Signer, config BootstrapConfi
 		sshUser, controlNode.Address)
 	fmt.Printf("  curl -sfL https://get.k3s.io | K3S_URL=https://%s:6443 K3S_TOKEN=\"$TOKEN\" sh -\n\n",
 		controlNode.Address)
+
+	if len(workerErrors) > 0 {
+		return errors.Join(workerErrors...)
+	}
 	return nil
 }
 

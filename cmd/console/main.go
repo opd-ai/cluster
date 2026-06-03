@@ -75,6 +75,8 @@ func newServer(addr, gatewayURL, wasmDir, keyFile string) (*Server, error) {
 		gatewayURL: gatewayURL,
 		wasmDir:    wasmDir,
 		apiKeys:    keys,
+		jobs:       make([]uiapi.JobState, 0),
+		logBuf:     make([]uiapi.LogLine, 0),
 		clients:    make(map[chan uiapi.Message]struct{}),
 		sessions:   make(map[string]sessionEntry),
 		audit:      newAuditLog(0),
