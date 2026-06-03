@@ -354,7 +354,7 @@ execution persistence by ID.
 - [x] Update gateway to optionally join discovery multicast group (`-discovery=true` flag)
 - [x] Add `agent` Makefile target: `$(GO) run ./cmd/node-agent --roles $(ROLES) --address $(ADDRESS)`
 - [x] Run `make lint` and `make test`
-- [ ] **FIX GAPS.md:** Record listener messages into `h.peers` under `peersMu` so `/api/v1/peers` returns discovered nodes
+- [x] **FIX GAPS.md:** Record listener messages into `h.peers` under `peersMu` so `/api/v1/peers` returns discovered nodes
 - [ ] Integration test: two node-agent instances on same LAN discover each other within 30 s
 
 ### Phase 3 — lb package + gateway routing 🔄 IN PROGRESS
@@ -364,9 +364,9 @@ execution persistence by ID.
 - [x] Create `internal/lb/latency_ewma.go`: `LatencyEWMA` implementation
 - [x] Create `internal/lb/registry.go`: `BackendRegistry` with `Register`, `Deregister`, `Pick(role, model, hint)`
 - [x] Add `-lb-strategy` flag to gateway
-- [ ] **Update `cmd/gateway/main.go`:** Replace `pickBackend()` / `discoverBackends()` with `lb.BackendRegistry` + `lb.Picker`
-- [ ] **FIX GAPS.md:** Add model filtering to all pickers (empty model = any; otherwise filter by `BackendRecord.Models`)
-- [ ] **Ensure multi-role routing:** Gateway uses `ServiceBinding.Port` to route image-gen to port 7860 on a host also serving chat on 11434
+- [x] **Update `cmd/gateway/main.go`:** Replace `pickBackend()` / `discoverBackends()` with `lb.BackendRegistry` + `lb.Picker`
+- [x] **FIX GAPS.md:** Add model filtering to all pickers (empty model = any; otherwise filter by `BackendRecord.Models`)
+- [x] **Ensure multi-role routing:** Gateway uses `ServiceBinding.Port` to route image-gen to port 7860 on a host also serving chat on 11434
 - [ ] Run `make lint` and `make test`
 - [ ] Load test: simulate 3 backends, one with queue=10; verify `least-queue` strategy routes away from it
 
@@ -377,7 +377,7 @@ execution persistence by ID.
 - [x] Add `PipelineState` and `PipelineStageState` types to `internal/uiapi/types.go`
 - [x] Add `MsgAggregateMetrics`, `MsgGenerationEvent`, `MsgPipelineState` constants
 - [x] Add `AggRoleMetrics` for per-role aggregation
-- [ ] **Update `cmd/console/main.go`:** Add aggregation loop polling all known node-agents' `/api/v1/metrics` every 5 s
+- [x] **Update `cmd/console/main.go`:** Add aggregation loop polling all known node-agents' `/api/v1/metrics` every 5 s
 - [ ] **Update `cmd/console/ws.go`:** Push `AggregateMetrics`, `GenerationEvent`, `PipelineState` messages
 - [ ] **Update `cmd/console-wasm/scene_cluster.go`:** Render `Roles []string` per node; show per-role VRAM bar
 - [ ] **Update `cmd/console-wasm/scene_imagestudio.go`:** Subscribe to `MsgGenerationEvent` for cross-node previews
@@ -394,16 +394,16 @@ execution persistence by ID.
 - [x] Implement `GET /api/v1/pipeline/result/{id}` on node-agent
 - [x] Write `docs/adr/011-pipeline-api.md` ADR (Status: Proposed)
 - [x] Run `make lint` and `make test`
-- [ ] **FIX GAPS.md:** Store pipeline executions by ID in gateway; return actual status from `GET /v1/pipelines/{id}` (currently hardcoded)
+- [x] **FIX GAPS.md:** Store pipeline executions by ID in gateway; return actual status from `GET /v1/pipelines/{id}` (currently hardcoded)
 - [ ] **Push `PipelineState` WebSocket messages** in `cmd/console/ws.go` during pipeline execution
 - [ ] End-to-end test: `POST /v1/pipelines` with chat→image stages; verify image URL in response
 
 ### Phase 6 — Known Gaps Remediation (from GAPS.md) ⬜ TODO
 
-- [ ] **Node discovery API (`cmd/node-agent`):** Populate `h.peers` from received beacons
-- [ ] **Load balancing model filter (`internal/lb`):** Add model filtering to all `Picker` implementations
-- [ ] **Pipeline status persistence (`cmd/gateway`):** Store executions by ID; return real status; 404 on unknown
-- [ ] **Video-to-video edits (`cmd/gateway/videos.go`):** Forward `req.Video` to backend
+- [x] **Node discovery API (`cmd/node-agent`):** Populate `h.peers` from received beacons
+- [x] **Load balancing model filter (`internal/lb`):** Add model filtering to all `Picker` implementations
+- [x] **Pipeline status persistence (`cmd/gateway`):** Store executions by ID; return real status; 404 on unknown
+- [x] **Video-to-video edits (`cmd/gateway/videos.go`):** Forward `req.Video` to backend
 
 ---
 

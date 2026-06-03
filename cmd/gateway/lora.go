@@ -108,15 +108,13 @@ func (gw *Gateway) resolveLoRAModel(model string) string {
 
 	// Find a backend that has the base model and is in the adapter's node list.
 	for _, nodeName := range adapter.Nodes {
-		for _, b := range gw.backends {
-			if b.URL == "" {
+		for _, b := range gw.lbRegistry.GetAll() {
+			chatURL := backendURLForRole(b, "chat")
+			if chatURL == "" {
 				continue
 			}
-			b.mu.RLock()
-			healthy := b.Healthy
-			b.mu.RUnlock()
-			if healthy && backendMatchesNode(b.URL, nodeName) {
-				return b.URL
+			if b.Healthy && backendMatchesNode(chatURL, nodeName) {
+				return chatURL
 			}
 		}
 	}
