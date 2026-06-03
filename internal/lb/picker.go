@@ -57,10 +57,10 @@ func (w *WeightedRoundRobin) Pick(role, model, hint string) *BackendRecord {
 		return nil
 	}
 
-	// Find healthy backends that support the requested role
+	// Find healthy backends that support the requested role and model
 	var candidates []*BackendRecord
 	for _, b := range w.backends {
-		if b.Healthy && hasRole(b, role) {
+		if b.Healthy && hasRole(b, role) && supportsModel(b, model) {
 			candidates = append(candidates, b)
 		}
 	}
@@ -89,6 +89,20 @@ func (w *WeightedRoundRobin) Update(backends []*BackendRecord) {
 func hasRole(b *BackendRecord, role string) bool {
 	for _, r := range b.Roles {
 		if r == role {
+			return true
+		}
+	}
+	return false
+}
+
+// supportsModel checks if a backend supports a given model.
+// An empty model string matches any backend (means any model is acceptable).
+func supportsModel(b *BackendRecord, model string) bool {
+	if model == "" {
+		return true // any model is acceptable
+	}
+	for _, m := range b.Models {
+		if m == model {
 			return true
 		}
 	}
