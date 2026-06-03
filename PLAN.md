@@ -414,7 +414,7 @@ with `status`, `output_text`, `output_image_url`, `output_video_url`).
 - [x] Create `internal/lb/latency_ewma.go`: `LatencyEWMA` implementation
 - [x] Create `internal/lb/registry.go`: `BackendRegistry` with `Register`, `Deregister`, `Pick(role, model, hint)` methods
 - [ ] Update `cmd/gateway/main.go`: replace `pickBackend` / `discoverBackends` with `lb.BackendRegistry` + `lb.Picker`
-- [ ] Add `-lb-strategy` flag to gateway
+- [x] Add `-lb-strategy` flag to gateway
 - [ ] Ensure multi-role routing: gateway uses `ServiceBinding.Port` to route image-gen to port 7860 on a host also serving chat on 11434
 - [x] Run `make lint` and `make test`
 - [ ] Load test: simulate 3 backends, one with queue=10; verify `least-queue` strategy routes away from it

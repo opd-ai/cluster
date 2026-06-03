@@ -10,13 +10,16 @@
 //	GET  /healthz                  — liveness probe
 //	GET  /status                   — cluster status (JSON)
 //	GET  /metrics                  — Prometheus metrics
+//	POST /v1/pipelines             — multi-stage pipeline execution
+//	GET  /v1/pipelines/{id}        — pipeline status and results
 //
 // Routing:
 //   - Round-robin across backend nodes that report a model in /api/tags.
 //   - Sticky sessions per (api_key, model) to preserve KV-cache locality.
 //   - Falls back to a model pull on cache miss.
-//   - Auth: ****** keys; keys are loaded from GATEWAY_API_KEYS (colon-
-//     separated) or an optional key file (--keys-file).
+//   - Auto-discovery of node-agents via UDP multicast when -discovery=true.
+//   - Auth: API keys; keys are loaded from GATEWAY_API_KEYS (colon-separated)
+//     or an optional key file (--keys-file).
 //
 // Usage:
 //
@@ -24,12 +27,14 @@
 //
 // Flags:
 //
-//	-addr         listen address (default: :8080)
-//	-backends     comma-separated list of Ollama backend URLs
-//	-inventory    path to inventory YAML for dynamic backend discovery
-//	-keys-file    path to newline-delimited API keys file
+//	-addr            listen address (default: :8080)
+//	-backends        comma-separated list of Ollama backend URLs
+//	-inventory       path to inventory YAML for dynamic backend discovery
+//	-keys-file       path to newline-delimited API keys file
 //	-probe-interval  backend health probe interval in seconds (default: 15)
-//	-speculative  enable speculative decoding feature flag
+//	-speculative     enable speculative decoding feature flag
+//	-discovery       enable UDP multicast discovery for node-agents
+//	-lb-strategy     load balancing strategy (weighted-rr|least-queue|latency-ewma)
 package main
 
 import (
@@ -102,6 +107,7 @@ func main() {
 	otelEndpoint := flag.String("otel-endpoint", "", "OTLP/HTTP collector endpoint (e.g. http://otel-collector:4318); empty disables tracing")
 	telemetry := flag.Bool("telemetry", false, "Send anonymous usage ping (opt-in; disabled by default)")
 	discoveryFlag := flag.Bool("discovery", false, "Enable UDP multicast discovery for node-agents")
+	lbStrategy := flag.String("lb-strategy", "weighted-rr", "Load balancing strategy: weighted-rr|least-queue|latency-ewma")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -128,6 +134,8 @@ func main() {
 			NSFWBlocklist:         defaultNSFWBlocklist,
 		},
 	}
+
+	log.Printf("Gateway starting with lb-strategy=%s", *lbStrategy)
 
 	// Shared HTTP client with connection pooling (H8).
 	gw.httpClient = &http.Client{
