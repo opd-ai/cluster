@@ -278,10 +278,9 @@ func (gw *Gateway) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		gw.reqTotal.Add(1)
-
 		if len(gw.apiKeys) == 0 {
 			// No keys configured — open mode
+			gw.reqTotal.Add(1)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -295,6 +294,7 @@ func (gw *Gateway) authMiddleware(next http.Handler) http.Handler {
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
+		gw.reqTotal.Add(1)
 		next.ServeHTTP(w, r)
 	})
 }

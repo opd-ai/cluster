@@ -335,7 +335,7 @@ func detectNvidiaGPU(client *ssh.Client) (string, int) {
 	fields := strings.Fields(strings.TrimSpace(out))
 	if len(fields) > 0 {
 		if mb, err := strconv.Atoi(fields[0]); err == nil {
-			vram = mb / 1024 // Convert MB to GB
+			vram = (mb + 512) / 1024 // Convert MB to GB with rounding
 		}
 	}
 	return "cuda", vram
@@ -352,7 +352,7 @@ func detectAMDGPU(client *ssh.Client) (string, int) {
 	fields := strings.Fields(strings.TrimSpace(out))
 	for _, field := range fields {
 		if mb, err := strconv.Atoi(strings.TrimSuffix(field, "MB")); err == nil {
-			vram = mb / 1024 // Convert MB to GB
+			vram = (mb + 512) / 1024 // Convert MB to GB with rounding
 			break
 		}
 	}

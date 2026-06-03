@@ -102,7 +102,9 @@ func main() {
 
 	state := loadState(*stateFile)
 	state.AccessCount[model]++
-	_ = saveState(*stateFile, state)
+	if err := saveState(*stateFile, state); err != nil {
+		log.Printf("warning: save state: %v", err)
+	}
 
 	plan := buildPlan(model, nodes, state, *multiDevice, *maxDevices)
 
@@ -322,7 +324,9 @@ func loadState(path string) *placerState {
 	if err != nil {
 		return s
 	}
-	_ = json.Unmarshal(data, s)
+	if err := json.Unmarshal(data, s); err != nil {
+		log.Printf("warning: unmarshal state: %v", err)
+	}
 	if s.AccessCount == nil {
 		s.AccessCount = make(map[string]int)
 	}

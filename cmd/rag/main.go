@@ -158,6 +158,9 @@ func (s *server) handleQuery(w http.ResponseWriter, r *http.Request) {
 	if req.TopK <= 0 {
 		req.TopK = s.cfg.topK
 	}
+	if req.TopK > 100 {
+		req.TopK = 100
+	}
 	if req.Collection == "" {
 		http.Error(w, `{"error":"collection required"}`, http.StatusBadRequest)
 		return
@@ -206,6 +209,9 @@ func (s *server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.TopK <= 0 {
 		req.TopK = s.cfg.topK
+	}
+	if req.TopK > 100 {
+		req.TopK = 100
 	}
 	if req.Collection == "" {
 		http.Error(w, `{"error":"collection required"}`, http.StatusBadRequest)

@@ -304,7 +304,9 @@ func streamLogs(env []string, jobName string) {
 		log.Printf("no pods found for job %s", jobName)
 		return
 	}
-	_ = kubectlRun(env, "logs", strings.TrimSpace(podName))
+	if err := kubectlRun(env, "logs", strings.TrimSpace(podName)); err != nil {
+		log.Printf("warning: stream logs for %s: %v", jobName, err)
+	}
 }
 
 // isValidK8sName validates that a string is a safe Kubernetes name.

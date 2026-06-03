@@ -87,7 +87,10 @@ func (c *ragClient) query(ctx context.Context, question, collection string, topK
 		"top_k":      topK,
 	}
 	start := time.Now()
-	data, _ := json.Marshal(body)
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, time.Since(start), fmt.Errorf("marshal query: %w", err)
+	}
 	resp, err := c.post(ctx, c.ragURL+"/rag/query", data)
 	elapsed := time.Since(start)
 	if err != nil {
@@ -114,7 +117,10 @@ func (c *ragClient) answer(ctx context.Context, question, collection string) (st
 		"collection": collection,
 	}
 	start := time.Now()
-	data, _ := json.Marshal(body)
+	data, err := json.Marshal(body)
+	if err != nil {
+		return "", time.Since(start), fmt.Errorf("marshal answer: %w", err)
+	}
 	resp, err := c.post(ctx, c.ragURL+"/rag/answer", data)
 	elapsed := time.Since(start)
 	if err != nil {
@@ -141,7 +147,10 @@ func (c *ragClient) judgeAnswer(ctx context.Context, question, answer, expected 
 			{"role": "user", "content": prompt},
 		},
 	}
-	data, _ := json.Marshal(body)
+	data, err := json.Marshal(body)
+	if err != nil {
+		return false, fmt.Errorf("marshal judge: %w", err)
+	}
 	resp, err := c.post(ctx, c.gatewayURL+"/v1/chat/completions", data)
 	if err != nil {
 		return false, err

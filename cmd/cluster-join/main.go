@@ -274,10 +274,14 @@ func remoteCmd(client *ssh.Client, cmd string) (string, error) {
 	}
 	defer sess.Close()
 
-	var buf bytes.Buffer
-	sess.Stdout = &buf
+	var stdout, stderr bytes.Buffer
+	sess.Stdout = &stdout
+	sess.Stderr = &stderr
 	if err := sess.Run(cmd); err != nil {
+		if stderr.Len() > 0 {
+			return "", fmt.Errorf("%w: stderr: %s", err, stderr.String())
+		}
 		return "", err
 	}
-	return buf.String(), nil
+	return stdout.String(), nil
 }
