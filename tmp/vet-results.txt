@@ -1,0 +1,6 @@
+# github.com/hajimehoshi/ebiten/v2/internal/glfw
+In file included from /home/runner/go/pkg/mod/github.com/hajimehoshi/ebiten/v2@v2.9.9/internal/glfw/native_linbsd.go:14:
+./glfw3native_unix.h:105:12: fatal error: X11/Xlib.h: No such file or directory
+  105 |   #include <X11/Xlib.h>
+      |            ^~~~~~~~~~~~
+compilation terminated.
