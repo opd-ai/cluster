@@ -24,11 +24,12 @@ make build
 # 2. Deploy services for your node's roles (auto-detects hardware)
 make deploy ROLES=chat,image-generation
 
-# 3. Start the node agent (enables discovery and supervision)
-make agent
+# 3. Start the node agent (enables discovery)
+NODE_AGENT_API_KEY=change-me
+go run ./cmd/node-agent --roles chat,image-generation --address "$(tailscale ip -4)" --api-key "$NODE_AGENT_API_KEY"
 ```
 
-Nodes automatically discover each other over the LAN. The gateway (`cmd/gateway`) joins the discovery multicast group with `--discovery=true` and routes requests to discovered backends.
+Nodes automatically discover each other over the LAN. When the gateway (`cmd/gateway`) is started with `--discovery=true`, it joins the discovery multicast group and routes requests to discovered backends.
 
 For a complete two-node example, see `examples/quickstart-2node/README.md`.
 
@@ -76,17 +77,17 @@ requires-python = ">=3.11"
 
 ### Zero-Configuration Deployment (Default)
 
-Use `make deploy` and `make agent` to run nodes that automatically discover each other:
+Use `make deploy` and start `cmd/node-agent` to run nodes that automatically discover each other:
 
 ```bash
 # Deploy services for a chat + image-gen node (auto-discovers hardware)
 make deploy ROLES=chat,image-generation
 
 # Start node agent (broadcasts capabilities, enables discovery)
-make agent ROLES=chat,image-generation ADDRESS=<tailnet-ip>
+go run ./cmd/node-agent --roles chat,image-generation --address <tailnet-ip> --api-key "$NODE_AGENT_API_KEY"
 ```
 
-The `node-agent` daemon broadcasts UDP beacons and serves `/api/v1/info`, `/api/v1/health`, and `/api/v1/metrics` endpoints. The gateway and other node-agents automatically discover and register these peers.
+The `node-agent` daemon broadcasts UDP beacons and serves `/api/v1/info`, `/api/v1/health`, and `/api/v1/metrics` endpoints. Other node-agents discover these peers automatically; the gateway discovers them when started with `--discovery=true`.
 
 ### Manual Inventory Configuration (Legacy)
 
@@ -123,7 +124,7 @@ The repository defines lifecycle-oriented targets for cluster bring-up, synchron
 ```makefile
 # Makefile
 deploy: ## Deploy node services for roles (zero-conf, default)
-agent: ## Start node-agent for discovery and supervision
+agent: ## Start node-agent for discovery
 bootstrap: ## Bootstrap nodes listed in cluster/inventory.yaml (legacy)
 up: ## Bring up the cluster (k3s control-plane + workers)
 sync: ## Sync repo-cache and push updated datasets
@@ -138,7 +139,7 @@ status: ## Diff declared vs actual cluster state
 
 ## Features
 
-- **Zero-Configuration Deployment** - Nodes automatically discover each other via UDP multicast beacons. Run `make deploy` + `make agent` and nodes join the cluster without manual inventory editing.
+- **Zero-Configuration Deployment** - Nodes automatically discover each other via UDP multicast beacons. Run `make deploy` and start `cmd/node-agent` with `--api-key` (or `--open`) to join without manual inventory editing.
 - **Auto-Discovery Protocol** - `cmd/node-agent` broadcasts UDP beacons on `239.77.0.1:9977` every 10 seconds; gateway and peers join the multicast group to discover new backends automatically.
 - **Multi-Role Node Support** - A single host can run multiple roles simultaneously (`chat`, `image-generation`, `training`). Resource budgeting automatically partitions VRAM, CPU, and RAM.
 - **Go-first project layout** - Contribution rules state that repository-owned components are written in Go, with Python reserved for training code in `python/`.
@@ -162,10 +163,10 @@ With zero-conf deployment, nodes discover each other automatically. Configuratio
 make deploy ROLES=chat
 
 # Override specific settings
-make agent ROLES=chat ADDRESS=100.64.0.10 PORT=9977
+go run ./cmd/node-agent --roles chat --address 100.64.0.10 --api-key "$NODE_AGENT_API_KEY"
 ```
 
-The `--discovery=true` flag (default) enables the gateway to join the multicast group and discover backends automatically.
+The `--discovery=true` flag enables the gateway to join the multicast group and discover backends automatically.
 
 ### Manual Inventory (Legacy)
 

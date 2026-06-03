@@ -36,13 +36,13 @@ The `node-deploy` command will:
 
 ```bash
 # Start the node agent (broadcasts discovery beacons)
-make agent ROLES=chat,image-generation ADDRESS=$(tailscale ip -4)
+NODE_AGENT_API_KEY=change-me
+go run ./cmd/node-agent --roles chat,image-generation --address "$(tailscale ip -4)" --api-key "$NODE_AGENT_API_KEY"
 ```
 
 The node-agent will:
 1. Start broadcasting UDP beacons every 10 seconds on `239.77.0.1:9977`.
 2. Serve HTTP endpoints at `:9977` (`/api/v1/info`, `/api/v1/health`, `/api/v1/metrics`).
-3. Supervise role processes (Ollama, SwarmUI, etc.).
 
 ### 3. Verify discovery
 
@@ -54,7 +54,8 @@ curl http://localhost:8080/v1/models | jq '.data[].id'
 # Should include models from the new node
 
 # Or check the node-agent directly
-curl http://<new-node-address>:9977/api/v1/info | jq
+curl -H "Authorization: ******" \
+  http://<new-node-address>:9977/api/v1/info | jq
 ```
 
 The node is now part of the cluster and eligible for request routing.
@@ -168,15 +169,16 @@ For nodes with `role=imagegen`, register the new ComfyUI backend in SwarmUI:
 
 ### Rollback (Zero-Conf)
 
-For zero-conf nodes, simply stop the node-agent:
+For zero-conf nodes, stop the `cmd/node-agent` process (or stop whichever
+service manager entry you created locally):
 
 ```bash
 # On the node
-systemctl stop node-agent  # Linux
-launchctl unload /Library/LaunchDaemons/ai.node-agent.plist  # macOS
+pkill -f 'cmd/node-agent'  # if running directly from go run/bin
 ```
 
-The gateway will stop receiving beacons and remove the node from routing after the health check timeout.
+The gateway will stop receiving fresh beacons. Routing health updates happen via
+periodic backend probes (default interval: 15s).
 
 ### Rollback (Manual Inventory)
 

@@ -31,9 +31,10 @@ supports a `Roles []string` list, and resource budgeting logic in `internal/auto
 GPU/VRAM, CPU, and RAM across co-located roles at deploy time.
 
 **Deployment Paths:**
-- **Zero-Configuration (Default):** Run `make deploy` + `make agent` on each node. Nodes
-  auto-discover via UDP multicast (`239.77.0.1:9977`) and are automatically added to the gateway's
-  backend registry.
+- **Zero-Configuration (Default):** Run `make deploy` and start `cmd/node-agent` with
+  `--api-key` (or `--open`) on each node. Nodes auto-discover via UDP multicast
+  (`239.77.0.1:9977`) and are added to the gateway backend registry when
+  gateway discovery is enabled (`-discovery=true`).
 - **Manual Inventory (Legacy):** Edit `cluster/inventory.yaml` and run `make bootstrap` + `make up`.
   Auto-discovery reconciles into the same schema via `internal/discovery/reconciler.go`.
 
@@ -538,7 +539,7 @@ execution persistence by ID.
 | **Inventory YAML corruption on concurrent writes** | Medium | `internal/discovery/reconciler.go` uses `os.CreateTemp` + `os.Rename` (atomic on POSIX); single-writer mutex guards file operations | ✅ Implemented |
 | **Port conflicts when operator manually assigns overlapping ports** | Low | `node-deploy` validates port availability on startup; exits with a clear error if a port is in use | ✅ Implemented in `cmd/node-deploy/main.go` |
 | **`discoverBackends` naive string-scan in gateway breaks with multi-role YAML** | High | P0 replaces this with `internal/inventory` proper YAML parsing via `gopkg.in/yaml.v3` | ✅ Implemented — inventory package used |
-| **New `cmd/node-agent` binary adds deployment complexity** | Medium | `node-deploy` installs and starts `node-agent` automatically; `make agent` provides a dev shortcut | ✅ Implemented |
+| **New `cmd/node-agent` binary adds deployment complexity** | Medium | `node-deploy` writes role service definitions; start `cmd/node-agent` separately with `--api-key` (or `--open`) | ✅ Implemented |
 | **mDNS alternative dependency** | Low | Plan avoids new direct dep by using stdlib UDP multicast; if DNS-SD interop is later required, `golang.org/x/net/dns/dnsmessage` (already transitive) can be used | ✅ N/A — UDP multicast chosen |
 | **WASM binary size growth from new uiapi types** | Low | New types are small structs; no binary size concern expected | ✅ Types added, size acceptable |
 | **Pipeline stage timeout / partial failure** | Medium | `pipeline.Executor` applies per-stage timeout (configurable, default 5 min); partial results are returned with `status: partial`; gateway returns HTTP 206 | ✅ Implemented |

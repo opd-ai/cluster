@@ -23,7 +23,8 @@ make build
 make deploy ROLES=chat,image-generation
 
 # Start node-agent for discovery
-make agent ROLES=chat,image-generation ADDRESS=$(tailscale ip -4)
+NODE_AGENT_API_KEY=change-me
+go run ./cmd/node-agent --roles chat,image-generation --address "$(tailscale ip -4)" --api-key "$NODE_AGENT_API_KEY"
 ```
 
 ### 2. Deploy on mac-mini (macOS + Apple Silicon)
@@ -37,7 +38,7 @@ make build
 make deploy ROLES=chat
 
 # Start node-agent for discovery
-make agent ROLES=chat ADDRESS=$(tailscale ip -4)
+go run ./cmd/node-agent --roles chat --address "$(tailscale ip -4)" --api-key "$NODE_AGENT_API_KEY"
 ```
 
 ### 3. Deploy on cpu-node (Linux, CPU-only)
@@ -51,7 +52,7 @@ make build
 make deploy ROLES=rag
 
 # Start node-agent for discovery
-make agent ROLES=rag ADDRESS=$(tailscale ip -4)
+go run ./cmd/node-agent --roles rag --address "$(tailscale ip -4)" --api-key "$NODE_AGENT_API_KEY"
 ```
 
 ### 4. Verify discovery
@@ -60,10 +61,10 @@ All nodes automatically discover each other. From any node:
 
 ```bash
 # Check discovered peers
-curl http://localhost:9977/api/v1/peers | jq
+curl -H "Authorization: ******" http://localhost:9977/api/v1/peers | jq
 
 # Check gateway has all backends
-curl http://gpu-box:8080/v1/models | jq '.data[].id'
+curl -H "Authorization: ******" http://gpu-box:8080/v1/models | jq '.data[].id'
 ```
 
 ---
@@ -143,7 +144,7 @@ uses `nodeSelector: hardware: nvidia` and will schedule automatically.
 ## Mac Mini integration
 
 The Mac Mini runs Ollama natively under `launchd` — it does **not** join k3s.
-The gateway discovers it via the inventory and routes to it over the tailnet.
+The gateway routes to it via inventory entries (or discovery if enabled with `--discovery=true`).
 
 ```bash
 # On mac-mini: ensure Ollama is running

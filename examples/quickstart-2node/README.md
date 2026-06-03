@@ -34,21 +34,20 @@ vagrant up   # ~15 minutes: downloads Ubuntu box, installs dependencies
 ```
 
 The Vagrant provisioner will:
-1. Install Ollama and cluster tools on both nodes.
-2. Run `make deploy ROLES=chat` on each node.
-3. Start `node-agent` on each node (auto-discovery enabled).
-4. Nodes discover each other automatically via UDP multicast.
+1. Install Ollama on both nodes.
+2. Write `cluster/inventory.yaml` for the two VMs.
+3. Bootstrap k3s on the control VM and join the worker VM.
 
 ## Verify the cluster
 
 ```bash
 vagrant ssh control
 
-# Check node-agent is running and discovering peers
-curl http://localhost:9977/api/v1/info | jq
+# Check both nodes are in k3s
+kubectl get nodes -o wide
 
-# Check the gateway has discovered both nodes
-curl http://localhost:8080/v1/models | jq '.data[].id'
+# Check gateway service is running in-cluster
+kubectl -n ai-cluster get svc gateway
 ```
 
 ## Query the gateway (LLM inference)

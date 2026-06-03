@@ -16,7 +16,6 @@ The cluster must dynamically discover node-agent instances running on the LAN to
 
 - Uses stdlib `net.UDPConn` only; no new external dependencies on node-agent binary.
 - Reduces attack surface and deployment friction.
-- Fallback to tailnet broadcast if link-local multicast is filtered.
 - **This is now the default deployment path** for the cluster.
 
 ## Rationale
@@ -25,7 +24,6 @@ The cluster must dynamically discover node-agent instances running on the LAN to
 
 - **Simplicity**: Raw bytes, no zeroconf library required.
 - **Stdlib only**: Reduces binary size and dependencies.
-- **Fallback**: Seamlessly falls back to tailnet broadcast if multicast is unavailable.
 - **Latency**: Direct UDP, < 100 ms discovery latency on local networks.
 
 ### mDNS (Alternative)
@@ -40,7 +38,6 @@ The cluster must dynamically discover node-agent instances running on the LAN to
 
 - Minimal dependencies on node-agent binary.
 - Fast discovery (< 100 ms on LAN).
-- Graceful degradation to tailnet unicast.
 
 ### Negative
 

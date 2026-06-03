@@ -5,7 +5,7 @@
 
 ## Overview
 
-The cluster uses a **zero-configuration architecture** by default. Nodes automatically discover each other via UDP multicast beacons on `239.77.0.1:9977`. The gateway joins the discovery multicast group and routes requests to discovered backends without requiring manual inventory configuration.
+The cluster uses a **zero-configuration architecture** for node beacons on `239.77.0.1:9977`. Nodes automatically discover each other via UDP multicast, and the gateway can route to discovered backends when started with `--discovery=true`. Manual inventory configuration remains supported.
 
 ```
                     ┌─────────────────────────────────────────────┐
@@ -46,14 +46,11 @@ Multicast Group (239.77.0.1:9977)
   ▼
 Gateway / Peer Nodes
   │  Receive beacon, deduplicate by (address, seq)
-  │  HTTP GET /api/v1/info → Node A (full capability metadata)
-  │  internal/discovery/reconciler.go merges into inventory
+  │  Gateway maps beacon services to backend roles/ports
   ▼
 Node registered in lb.BackendRegistry
   │  Available for request routing
 ```
-
-**Fallback:** If link-local multicast is filtered (corporate networks), discovery falls back to tailnet unicast.
 
 ## Data Flow
 
@@ -63,7 +60,7 @@ Node registered in lb.BackendRegistry
 Client
   │  POST /v1/chat/completions {model, messages}
   ▼
-Gateway (cmd/gateway) [--discovery=true by default]
+Gateway (cmd/gateway) [with --discovery=true]
   │  auth via API key (Authorization: Bearer)
   │  select backend via lb.BackendRegistry
   │    → auto-discovered backends from multicast
@@ -81,7 +78,8 @@ full model run in separate Ollama processes on different tailnet addresses.
 
 Hot-swap: Gateway re-reads inventory on SIGHUP; in-flight requests drain to
 old backend while new requests are routed to the new backend. Auto-discovered
-nodes are registered immediately without SIGHUP.
+nodes are registered when discovery is enabled; backend health is tracked by
+periodic `/api/tags` probes.
 
 ### Federated Training Flow
 

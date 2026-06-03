@@ -21,29 +21,30 @@ For nodes added via zero-conf deployment, removal is straightforward:
 ### 1. Stop the node-agent
 
 ```bash
-# Linux
-sudo systemctl stop node-agent
-sudo systemctl disable node-agent
+# If node-agent is running directly
+pkill -f 'cmd/node-agent'
 
-# macOS
-sudo launchctl unload /Library/LaunchDaemons/ai.node-agent.plist
+# Or stop the service unit/plist name you configured locally
+# (node-deploy writes role units such as ollama-chat / swarmui-image-generation)
 ```
 
 ### 2. Verify removal
 
-The gateway and other nodes will stop receiving beacons from this node. After the health check timeout (default: 30 seconds), the node is automatically removed from routing.
+The gateway and other nodes will stop receiving beacons from this node. Backend
+health status is then updated by periodic `/api/tags` probes (`--probe-interval`,
+default 15s).
 
 ```bash
 # Verify the node is no longer being routed to
-curl http://localhost:8080/v1/models | jq '.data[].id'
+curl -H "Authorization: ******" http://localhost:8080/v1/models | jq '.data[].id'
 ```
 
 ### 3. Optional: Clean up services
 
 ```bash
 # Stop Ollama and other services
-sudo systemctl stop ollama
-sudo systemctl stop swarmui  # if image-gen role
+sudo systemctl stop ollama-chat
+sudo systemctl stop swarmui-image-generation  # if image-gen role
 ```
 
 ---

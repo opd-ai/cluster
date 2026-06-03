@@ -2,28 +2,29 @@
 
 Each GPU worker node in the cluster runs a local [Ollama](https://ollama.ai)
 daemon that serves models over the Ollama HTTP API on port **11434**.  
-The gateway (`cmd/gateway`) discovers these daemons automatically via the
-**zero-configuration discovery protocol** (UDP multicast on `239.77.0.1:9977`).
+The gateway (`cmd/gateway`) can discover these daemons via the
+**zero-configuration discovery protocol** (UDP multicast on `239.77.0.1:9977`)
+when started with `--discovery=true`.
 
 ## Zero-Configuration Setup (Recommended)
 
 The easiest way to set up Ollama is through `cmd/node-deploy`:
 
 ```bash
-# Deploy Ollama and configure systemd/launchd automatically
+# Generate role service unit/plist definitions
 make deploy ROLES=chat
 
 # Start node-agent for discovery (broadcasts to gateway and peers)
-make agent ROLES=chat ADDRESS=$(tailscale ip -4)
+NODE_AGENT_API_KEY=change-me
+go run ./cmd/node-agent --roles chat --address "$(tailscale ip -4)" --api-key "$NODE_AGENT_API_KEY"
 ```
 
 This will:
-1. Install Ollama if not present.
-2. Create systemd unit (Linux) or launchd plist (macOS).
-3. Configure resource budgets via `internal/autotuner`.
-4. Start the node-agent for automatic discovery.
+1. Generate service definitions from detected hardware budgets.
+2. Write systemd units (Linux) or launchd plists (macOS) for requested roles.
+3. Start node-agent for automatic discovery only when you run it separately.
 
-The gateway will automatically discover this node and route requests to it.
+When gateway discovery is enabled (`--discovery=true`), the gateway can discover this node and route requests to it.
 
 ## Manual Linux Setup — systemd Unit (Legacy)
 
@@ -145,10 +146,10 @@ returns a non-200 status.
 
 ```bash
 # Check node-agent health endpoint
-curl http://localhost:9977/api/v1/health | jq
+curl -H "Authorization: ******" http://localhost:9977/api/v1/health | jq
 
 # Check discovered peers
-curl http://localhost:9977/api/v1/peers | jq
+curl -H "Authorization: ******" http://localhost:9977/api/v1/peers | jq
 ```
 
 ### Manual Health Check (Legacy)
