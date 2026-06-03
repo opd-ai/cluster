@@ -31,7 +31,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -185,8 +184,14 @@ func main() {
 		NSFilePath:  *namespacesPath,
 	}
 
-	// Write Job manifest to a temp file.
-	tmpFile := filepath.Join(os.TempDir(), jobName+".yaml")
+	// Write Job manifest to a temp file with secure random name.
+	f, err := os.CreateTemp("", jobName+"-*.yaml")
+	if err != nil {
+		log.Fatalf("create temp file: %v", err)
+	}
+	tmpFile := f.Name()
+	f.Close()
+	
 	if err := writeJobManifest(tmpFile, spec); err != nil {
 		log.Fatalf("write job manifest: %v", err)
 	}
