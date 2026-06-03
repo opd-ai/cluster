@@ -65,12 +65,7 @@ func (gw *Gateway) handleImageGenerations(w http.ResponseWriter, r *http.Request
 		http.Error(w, `{"error":"bad request"}`, http.StatusBadRequest)
 		return
 	}
-	if req.N <= 0 {
-		req.N = 1
-	}
-	if req.Size == "" {
-		req.Size = "1024x1024"
-	}
+	req.N, req.Size = normalizeImageParams(req.N, req.Size)
 
 	key := extractBearerToken(r)
 	if !gw.checkNSFW(w, req.Prompt) {
@@ -113,12 +108,7 @@ func (gw *Gateway) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"bad request"}`, http.StatusBadRequest)
 		return
 	}
-	if req.N <= 0 {
-		req.N = 1
-	}
-	if req.Size == "" {
-		req.Size = "1024x1024"
-	}
+	req.N, req.Size = normalizeImageParams(req.N, req.Size)
 
 	key := extractBearerToken(r)
 	if !gw.checkNSFW(w, req.Prompt) {
@@ -206,6 +196,17 @@ func buildImageResponse(images []string, format, baseURL string) imageResponse {
 		Created: time.Now().Unix(),
 		Data:    items,
 	}
+}
+
+// normalizeImageParams applies defaults to image request parameters.
+func normalizeImageParams(n int, size string) (int, string) {
+	if n <= 0 {
+		n = 1
+	}
+	if size == "" {
+		size = "1024x1024"
+	}
+	return n, size
 }
 
 // parseSizeStr splits "1024x1024" into (1024, 1024).
