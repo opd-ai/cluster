@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -172,70 +173,73 @@ func writeLine(w *bufio.Writer, data []byte) error {
 	return w.WriteByte('\n')
 }
 
-// walkRepo walks a bare-clone or regular git repo directory and writes
-// qualifying files as JSONL examples.
+// walkRepo reads a bare-clone git repo via `git ls-tree` and `git show` to extract
+// source code files, and writes qualifying examples as JSONL.
+// This avoids including Git plumbing files (config, HEAD, packed-refs, etc.)
+// that would be present if walking the bare-repo filesystem directly.
 func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW *bufio.Writer, repoSeen, nsSeen map[string]struct{}) (int, error) {
 	count := 0
-	err := filepath.WalkDir(repoDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil // skip unreadable entries
-		}
-		if d.IsDir() {
-			// Skip .git internals and hidden dirs.
-			base := d.Name()
-			if base == "objects" || base == "refs" || base == "logs" || strings.HasPrefix(base, ".") {
-				return filepath.SkipDir
-			}
-			return nil
+
+	// Get the list of all files in HEAD using git ls-tree.
+	cmd := exec.Command("git", "--git-dir", repoDir, "ls-tree", "-r", "--name-only", "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		// Repository may have no commits or is not a valid git repo.
+		// Return success with count=0 instead of failing.
+		return 0, nil
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
 		}
 
-		data, err := os.ReadFile(path)
+		// Read file content via `git show`.
+		showCmd := exec.Command("git", "--git-dir", repoDir, "show", "HEAD:"+line)
+		data, err := showCmd.Output()
 		if err != nil {
-			return nil
+			// Skip files that can't be read (e.g., symlinks).
+			continue
 		}
 
 		// Size filter.
 		sz := len(data)
 		if sz < hp.MinFileBytes || (hp.MaxFileBytes > 0 && sz > hp.MaxFileBytes) {
-			return nil
+			continue
 		}
 
 		// Skip binary files.
 		if isBinary(data) {
-			return nil
+			continue
 		}
 
 		text := string(data)
 		hash := contentHash(text)
-
-		rel, err := filepath.Rel(repoDir, path)
-		if err != nil {
-			return fmt.Errorf("filepath rel for %q: %w", path, err)
-		}
-		src := repoLabel + "/" + rel
+		src := repoLabel + "/" + line
 
 		ex := example{Text: text, Source: src}
-		line, err := json.Marshal(ex)
+		exLine, err := json.Marshal(ex)
 		if err != nil {
-			return fmt.Errorf("marshal example for %q: %w", src, err)
+			continue // skip unmarshallable examples
 		}
 
 		if _, seen := repoSeen[hash]; !seen {
 			repoSeen[hash] = struct{}{}
-			if err := writeLine(repoW, line); err != nil {
-				return err
+			if err := writeLine(repoW, exLine); err != nil {
+				return count, err
 			}
 			count++
 		}
 		if _, seen := nsSeen[hash]; !seen {
 			nsSeen[hash] = struct{}{}
-			if err := writeLine(nsW, line); err != nil {
-				return err
+			if err := writeLine(nsW, exLine); err != nil {
+				return count, err
 			}
 		}
-		return nil
-	})
-	return count, err
+	}
+
+	return count, nil
 }
 
 // isBinary returns true if data contains a null byte (heuristic for binary).

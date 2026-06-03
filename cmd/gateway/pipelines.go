@@ -53,6 +53,11 @@ func (gw *Gateway) handlePostPipelines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Store the result
+	gw.mu.Lock()
+	gw.pipelineResults[spec.ID] = exec
+	gw.mu.Unlock()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(exec)
@@ -66,13 +71,15 @@ func (gw *Gateway) handleGetPipelineStatus(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// TODO: Retrieve pipeline status from storage/cache
-	// For now, return a placeholder
-	status := map[string]interface{}{
-		"id":     pipelineID,
-		"status": "completed",
+	gw.mu.RLock()
+	exec, found := gw.pipelineResults[pipelineID]
+	gw.mu.RUnlock()
+
+	if !found {
+		http.Error(w, fmt.Sprintf("pipeline %s not found", pipelineID), http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	json.NewEncoder(w).Encode(exec)
 }

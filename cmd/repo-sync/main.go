@@ -46,14 +46,16 @@ type Namespace struct {
 
 // Repo describes a single repository to be cloned/updated.
 type Repo struct {
-	Label string `yaml:"label"`
-	URL   string `yaml:"url"`
+	Label     string `yaml:"label"`
+	URL       string `yaml:"url"`
+	Namespace string `yaml:"-"` // filled by loadRepos, not in YAML
 }
 
 // SyncConfig holds runtime configuration.
 type SyncConfig struct {
 	NamespacesPath string
 	CacheDir       string
+	Namespace      string // if set, only sync repos in this namespace
 	Depth          int
 	Jobs           int
 	DryRun         bool
@@ -63,6 +65,7 @@ func main() {
 	cfg := SyncConfig{}
 	flag.StringVar(&cfg.NamespacesPath, "namespaces", "configs/namespaces.yaml", "Path to namespaces.yaml")
 	flag.StringVar(&cfg.CacheDir, "cache-dir", "repo-cache", "Root of the bare-clone cache")
+	flag.StringVar(&cfg.Namespace, "namespace", "", "If set, only sync repos in this namespace")
 	flag.IntVar(&cfg.Depth, "depth", 0, "Shallow clone depth (0 = full history)")
 	flag.IntVar(&cfg.Jobs, "jobs", 4, "Parallel sync workers")
 	flag.BoolVar(&cfg.DryRun, "dry-run", false, "Log without performing operations")
@@ -71,6 +74,17 @@ func main() {
 	repos, err := loadRepos(cfg.NamespacesPath)
 	if err != nil {
 		log.Fatalf("load namespaces: %v", err)
+	}
+
+	// Filter repos by namespace if specified
+	if cfg.Namespace != "" {
+		var filtered []Repo
+		for _, r := range repos {
+			if r.Namespace == cfg.Namespace {
+				filtered = append(filtered, r)
+			}
+		}
+		repos = filtered
 	}
 
 	if len(repos) == 0 {
@@ -164,7 +178,10 @@ func loadRepos(path string) ([]Repo, error) {
 
 	var repos []Repo
 	for _, ns := range nf.Namespaces {
-		repos = append(repos, ns.Repos...)
+		for _, r := range ns.Repos {
+			r.Namespace = ns.Name
+			repos = append(repos, r)
+		}
 	}
 	return repos, nil
 }
