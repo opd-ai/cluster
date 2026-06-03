@@ -130,7 +130,7 @@ prevent automatic toolchain upgrades.
 ```bash
 # Using the exact Go version from go.mod
 GOTOOLCHAIN=local GOOS=js GOARCH=wasm \
-  go build -o dist/js-wasm/console.wasm ./cmd/console-wasm
+  go build -o web/console.wasm ./cmd/console-wasm
 ```
 
 The `wasm_exec.js` shim is sourced from the Go distribution at the same

@@ -1,12 +1,12 @@
 # github.com/opd-ai/cluster
 
-`cluster` is a repository scaffold for a self-hosted AI cluster with Go-first tooling and an optional Python training environment. The root module is declared in `go.mod` as `github.com/opd-ai/cluster`, and the top-level workflow is orchestrated through `Makefile`. The codebase currently emphasizes project structure, task entry points, and development conventions rather than fully implemented command packages.
+`cluster` is a repository scaffold for a self-hosted AI cluster with Go-first tooling and an optional Python training environment. The root module is declared in `go.mod` as `github.com/opd-ai/cluster`, and the top-level workflow is orchestrated through `Makefile`. The codebase provides implemented command packages under `cmd/` (gateway, console, RAG, bootstrap, placer, and more) alongside project structure and development conventions.
 
 ---
 
 ## Description
 
-This repository defines a unified development surface for cluster lifecycle operations, model training, serving, a web console, and RAG workflows through named `make` targets. It also includes a Python project in `python/pyproject.toml` named `cluster-training` for PyTorch-based training dependencies. At the current state of the repository, many runtime command paths referenced by the Makefile are placeholders, so the README documents what is explicitly configured.
+This repository defines a unified development surface for cluster lifecycle operations, model training, serving, a web console, and RAG workflows through named `make` targets. It also includes a Python project in `python/pyproject.toml` named `cluster-training` for PyTorch-based training dependencies. The runtime command paths referenced by the Makefile are implemented under `cmd/` (with `cmd/placeholder` remaining as an intentional empty build stub).
 
 ---
 
@@ -80,7 +80,7 @@ rag: ## Start the RAG service locally
 status: ## Diff declared vs actual cluster state
 ```
 
-These targets call `go run` on `./cmd/...` entry points. If those packages are not present yet, commands depending on them will fail until implementation is added.
+These targets call `go run` on `./cmd/...` entry points, which are implemented in this repository (for example `./cmd/gateway`, `./cmd/console`, `./cmd/rag`, and `./cmd/cluster-bootstrap`).
 
 ---
 

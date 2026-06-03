@@ -53,10 +53,12 @@ Add each node's ComfyUI URL in SwarmUI's settings:
 http://<node-tailnet-ip>:8188
 ```
 
-Install ComfyUI on each imagegen node via bootstrap:
+Install ComfyUI on each imagegen node manually. `cluster-bootstrap` handles
+base node dependencies (for example Ollama/Tailscale), but does not install
+ComfyUI itself:
 
 ```bash
-cluster-bootstrap apply --inventory cluster/inventory.yaml --roles imagegen
+cluster-bootstrap --inventory cluster/inventory.yaml
 ```
 
 ## 6.3 Multi-Backend Fan-Out
@@ -105,4 +107,5 @@ Standard layout on each node:
 ```
 
 The model registry (`cmd/registry`) tracks provenance, license tag, and
-SHA256 for every file.  `registry list --filter lora` lists available LoRAs.
+SHA256 for every file.  `registry list` prints all tracked files; the `TYPE`
+column distinguishes LoRAs from checkpoints and other entries.

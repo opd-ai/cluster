@@ -41,10 +41,10 @@ make lint
 # Run tests with race detector
 make test
 
-# Build all binaries (requires cmd/* packages — not yet implemented)
+# Build all cmd/* binaries into bin/
 make build
 
-# Cross-compile the Ebitengine WASM console (requires cmd/console-wasm — not yet implemented)
+# Cross-compile the Ebitengine WASM console (cmd/console-wasm)
 make console-wasm
 ```
 

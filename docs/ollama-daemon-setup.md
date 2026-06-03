@@ -109,7 +109,7 @@ the `bootstrapUbuntuDebian` and `bootstrapRHEL` paths.  After bootstrap,
 run:
 
 ```bash
-cluster-bootstrap apply --inventory cluster/inventory.yaml
+cluster-bootstrap --inventory cluster/inventory.yaml
 ```
 
 The daemon is started automatically as part of the bootstrap sequence.
