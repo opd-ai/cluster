@@ -376,19 +376,19 @@ with `status`, `output_text`, `output_image_url`, `output_video_url`).
 
 ### Phase 1 — node-deploy + autotuner
 
-- [ ] Create `internal/autotuner/autotuner.go`: `HardwareProfile` struct; `Probe() HardwareProfile` (reuses SSH-free local-probe logic from `cmd/cluster-probe`)
-- [ ] Create `internal/autotuner/colocation.go`: `BudgetSplit(roles []string, hw HardwareProfile, overrides map[string]int) map[string]ResourceBudget`
-- [ ] Create `internal/autotuner/ollama.go`: `OllamaConfig(role string, budget ResourceBudget) OllamaEnv`
-- [ ] Create `internal/autotuner/swarmui.go`: `SwarmUIConfig(budget ResourceBudget) SwarmUIArgs`
-- [ ] Create `internal/autotuner/training.go`: `TrainingConfig(budget ResourceBudget) TrainingEnv`
-- [ ] Create `internal/serviceinstall/linux.go`: systemd unit file writer for node-agent + role daemons
-- [ ] Create `internal/serviceinstall/darwin.go`: launchd plist writer
-- [ ] Create `cmd/node-deploy/main.go`: parse `--roles`, call autotuner, call serviceinstall, write `cluster/inventory.yaml` entry
-- [ ] Add `deploy` Makefile target: `go run ./cmd/node-deploy --roles $(ROLES)`
-- [ ] Write `docs/adr/009-discovery-protocol.md` ADR stub (UDP beacon vs. mDNS)
-- [ ] Write `docs/adr/010-auto-tuning-budgeting.md` ADR stub
-- [ ] Run `make lint` and `make test` — no regressions
-- [ ] Manual smoke test: `node-deploy --roles chat` on a Linux dev box; verify Ollama unit file is generated with correct `--num-gpu`
+- [x] Create `internal/autotuner/autotuner.go`: `HardwareProfile` struct; `Probe() HardwareProfile` (reuses SSH-free local-probe logic from `cmd/cluster-probe`)
+- [x] Create `internal/autotuner/colocation.go`: `BudgetSplit(roles []string, hw HardwareProfile, overrides map[string]int) map[string]ResourceBudget`
+- [x] Create `internal/autotuner/ollama.go`: `OllamaConfig(role string, budget ResourceBudget) OllamaEnv`
+- [x] Create `internal/autotuner/swarmui.go`: `SwarmUIConfig(budget ResourceBudget) SwarmUIArgs`
+- [x] Create `internal/autotuner/training.go`: `TrainingConfig(budget ResourceBudget) TrainingEnv`
+- [x] Create `internal/serviceinstall/linux.go`: systemd unit file writer for node-agent + role daemons
+- [x] Create `internal/serviceinstall/darwin.go`: launchd plist writer
+- [x] Create `cmd/node-deploy/main.go`: parse `--roles`, call autotuner, call serviceinstall, write `cluster/inventory.yaml` entry
+- [x] Add `deploy` Makefile target: `go run ./cmd/node-deploy --roles $(ROLES)`
+- [x] Write `docs/adr/009-discovery-protocol.md` ADR stub (UDP beacon vs. mDNS)
+- [x] Write `docs/adr/010-auto-tuning-budgeting.md` ADR stub
+- [x] Run `make lint` and `make test` — no regressions
+- [x] Manual smoke test: `node-deploy --roles chat` on a Linux dev box; verify Ollama unit file is generated with correct `--num-gpu`
 
 ### Phase 2 — node-agent + discovery
 
