@@ -123,7 +123,7 @@ func drawRoleVRAMBars(screen *ebiten.Image, x, y, w, h int, node *uiapi.NodeStat
 	barSpacing := float32(2)
 	startY := float32(y + 28)
 
-	for role := range node.Roles {
+	for _, role := range nodeRoles(node) {
 		if startY+barH > float32(y+h-20) {
 			break
 		}
@@ -146,6 +146,16 @@ func drawRoleVRAMBars(screen *ebiten.Image, x, y, w, h int, node *uiapi.NodeStat
 	}
 }
 
+func nodeRoles(node *uiapi.NodeState) []string {
+	if len(node.Roles) > 0 {
+		return node.Roles
+	}
+	if node.Role != "" {
+		return []string{node.Role}
+	}
+	return nil
+}
+
 func drawVRAMBar(screen *ebiten.Image, x, y, w, h float32, ratio float64, barColor color.RGBA) {
 	// Draw background
 	vector.DrawFilledRect(screen, x, y, w, h, color.RGBA{40, 40, 60, 255}, false)
@@ -158,11 +168,11 @@ func getRoleColor(role string) color.RGBA {
 	switch role {
 	case "chat":
 		return color.RGBA{100, 150, 255, 255} // Blue
-	case "image-gen":
+	case "image-generation", "image-gen":
 		return color.RGBA{255, 150, 100, 255} // Orange
 	case "training":
 		return color.RGBA{150, 255, 100, 255} // Green
-	case "video-gen":
+	case "video-generation", "video-gen":
 		return color.RGBA{255, 100, 200, 255} // Pink
 	default:
 		return color.RGBA{150, 150, 150, 255} // Gray
