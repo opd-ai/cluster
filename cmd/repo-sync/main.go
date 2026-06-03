@@ -102,6 +102,8 @@ func main() {
 	}
 	close(work)
 
+	// Collect errors from workers
+	errChan := make(chan error, len(repos))
 	var wg sync.WaitGroup
 	for i := 0; i < cfg.Jobs; i++ {
 		wg.Add(1)
@@ -110,11 +112,23 @@ func main() {
 			for repo := range work {
 				if err := syncRepo(repo, cfg); err != nil {
 					log.Printf("sync %s: %v", repo.Label, err)
+					errChan <- err
 				}
 			}
 		}()
 	}
 	wg.Wait()
+	close(errChan)
+
+	// Check if any errors occurred
+	var syncErrors []error
+	for err := range errChan {
+		syncErrors = append(syncErrors, err)
+	}
+
+	if len(syncErrors) > 0 {
+		log.Fatalf("sync failed: %d/%d repositories had errors", len(syncErrors), len(repos))
+	}
 }
 
 // syncRepo clones (or fetches) a single repository into the cache.

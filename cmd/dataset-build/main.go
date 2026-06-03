@@ -32,6 +32,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,6 +99,7 @@ func main() {
 	repoCache := flag.String("repo-cache", "repo-cache", "Path to bare-clone cache")
 	outDir := flag.String("out", "datasets", "Output base directory")
 	nsFilter := flag.String("namespace", "", "Only process this namespace (empty = all)")
+	holdoutRatio := flag.Float64("holdout-ratio", 0.0, "Fraction of examples to hold out (0-1, default: 0)")
 	flag.Parse()
 
 	nsFile, err := loadNamespaces(*namespacesPath)
@@ -123,6 +125,16 @@ func main() {
 		nsWriter := bufio.NewWriter(nsOutFile)
 		nsSeen := make(map[string]struct{})
 
+		var nsHoldoutFile *os.File
+		var nsHoldoutWriter *bufio.Writer
+		if *holdoutRatio > 0 {
+			nsHoldoutFile, err = os.Create(filepath.Join(nsOutDir, "holdout.jsonl"))
+			if err != nil {
+				log.Fatalf("create holdout: %v", err)
+			}
+			nsHoldoutWriter = bufio.NewWriter(nsHoldoutFile)
+		}
+
 		for _, repo := range ns.Repos {
 			repoDir := filepath.Join(*repoCache, repo.Label)
 			if _, err := os.Stat(repoDir); err != nil {
@@ -141,7 +153,17 @@ func main() {
 			repoWriter := bufio.NewWriter(repoFile)
 			repoSeen := make(map[string]struct{})
 
-			count, err := walkRepo(repoDir, repo.Label, hp, repoWriter, nsWriter, repoSeen, nsSeen)
+			var repoHoldoutFile *os.File
+			var repoHoldoutWriter *bufio.Writer
+			if *holdoutRatio > 0 {
+				repoHoldoutFile, err = os.Create(filepath.Join(repoOutDir, "holdout.jsonl"))
+				if err != nil {
+					log.Fatalf("create repo holdout: %v", err)
+				}
+				repoHoldoutWriter = bufio.NewWriter(repoHoldoutFile)
+			}
+
+			count, err := walkRepo(repoDir, repo.Label, hp, repoWriter, nsWriter, repoHoldoutWriter, nsHoldoutWriter, repoSeen, nsSeen, *holdoutRatio)
 			if err != nil {
 				log.Printf("walk repo %s: %v", repo.Label, err)
 			}
@@ -152,6 +174,16 @@ func main() {
 			if err := repoFile.Close(); err != nil {
 				log.Fatalf("close repo file for %s: %v", repo.Label, err)
 			}
+
+			if repoHoldoutWriter != nil {
+				if err := repoHoldoutWriter.Flush(); err != nil {
+					log.Fatalf("flush repo holdout writer for %s: %v", repo.Label, err)
+				}
+				if err := repoHoldoutFile.Close(); err != nil {
+					log.Fatalf("close repo holdout file for %s: %v", repo.Label, err)
+				}
+			}
+
 			log.Printf("namespace=%s repo=%s examples=%d", ns.Name, repo.Label, count)
 		}
 
@@ -160,6 +192,15 @@ func main() {
 		}
 		if err := nsOutFile.Close(); err != nil {
 			log.Fatalf("close namespace file for %s: %v", ns.Name, err)
+		}
+
+		if nsHoldoutWriter != nil {
+			if err := nsHoldoutWriter.Flush(); err != nil {
+				log.Fatalf("flush namespace holdout writer for %s: %v", ns.Name, err)
+			}
+			if err := nsHoldoutFile.Close(); err != nil {
+				log.Fatalf("close namespace holdout file for %s: %v", ns.Name, err)
+			}
 		}
 		log.Printf("namespace=%s dataset written to %s", ns.Name, nsOutDir)
 	}
@@ -175,9 +216,8 @@ func writeLine(w *bufio.Writer, data []byte) error {
 
 // walkRepo reads a bare-clone git repo via `git ls-tree` and `git show` to extract
 // source code files, and writes qualifying examples as JSONL.
-// This avoids including Git plumbing files (config, HEAD, packed-refs, etc.)
-// that would be present if walking the bare-repo filesystem directly.
-func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW *bufio.Writer, repoSeen, nsSeen map[string]struct{}) (int, error) {
+// If holdoutRatio > 0, splits examples between dataset.jsonl and holdout.jsonl based on random assignment.
+func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW, repoHoldoutW, nsHoldoutW *bufio.Writer, repoSeen, nsSeen map[string]struct{}, holdoutRatio float64) (int, error) {
 	count := 0
 
 	// Get the list of all files in HEAD using git ls-tree.
@@ -224,17 +264,32 @@ func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW *bufio.Write
 			continue // skip unmarshallable examples
 		}
 
+		// Determine if this example goes to training or holdout set
+		isHoldout := holdoutRatio > 0 && rand.Float64() < holdoutRatio
+
 		if _, seen := repoSeen[hash]; !seen {
 			repoSeen[hash] = struct{}{}
-			if err := writeLine(repoW, exLine); err != nil {
-				return count, err
+			if isHoldout && repoHoldoutW != nil {
+				if err := writeLine(repoHoldoutW, exLine); err != nil {
+					return count, err
+				}
+			} else {
+				if err := writeLine(repoW, exLine); err != nil {
+					return count, err
+				}
 			}
 			count++
 		}
 		if _, seen := nsSeen[hash]; !seen {
 			nsSeen[hash] = struct{}{}
-			if err := writeLine(nsW, exLine); err != nil {
-				return count, err
+			if isHoldout && nsHoldoutW != nil {
+				if err := writeLine(nsHoldoutW, exLine); err != nil {
+					return count, err
+				}
+			} else {
+				if err := writeLine(nsW, exLine); err != nil {
+					return count, err
+				}
 			}
 		}
 	}
