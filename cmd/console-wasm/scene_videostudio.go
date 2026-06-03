@@ -75,12 +75,14 @@ func (s *videoStudioScene) submitJob(prompt string) string {
 	return result.ID
 }
 
+// Update advances the video studio scene for the current frame. It implements the Scene interface.
 func (s *videoStudioScene) Update(_ *SharedState) error {
 	_ = s.backBtn.Update()
 	_ = s.genBtn.Update()
 	return nil
 }
 
+// Draw renders the video studio scene to screen. It implements the Scene interface.
 func (s *videoStudioScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	screen.Fill(color.RGBA{14, 14, 22, 255})
 	vector.DrawFilledRect(screen, 0, 0, 1280, 52, color.RGBA{22, 22, 38, 255}, false)

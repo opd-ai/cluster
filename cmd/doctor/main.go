@@ -1,3 +1,5 @@
+// cmd/doctor runs cluster health checks against the local machine or, with
+// -remote, a host reached over SSH, and reports the outcome of each check.
 package main
 
 import (
@@ -22,6 +24,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// DoctorConfig holds the configuration for a health-check run, including the
+// optional remote SSH target and the thresholds applied during checks.
 type DoctorConfig struct {
 	Host                     string
 	User                     string
@@ -32,12 +36,14 @@ type DoctorConfig struct {
 	CheckRemote              bool
 }
 
+// HealthReport summarizes the outcome of all checks run against a single host.
 type HealthReport struct {
 	Hostname  string
 	Checks    []CheckResult
 	AllPassed bool
 }
 
+// CheckResult records the outcome of an individual health check.
 type CheckResult struct {
 	Name    string
 	Status  string // "PASS", "WARN", "FAIL"
@@ -126,7 +132,7 @@ func performLocalChecks(config DoctorConfig) HealthReport {
 func performRemoteChecks(host, user string, signer ssh.Signer, config DoctorConfig) HealthReport {
 	var report HealthReport
 	report.Hostname = host
-	report.AllPassed = true  // Assume passed until a check fails
+	report.AllPassed = true // Assume passed until a check fails
 
 	client, err := createSSHClient(user, host, "22", signer, config)
 	if err != nil {

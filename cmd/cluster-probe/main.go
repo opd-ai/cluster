@@ -1,3 +1,5 @@
+// cmd/cluster-probe connects to each host over SSH and collects hardware and
+// platform details (architecture, OS, accelerator, VRAM, RAM, and disk).
 package main
 
 import (
@@ -22,6 +24,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// HostInfo holds the hardware and connection details probed from a single host.
 type HostInfo struct {
 	Hostname    string
 	Address     string

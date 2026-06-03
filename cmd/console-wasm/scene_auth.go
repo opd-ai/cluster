@@ -63,10 +63,12 @@ func (a *authScene) doLogin() {
 	a.onSuccess(lr.Token, uiapi.Role(lr.Role))
 }
 
+// Update advances the authentication / login scene for the current frame. It implements the Scene interface.
 func (a *authScene) Update(_ *SharedState) error {
 	return a.loginBtn.Update()
 }
 
+// Draw renders the authentication / login scene to screen. It implements the Scene interface.
 func (a *authScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	screen.Fill(color.RGBA{18, 18, 28, 255})
 

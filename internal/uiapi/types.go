@@ -13,16 +13,26 @@ import "time"
 type MessageType string
 
 const (
-	MsgClusterState      MessageType = "cluster_state"
-	MsgNodeMetrics       MessageType = "node_metrics"
-	MsgLogLine           MessageType = "log_line"
-	MsgJobProgress       MessageType = "job_progress"
-	MsgImagePreview      MessageType = "image_preview"
-	MsgTrainingMetrics   MessageType = "training_metrics"
-	MsgAggregateMetrics  MessageType = "aggregate_metrics"
-	MsgGenerationEvent   MessageType = "generation_event"
-	MsgPipelineState     MessageType = "pipeline_state"
-	MsgError             MessageType = "error"
+	// MsgClusterState carries a full cluster snapshot (ClusterState).
+	MsgClusterState MessageType = "cluster_state"
+	// MsgNodeMetrics carries a periodic per-node metrics update (NodeMetrics).
+	MsgNodeMetrics MessageType = "node_metrics"
+	// MsgLogLine carries a single streamed log line.
+	MsgLogLine MessageType = "log_line"
+	// MsgJobProgress carries a job progress update.
+	MsgJobProgress MessageType = "job_progress"
+	// MsgImagePreview carries a generated image preview.
+	MsgImagePreview MessageType = "image_preview"
+	// MsgTrainingMetrics carries a training metrics update.
+	MsgTrainingMetrics MessageType = "training_metrics"
+	// MsgAggregateMetrics carries aggregated federated training metrics.
+	MsgAggregateMetrics MessageType = "aggregate_metrics"
+	// MsgGenerationEvent carries an image or video generation event.
+	MsgGenerationEvent MessageType = "generation_event"
+	// MsgPipelineState carries a pipeline state update.
+	MsgPipelineState MessageType = "pipeline_state"
+	// MsgError carries an error notification.
+	MsgError MessageType = "error"
 )
 
 // Message is the WebSocket envelope.
@@ -44,19 +54,19 @@ type ClusterState struct {
 
 // NodeState represents a single cluster node.
 type NodeState struct {
-	Name        string                   `json:"name"`
-	Role        string                   `json:"role"`                   // deprecated: use Roles instead
-	Roles       []string                 `json:"roles,omitempty"`        // new: multiple roles
-	Services    []NodeService            `json:"services,omitempty"`     // service bindings
-	VRAMBudget  map[string]int           `json:"vram_budget,omitempty"` // VRAM allocation per role
-	Labels      map[string]string        `json:"labels"`
-	Healthy     bool                     `json:"healthy"`
-	Models      []string                 `json:"models"`
-	GPUName     string                   `json:"gpu_name,omitempty"`
-	VRAMTotal   int64                    `json:"vram_total_mb,omitempty"`
-	VRAMUsed    int64                    `json:"vram_used_mb,omitempty"`
-	CPUPct      float64                  `json:"cpu_pct,omitempty"`
-	MemPct      float64                  `json:"mem_pct,omitempty"`
+	Name       string            `json:"name"`
+	Role       string            `json:"role"`                  // deprecated: use Roles instead
+	Roles      []string          `json:"roles,omitempty"`       // new: multiple roles
+	Services   []NodeService     `json:"services,omitempty"`    // service bindings
+	VRAMBudget map[string]int    `json:"vram_budget,omitempty"` // VRAM allocation per role
+	Labels     map[string]string `json:"labels"`
+	Healthy    bool              `json:"healthy"`
+	Models     []string          `json:"models"`
+	GPUName    string            `json:"gpu_name,omitempty"`
+	VRAMTotal  int64             `json:"vram_total_mb,omitempty"`
+	VRAMUsed   int64             `json:"vram_used_mb,omitempty"`
+	CPUPct     float64           `json:"cpu_pct,omitempty"`
+	MemPct     float64           `json:"mem_pct,omitempty"`
 }
 
 // NodeService represents a service binding on a node.
@@ -82,22 +92,32 @@ type NodeMetrics struct {
 type JobKind string
 
 const (
+	// JobKindInference identifies an inference job.
 	JobKindInference JobKind = "inference"
-	JobKindTraining  JobKind = "training"
-	JobKindImageGen  JobKind = "image_gen"
-	JobKindVideoGen  JobKind = "video_gen"
+	// JobKindTraining identifies a model training job.
+	JobKindTraining JobKind = "training"
+	// JobKindImageGen identifies an image generation job.
+	JobKindImageGen JobKind = "image_gen"
+	// JobKindVideoGen identifies a video generation job.
+	JobKindVideoGen JobKind = "video_gen"
+	// JobKindRAGIngest identifies a RAG ingestion job.
 	JobKindRAGIngest JobKind = "rag_ingest"
-	JobKindEval      JobKind = "eval"
+	// JobKindEval identifies an evaluation job.
+	JobKindEval JobKind = "eval"
 )
 
 // JobStatus is the lifecycle state of a job.
 type JobStatus string
 
 const (
-	JobPending   JobStatus = "pending"
-	JobRunning   JobStatus = "running"
+	// JobPending indicates a job that has been queued but not yet started.
+	JobPending JobStatus = "pending"
+	// JobRunning indicates a job that is currently executing.
+	JobRunning JobStatus = "running"
+	// JobCompleted indicates a job that finished successfully.
 	JobCompleted JobStatus = "completed"
-	JobFailed    JobStatus = "failed"
+	// JobFailed indicates a job that terminated with an error.
+	JobFailed JobStatus = "failed"
 )
 
 // JobState describes a running or recently completed job.
@@ -177,9 +197,12 @@ type LoginResponse struct {
 type Role string
 
 const (
-	RoleAdmin    Role = "admin"
+	// RoleAdmin grants full administrative access.
+	RoleAdmin Role = "admin"
+	// RoleOperator grants permission to operate the cluster without admin rights.
 	RoleOperator Role = "operator"
-	RoleUser     Role = "user"
+	// RoleUser grants standard read and submit access.
+	RoleUser Role = "user"
 )
 
 // -------------------------------------------------------------------------
@@ -188,22 +211,22 @@ const (
 
 // AggregateMetrics provides cluster-wide rollup metrics from all nodes.
 type AggregateMetrics struct {
-	Timestamp           time.Time           `json:"timestamp"`
-	TotalCPUPct         float64             `json:"total_cpu_pct"`
-	TotalMemPct         float64             `json:"total_mem_pct"`
-	TotalVRAMUsedMB     int64               `json:"total_vram_used_mb"`
-	TotalVRAMAvailableMB int64              `json:"total_vram_available_mb"`
-	PerRoleMetrics      map[string]AggRoleMetrics `json:"per_role_metrics"`
+	Timestamp            time.Time                 `json:"timestamp"`
+	TotalCPUPct          float64                   `json:"total_cpu_pct"`
+	TotalMemPct          float64                   `json:"total_mem_pct"`
+	TotalVRAMUsedMB      int64                     `json:"total_vram_used_mb"`
+	TotalVRAMAvailableMB int64                     `json:"total_vram_available_mb"`
+	PerRoleMetrics       map[string]AggRoleMetrics `json:"per_role_metrics"`
 }
 
 // AggRoleMetrics aggregates metrics for a single role across all nodes.
 type AggRoleMetrics struct {
-	Role               string  `json:"role"`
-	NodesActive        int     `json:"nodes_active"`
-	TotalQueueDepth    int     `json:"total_queue_depth"`
-	AvgLatencyEMAms    float64 `json:"avg_latency_ema_ms"`
-	TotalVRAMUsedMB    int64   `json:"total_vram_used_mb"`
-	TotalVRAMBudgetMB  int64   `json:"total_vram_budget_mb"`
+	Role              string  `json:"role"`
+	NodesActive       int     `json:"nodes_active"`
+	TotalQueueDepth   int     `json:"total_queue_depth"`
+	AvgLatencyEMAms   float64 `json:"avg_latency_ema_ms"`
+	TotalVRAMUsedMB   int64   `json:"total_vram_used_mb"`
+	TotalVRAMBudgetMB int64   `json:"total_vram_budget_mb"`
 }
 
 // GenerationEvent carries real-time events from image or video generation pipelines.
@@ -220,25 +243,25 @@ type GenerationEvent struct {
 
 // PipelineState tracks multi-stage pipeline execution across nodes.
 type PipelineState struct {
-	PipelineID  string                       `json:"pipeline_id"`
-	Status      string                       `json:"status"` // pending, running, completed, failed
-	Stages      []PipelineStageState         `json:"stages"`
-	StartedAt   time.Time                    `json:"started_at"`
-	UpdatedAt   time.Time                    `json:"updated_at"`
-	CompletedAt time.Time                    `json:"completed_at,omitempty"`
+	PipelineID  string               `json:"pipeline_id"`
+	Status      string               `json:"status"` // pending, running, completed, failed
+	Stages      []PipelineStageState `json:"stages"`
+	StartedAt   time.Time            `json:"started_at"`
+	UpdatedAt   time.Time            `json:"updated_at"`
+	CompletedAt time.Time            `json:"completed_at,omitempty"`
 }
 
 // PipelineStageState tracks a single stage in a pipeline.
 type PipelineStageState struct {
-	StageID       string    `json:"stage_id"`
-	Index         int       `json:"index"`
-	Status        string    `json:"status"` // pending, running, completed, failed
-	NodeAddress   string    `json:"node_address"`
-	Role          string    `json:"role"`
-	Progress      float64   `json:"progress"`
-	Input         any       `json:"input,omitempty"`
-	Output        any       `json:"output,omitempty"`
-	Error         string    `json:"error,omitempty"`
-	StartedAt     time.Time `json:"started_at,omitempty"`
-	CompletedAt   time.Time `json:"completed_at,omitempty"`
+	StageID     string    `json:"stage_id"`
+	Index       int       `json:"index"`
+	Status      string    `json:"status"` // pending, running, completed, failed
+	NodeAddress string    `json:"node_address"`
+	Role        string    `json:"role"`
+	Progress    float64   `json:"progress"`
+	Input       any       `json:"input,omitempty"`
+	Output      any       `json:"output,omitempty"`
+	Error       string    `json:"error,omitempty"`
+	StartedAt   time.Time `json:"started_at,omitempty"`
+	CompletedAt time.Time `json:"completed_at,omitempty"`
 }

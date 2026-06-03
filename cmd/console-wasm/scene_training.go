@@ -34,6 +34,7 @@ func newTrainingScene(onBack func()) *trainingScene {
 	return s
 }
 
+// Update advances the training metrics scene for the current frame. It implements the Scene interface.
 func (s *trainingScene) Update(state *SharedState) error {
 	_ = s.backBtn.Update()
 
@@ -68,6 +69,7 @@ func (s *trainingScene) fetchJobs() {
 	s.jobs = training
 }
 
+// Draw renders the training metrics scene to screen. It implements the Scene interface.
 func (s *trainingScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	screen.Fill(color.RGBA{12, 12, 20, 255})
 	vector.DrawFilledRect(screen, 0, 0, 1280, 52, color.RGBA{22, 22, 38, 255}, false)

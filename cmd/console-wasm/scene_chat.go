@@ -95,12 +95,14 @@ func (s *chatScene) callChat(userMsg string) string {
 	return "(no response)"
 }
 
+// Update advances the chat scene for the current frame. It implements the Scene interface.
 func (s *chatScene) Update(_ *SharedState) error {
 	_ = s.backBtn.Update()
 	_ = s.sendBtn.Update()
 	return nil
 }
 
+// Draw renders the chat scene to screen. It implements the Scene interface.
 func (s *chatScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	screen.Fill(color.RGBA{14, 14, 22, 255})
 	vector.DrawFilledRect(screen, 0, 0, 1280, 52, color.RGBA{22, 22, 38, 255}, false)

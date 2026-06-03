@@ -49,6 +49,7 @@ func newClusterScene(onNavigate func(string)) *clusterScene {
 	return s
 }
 
+// Update advances the cluster overview scene for the current frame. It implements the Scene interface.
 func (s *clusterScene) Update(state *SharedState) error {
 	for _, btn := range []*ui.Button{s.chatBtn, s.imageBtn, s.videoBtn, s.trainBtn, s.ragBtn, s.regBtn} {
 		if err := btn.Update(); err != nil {
@@ -71,6 +72,7 @@ func (s *clusterScene) Update(state *SharedState) error {
 	return nil
 }
 
+// Draw renders the cluster overview scene to screen. It implements the Scene interface.
 func (s *clusterScene) Draw(screen *ebiten.Image, state *SharedState) {
 	screen.Fill(color.RGBA{12, 12, 20, 255})
 
