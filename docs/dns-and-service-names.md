@@ -15,6 +15,13 @@ layers of DNS described below.
 | `images.cluster`     | 7860         | SwarmUI            |
 | `rag.cluster`        | 6333 (HTTP), 6334 (gRPC)   | Qdrant + `cmd/rag` |
 
+<!-- REVIEW: the SwarmUI port for `images.cluster` is inconsistent across the
+codebase. The gateway swarmui-url default (cmd/gateway/images.go) and the
+production network policies use 7801 (SwarmUI's real default), while the
+discovery fallback and node role-port mapping (cmd/gateway/main.go:596,
+cmd/node-agent, cmd/node-deploy) use 7860. Confirm the canonical port and
+align code + docs. -->
+
 ## Layer 1 — CoreDNS (k3s default, Linux nodes)
 
 k3s ships CoreDNS in the `kube-system` namespace.  Each Go service is

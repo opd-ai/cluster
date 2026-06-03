@@ -54,7 +54,7 @@ The gateway routes requests to the appropriate backend:
 - `/v1/chat/completions` with `model: llama3.2:13b` → `mac-mini:11434`
 - `/v1/embeddings` → `mac-mini:11434` (nomic-embed-text)
 - `/v1/images/generations` → `gpu-box:7801` (SwarmUI/SDXL)
-- `/v1/videos/generations` → `gpu-box:11434` (video model)
+- `/v1/videos/generations` → `gpu-box:7801` (SwarmUI/video model)
 - RAG ingest → `cpu-node` (Qdrant via RAG service)
 
 ## Bootstrap

@@ -23,7 +23,7 @@ in plain text in the repository.
 During `make bootstrap` / `./bootstrap`, the bootstrap command generates an age
 key pair on the control node and stores:
 
-- The **public key** at `cluster/.sops.yaml` (committed to git, safe to share).
+- The **public key** at `.sops.yaml` in the repo root (committed to git, safe to share).
 - The **private key** as a Kubernetes Secret named `sops-age` in the
   `flux-system` namespace (never leaves the cluster).
 

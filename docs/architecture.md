@@ -13,7 +13,7 @@
                     │    │                                         │
                     │    ├── /v1/chat/completions ──► Ollama nodes │
                     │    ├── /v1/images/generations ─► SwarmUI    │
-                    │    ├── /v1/videos/generations ─► Ollama     │
+                    │    ├── /v1/videos/generations ─► SwarmUI    │
                     │    ├── /v1/embeddings ──────────► Ollama    │
                     │    └── /ingest, /query ─────────► RAG :8081  │
                     │                  │                           │
@@ -32,7 +32,7 @@ Client
   │  POST /v1/chat/completions {model, messages}
   ▼
 Gateway (cmd/gateway)
-  │  auth via API key (X-Api-Key or Authorization)
+  │  auth via API key (Authorization: Bearer)
   │  select backend via Placer (inventory health check)
   ▼
 Ollama :11434 (Linux/GPU node or Mac node)
@@ -122,7 +122,7 @@ Browser
   │  WebAssembly instantiate console.wasm
   │  Ebitengine game loop (60 fps, requestAnimationFrame)
   │
-  │  WS /ws  ←→  console server
+  │  WS /api/ws  ←→  console server
   │              proxies to Gateway API
   │
   ▼
@@ -133,6 +133,17 @@ The WASM binary is compiled with `GOOS=js GOARCH=wasm` from `cmd/console-wasm`.
 Ebitengine renders to an HTML `<canvas>` element. All API calls go through the
 WebSocket proxy to avoid CORS issues. The accessibility tradeoff (canvas vs DOM
 elements) is documented in ADR 007.
+<!-- REVIEW: the console flow above names the served binary `console.wasm`, but
+cmd/console serves it as `/main.wasm` (cmd/console/main.go:136) while the
+Makefile builds it to web/console.wasm (WASM_OUT). The build artifact and the
+served filename differ; confirm the intended canonical name. -->
+
+### Console Bootstrap Assets
+
+The console server (`cmd/console`) leaves `/`, `/index.html`, `/main.wasm`, and
+`/wasm_exec.js` publicly accessible so the login page can load; every other
+static asset and API route (including `/api/ws`, authenticated via the `token`
+query parameter) requires a session token.
 
 ### Failure Modes
 

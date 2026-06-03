@@ -154,7 +154,7 @@ Current size targets:
 To check current size:
 
 ```bash
-ls -lh dist/js-wasm/console.wasm
+ls -lh web/console.wasm
 ```
 
 To reduce size:
@@ -164,5 +164,5 @@ To reduce size:
   instead
 - Run `wasm-opt -O2` from `binaryen` tools (reduces size by ~15–20%):
   ```bash
-  wasm-opt -O2 -o dist/js-wasm/console.wasm dist/js-wasm/console.wasm
+  wasm-opt -O2 -o web/console.wasm web/console.wasm
   ```
