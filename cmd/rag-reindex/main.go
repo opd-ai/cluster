@@ -181,7 +181,8 @@ func sanitizeLabel(label string) string {
 // could return a different directory than the one that actually changed.
 func dirAndCollectionForPath(path string, m map[string]string) (string, string) {
 	for dir, coll := range m {
-		if strings.HasPrefix(path, dir) {
+		// Check for exact match or directory boundary (dir + "/")
+		if path == dir || strings.HasPrefix(path, dir+"/") {
 			return dir, coll
 		}
 	}
