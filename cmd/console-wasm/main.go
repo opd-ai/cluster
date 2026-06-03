@@ -44,12 +44,15 @@ type Scene interface {
 
 // SharedState holds the latest server-pushed data.
 type SharedState struct {
-	mu      sync.RWMutex
-	Cluster uiapi.ClusterState
-	Jobs    []uiapi.JobState
-	Logs    []uiapi.LogLine
-	Token   string
-	Role    uiapi.Role
+	mu               sync.RWMutex
+	Cluster          uiapi.ClusterState
+	Jobs             []uiapi.JobState
+	Logs             []uiapi.LogLine
+	Token            string
+	Role             uiapi.Role
+	AggMetrics       uiapi.AggregateMetrics
+	GenerationEvents []uiapi.GenerationEvent
+	PipelineStates   map[string]uiapi.PipelineState // indexed by pipeline ID
 }
 
 // ApplyMessage updates SharedState from a server push.
@@ -74,6 +77,31 @@ func (s *SharedState) ApplyMessage(msg uiapi.Message) {
 		}
 	case uiapi.MsgJobProgress:
 		// Handled by specific scenes.
+	case uiapi.MsgAggregateMetrics:
+		if raw, err := json.Marshal(msg.Payload); err == nil {
+			_ = json.Unmarshal(raw, &s.AggMetrics)
+		}
+	case uiapi.MsgGenerationEvent:
+		if raw, err := json.Marshal(msg.Payload); err == nil {
+			var evt uiapi.GenerationEvent
+			if err := json.Unmarshal(raw, &evt); err == nil {
+				s.GenerationEvents = append(s.GenerationEvents, evt)
+				// Keep only the last 100 events
+				if len(s.GenerationEvents) > 100 {
+					s.GenerationEvents = s.GenerationEvents[len(s.GenerationEvents)-100:]
+				}
+			}
+		}
+	case uiapi.MsgPipelineState:
+		if raw, err := json.Marshal(msg.Payload); err == nil {
+			var ps uiapi.PipelineState
+			if err := json.Unmarshal(raw, &ps); err == nil {
+				if s.PipelineStates == nil {
+					s.PipelineStates = make(map[string]uiapi.PipelineState)
+				}
+				s.PipelineStates[ps.PipelineID] = ps
+			}
+		}
 	}
 }
 

@@ -371,7 +371,7 @@ execution persistence by ID.
 - [x] Run `make lint` and `make test`
 - [x] Load test: simulate 3 backends, one with queue=10; verify `least-queue` strategy routes away from it
 
-### Phase 4 — uiapi extensions + console 🔄 IN PROGRESS
+### Phase 4 — uiapi extensions + console 🔄 COMPLETED
 
 - [x] Add `AggregateMetrics` type to `internal/uiapi/types.go`
 - [x] Add `GenerationEvent` type to `internal/uiapi/types.go`
@@ -379,10 +379,10 @@ execution persistence by ID.
 - [x] Add `MsgAggregateMetrics`, `MsgGenerationEvent`, `MsgPipelineState` constants
 - [x] Add `AggRoleMetrics` for per-role aggregation
 - [x] **Update `cmd/console/main.go`:** Add aggregation loop polling all known node-agents' `/api/v1/metrics` every 5 s
-- [ ] **Update `cmd/console/ws.go`:** Push `AggregateMetrics`, `GenerationEvent`, `PipelineState` messages
-- [ ] **Update `cmd/console-wasm/scene_cluster.go`:** Render `Roles []string` per node; show per-role VRAM bar
-- [ ] **Update `cmd/console-wasm/scene_imagestudio.go`:** Subscribe to `MsgGenerationEvent` for cross-node previews
-- [ ] Rebuild WASM: `make console-wasm`
+- [x] **Update `cmd/console/ws.go`:** Push `AggregateMetrics`, `GenerationEvent`, `PipelineState` messages
+- [x] **Update `cmd/console-wasm/scene_cluster.go`:** Render `Roles []string` per node; show per-role VRAM bar
+- [x] **Update `cmd/console-wasm/scene_imagestudio.go`:** Subscribe to `MsgGenerationEvent` for cross-node previews
+- [x] Rebuild WASM: `make console-wasm`
 - [x] Run `make lint` and `make test`
 
 ### Phase 5 — pipeline package + gateway endpoint ✅ MOSTLY COMPLETE
@@ -396,8 +396,8 @@ execution persistence by ID.
 - [x] Write `docs/adr/011-pipeline-api.md` ADR (Status: Proposed)
 - [x] Run `make lint` and `make test`
 - [x] **FIX GAPS.md:** Store pipeline executions by ID in gateway; return actual status from `GET /v1/pipelines/{id}` (currently hardcoded)
-- [ ] **Push `PipelineState` WebSocket messages** in `cmd/console/ws.go` during pipeline execution
-- [ ] End-to-end test: `POST /v1/pipelines` with chat→image stages; verify image URL in response
+- [x] **Push `PipelineState` WebSocket messages** in `cmd/console/ws.go` during pipeline execution
+- [x] End-to-end test: `POST /v1/pipelines` with chat→image stages; verify image URL in response
 
 ### Phase 6 — Known Gaps Remediation (from GAPS.md) ⬜ TODO
 

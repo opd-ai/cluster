@@ -67,6 +67,7 @@ type Server struct {
 	audit          *auditLog
 	sessions       map[string]sessionEntry
 	nodeAgentURLs  []string // derived from gateway /status backends
+	pipelineStates map[string]uiapi.PipelineState // pipeline ID -> state
 }
 
 func newServer(addr, gatewayURL, wasmDir, keyFile string) (*Server, error) {
@@ -75,15 +76,16 @@ func newServer(addr, gatewayURL, wasmDir, keyFile string) (*Server, error) {
 		return nil, fmt.Errorf("load key file: %w", err)
 	}
 	return &Server{
-		addr:       addr,
-		gatewayURL: gatewayURL,
-		wasmDir:    wasmDir,
-		apiKeys:    keys,
-		jobs:       make([]uiapi.JobState, 0),
-		logBuf:     make([]uiapi.LogLine, 0),
-		clients:    make(map[chan uiapi.Message]struct{}),
-		sessions:   make(map[string]sessionEntry),
-		audit:      newAuditLog(0),
+		addr:           addr,
+		gatewayURL:     gatewayURL,
+		wasmDir:        wasmDir,
+		apiKeys:        keys,
+		jobs:           make([]uiapi.JobState, 0),
+		logBuf:         make([]uiapi.LogLine, 0),
+		clients:        make(map[chan uiapi.Message]struct{}),
+		sessions:       make(map[string]sessionEntry),
+		pipelineStates: make(map[string]uiapi.PipelineState),
+		audit:          newAuditLog(0),
 	}, nil
 }
 
@@ -444,6 +446,86 @@ func (s *Server) fetchGatewayState(client *http.Client) {
 	s.mu.Unlock()
 
 	s.broadcast(uiapi.Message{Type: uiapi.MsgClusterState, Payload: state})
+}
+
+// pollPipelineStatus polls the gateway for active pipeline executions and broadcasts status updates.
+// This is called periodically to track pipeline execution progress.
+func (s *Server) pollPipelineStatus(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	// Track known pipeline IDs to poll (these would come from subscriptions or gateway API)
+	var knownPipelines []string
+	knownPipelinesMu := &sync.Mutex{}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			knownPipelinesMu.Lock()
+			for _, pipelineID := range knownPipelines {
+				s.fetchAndBroadcastPipelineStatus(client, pipelineID)
+			}
+			knownPipelinesMu.Unlock()
+		}
+	}
+}
+
+func (s *Server) fetchAndBroadcastPipelineStatus(client *http.Client, pipelineID string) {
+	// Fetch pipeline status from the gateway
+	url := s.gatewayURL + "/v1/pipelines/" + pipelineID
+	resp, err := client.Get(url) // #nosec G107 — operator-supplied URL
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	// The gateway returns PipelineExecution, which we need to convert to PipelineState
+	var exec struct {
+		ID     string    `json:"id"`
+		Status string    `json:"status"`
+		Stages []struct {
+			ID       string    `json:"id"`
+			Status   string    `json:"status"`
+			Role     string    `json:"role"`
+			Progress float64   `json:"progress"`
+		} `json:"stages"`
+		StartedAt   time.Time `json:"started_at"`
+		UpdatedAt   time.Time `json:"updated_at"`
+		CompletedAt time.Time `json:"completed_at,omitempty"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&exec); err != nil {
+		return
+	}
+
+	// Convert to PipelineState
+	ps := uiapi.PipelineState{
+		PipelineID: exec.ID,
+		Status:     exec.Status,
+		StartedAt:  exec.StartedAt,
+		UpdatedAt:  exec.UpdatedAt,
+		Stages:     make([]uiapi.PipelineStageState, len(exec.Stages)),
+	}
+
+	for i, stage := range exec.Stages {
+		ps.Stages[i] = uiapi.PipelineStageState{
+			StageID:  stage.ID,
+			Index:    i,
+			Status:   stage.Status,
+			Role:     stage.Role,
+			Progress: stage.Progress,
+		}
+	}
+
+	// Store and broadcast
+	s.mu.Lock()
+	s.pipelineStates[pipelineID] = ps
+	s.mu.Unlock()
+
+	s.broadcast(uiapi.Message{Type: uiapi.MsgPipelineState, Payload: ps})
 }
 
 // backendHost extracts just the hostname from a URL like "http://host:11434".
