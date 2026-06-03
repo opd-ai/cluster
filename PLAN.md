@@ -392,19 +392,19 @@ with `status`, `output_text`, `output_image_url`, `output_video_url`).
 
 ### Phase 2 — node-agent + discovery
 
-- [ ] Create `internal/nodeapi/types.go`: `NodeInfo`, `HealthReport`, `NodeMetricsExt`, `PeerRecord`, `PipelineAck`, `PipelineResult`, `BeaconMessage`
-- [ ] Create `internal/discovery/beacon.go`: UDP multicast sender on `239.77.0.1:9977` using stdlib `net`
-- [ ] Create `internal/discovery/listener.go`: UDP multicast receiver; emits `BeaconMessage` on a channel
-- [ ] Create `internal/discovery/reconciler.go`: merge discovered nodes into `cluster/inventory.yaml` atomically
-- [ ] Create `cmd/node-agent/main.go`: starts beacon, HTTP server, process supervisor (one goroutine per role daemon)
-- [ ] Implement `GET /api/v1/info` on node-agent (returns `NodeInfo`)
-- [ ] Implement `GET /api/v1/health` on node-agent (returns `HealthReport`)
-- [ ] Implement `GET /api/v1/metrics` on node-agent (returns `NodeMetricsExt`)
-- [ ] Implement `GET /api/v1/peers` on node-agent
-- [ ] Add `--no-reconcile` flag to node-agent
+- [x] Create `internal/nodeapi/types.go`: `NodeInfo`, `HealthReport`, `NodeMetricsExt`, `PeerRecord`, `PipelineAck`, `PipelineResult`, `BeaconMessage`
+- [x] Create `internal/discovery/beacon.go`: UDP multicast sender on `239.77.0.1:9977` using stdlib `net`
+- [x] Create `internal/discovery/listener.go`: UDP multicast receiver; emits `BeaconMessage` on a channel
+- [x] Create `internal/discovery/reconciler.go`: merge discovered nodes into `cluster/inventory.yaml` atomically
+- [x] Create `cmd/node-agent/main.go`: starts beacon, HTTP server, process supervisor (one goroutine per role daemon)
+- [x] Implement `GET /api/v1/info` on node-agent (returns `NodeInfo`)
+- [x] Implement `GET /api/v1/health` on node-agent (returns `HealthReport`)
+- [x] Implement `GET /api/v1/metrics` on node-agent (returns `NodeMetricsExt`)
+- [x] Implement `GET /api/v1/peers` on node-agent
+- [x] Add `--no-reconcile` flag to node-agent
 - [ ] Update gateway to optionally join discovery multicast group (`-discovery=true` flag)
 - [ ] Add `agent` Makefile target: `go run ./cmd/node-agent --roles $(ROLES)`
-- [ ] Run `make lint` and `make test`
+- [x] Run `make lint` and `make test`
 - [ ] Integration test: two node-agent instances on same LAN discover each other within 30 s
 
 ### Phase 3 — lb package + gateway routing
