@@ -107,6 +107,16 @@ func main() {
 			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
 				continue
 			}
+			
+			// If a directory is created, recursively add watches
+			if event.Op == fsnotify.Create {
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+					if err := addWatchRecursive(watcher, event.Name); err != nil {
+						log.Printf("error adding watch to new dir %s: %v", event.Name, err)
+					}
+				}
+			}
+			
 			dir, coll := dirAndCollectionForPath(event.Name, repoToCollection)
 			if coll == "" {
 				continue
