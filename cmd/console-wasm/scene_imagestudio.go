@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -17,14 +18,24 @@ import (
 
 // imageStudioScene is the image generation studio.
 type imageStudioScene struct {
-	mu       sync.Mutex
-	onBack   func()
-	backBtn  *ui.Button
-	genBtn   *ui.Button
-	prompt   string
-	lastURL  string
-	progress *ui.ProgressBar
-	busy     bool
+	mu                    sync.Mutex
+	onBack                func()
+	backBtn               *ui.Button
+	genBtn                *ui.Button
+	prompt                string
+	lastURL               string
+	progress              *ui.ProgressBar
+	busy                  bool
+	latestGenerationID    string
+	latestGenerationEvt   *generationEventDisplay
+	lastGenerationEventAt time.Time
+}
+
+type generationEventDisplay struct {
+	jobID     string
+	progress  float64
+	status    string
+	outputURL string
 }
 
 func newImageStudioScene(onBack func()) *imageStudioScene {
@@ -82,9 +93,45 @@ func (s *imageStudioScene) callGenerate(prompt string) string {
 	return result.Data[0].URL
 }
 
-func (s *imageStudioScene) Update(_ *SharedState) error {
+func (s *imageStudioScene) Update(state *SharedState) error {
 	_ = s.backBtn.Update()
 	_ = s.genBtn.Update()
+
+	// Check for generation events from the server
+	if state != nil {
+		state.mu.RLock()
+		for _, evt := range state.GenerationEvents {
+			// Filter for image-generation role events
+			if evt.Role == "image-generation" || evt.Role == "image-gen" {
+				s.mu.Lock()
+				if !evt.Timestamp.After(s.lastGenerationEventAt) {
+					s.mu.Unlock()
+					continue
+				}
+				s.latestGenerationID = evt.JobID
+				if s.latestGenerationEvt == nil {
+					s.latestGenerationEvt = &generationEventDisplay{}
+				}
+				s.latestGenerationEvt.jobID = evt.JobID
+				s.latestGenerationEvt.progress = evt.Progress
+				s.latestGenerationEvt.status = evt.Status
+				s.latestGenerationEvt.outputURL = evt.OutputURL
+				s.lastGenerationEventAt = evt.Timestamp
+
+				// Update progress bar
+				s.progress.Value = evt.Progress
+				if evt.Status == "completed" && evt.OutputURL != "" {
+					s.lastURL = evt.OutputURL
+					s.busy = false
+				} else if evt.Status == "failed" {
+					s.busy = false
+				}
+				s.mu.Unlock()
+			}
+		}
+		state.mu.RUnlock()
+	}
+
 	return nil
 }
 
