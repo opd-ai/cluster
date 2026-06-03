@@ -40,6 +40,9 @@ After training, run the regression eval before deploying:
 # From cmd/pipeline (or your eval script)
 make eval MODEL=llama3.2:13b-lora DATASET=eval/golden.jsonl
 ```
+<!-- REVIEW: `make eval` is not a defined Makefile target and the MODEL/DATASET
+flags do not match cmd/eval-harness (which uses -gateway, -namespace, -repo,
+-datasets, -out, -threshold). Confirm the intended invocation. -->
 
 Accept the LoRA if and only if:
 - Perplexity ≤ base model + 5%

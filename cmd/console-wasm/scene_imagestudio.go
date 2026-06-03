@@ -93,6 +93,7 @@ func (s *imageStudioScene) callGenerate(prompt string) string {
 	return result.Data[0].URL
 }
 
+// Update advances the image studio scene for the current frame. It implements the Scene interface.
 func (s *imageStudioScene) Update(state *SharedState) error {
 	_ = s.backBtn.Update()
 	_ = s.genBtn.Update()
@@ -135,6 +136,7 @@ func (s *imageStudioScene) Update(state *SharedState) error {
 	return nil
 }
 
+// Draw renders the image studio scene to screen. It implements the Scene interface.
 func (s *imageStudioScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	screen.Fill(color.RGBA{14, 14, 22, 255})
 	vector.DrawFilledRect(screen, 0, 0, 1280, 52, color.RGBA{22, 22, 38, 255}, false)

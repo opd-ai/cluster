@@ -34,6 +34,10 @@ env:
 
 The `python/train.py` script detects multi-node mode when the `WORLD_SIZE`
 environment variable is > 1 and switches to DeepSpeed automatically.
+<!-- REVIEW: python/train.py does not currently reference WORLD_SIZE or DeepSpeed
+(it is a single-GPU LoRA driver using argparse with --mode/--namespace/--repo).
+This multi-node/DeepSpeed auto-switching behavior appears unimplemented; confirm
+whether this document is forward-looking or needs updating to match the code. -->
 
 Sample `configs/deepspeed/zero3.json`:
 

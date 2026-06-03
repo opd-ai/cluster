@@ -20,7 +20,7 @@ opening issues or pull requests.
 
 ## Prerequisites
 
-- Go 1.22 or newer (install via <https://go.dev/dl/>)
+- Go 1.25 or newer (install via <https://go.dev/dl/>)
 - `golangci-lint` — `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`
 - Python 3.11+ with `uv` — only needed if touching `python/`
 - `shellcheck`, `yamllint`, `markdownlint-cli` — for shell/YAML/Markdown linting

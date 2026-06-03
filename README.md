@@ -30,7 +30,7 @@ pre-commit install
 
 The following requirements are explicitly documented in `CONTRIBUTING.md` and `python/pyproject.toml`:
 
-- Go 1.22 or newer
+- Go 1.25 or newer
 - Python 3.11+
 - `uv` (used for Python lint commands in the Makefile)
 - `golangci-lint`, `shellcheck`, `yamllint`, `markdownlint-cli`

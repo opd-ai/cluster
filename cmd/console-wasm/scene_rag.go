@@ -129,6 +129,7 @@ func (s *ragAdminScene) triggerReindex() {
 	}()
 }
 
+// Update advances the RAG administration scene for the current frame. It implements the Scene interface.
 func (s *ragAdminScene) Update(_ *SharedState) error {
 	_ = s.backBtn.Update()
 	_ = s.queryBtn.Update()
@@ -136,6 +137,7 @@ func (s *ragAdminScene) Update(_ *SharedState) error {
 	return nil
 }
 
+// Draw renders the RAG administration scene to screen. It implements the Scene interface.
 func (s *ragAdminScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	screen.Fill(color.RGBA{12, 12, 20, 255})
 	vector.DrawFilledRect(screen, 0, 0, 1280, 52, color.RGBA{22, 22, 38, 255}, false)

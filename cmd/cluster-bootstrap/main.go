@@ -1,3 +1,5 @@
+// cmd/cluster-bootstrap provisions a cluster from an inventory file, SSHing
+// into each node to install prerequisites and bring up the control plane.
 package main
 
 import (
@@ -19,6 +21,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// BootstrapConfig holds the options that control a cluster bootstrap run,
+// including the inventory source, SSH host-key handling, and execution mode.
 type BootstrapConfig struct {
 	InventoryPath            string
 	DryRun                   bool
@@ -29,6 +33,7 @@ type BootstrapConfig struct {
 	UpMode                   bool
 }
 
+// NodeConfig describes a single node entry parsed from the inventory file.
 type NodeConfig struct {
 	Hostname    string            `yaml:"hostname"`
 	SSHUser     string            `yaml:"ssh_user"`

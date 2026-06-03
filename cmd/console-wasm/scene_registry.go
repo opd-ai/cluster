@@ -85,6 +85,7 @@ func (s *registryScene) fetchModels() {
 	}()
 }
 
+// Update advances the model registry scene for the current frame. It implements the Scene interface.
 func (s *registryScene) Update(_ *SharedState) error {
 	_ = s.backBtn.Update()
 	_ = s.refreshBtn.Update()
@@ -97,6 +98,7 @@ func (s *registryScene) Update(_ *SharedState) error {
 	return nil
 }
 
+// Draw renders the model registry scene to screen. It implements the Scene interface.
 func (s *registryScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	screen.Fill(color.RGBA{12, 12, 20, 255})
 	vector.DrawFilledRect(screen, 0, 0, 1280, 52, color.RGBA{22, 22, 38, 255}, false)
