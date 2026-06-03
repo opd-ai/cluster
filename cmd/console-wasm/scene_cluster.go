@@ -109,41 +109,49 @@ func drawNodeCard(screen *ebiten.Image, x, y, w, h int, node *uiapi.NodeState, s
 	}
 	vector.DrawFilledRect(screen, float32(x+w-18), float32(y+8), 10, 10, indicator, false)
 
-	// Draw per-role VRAM bars (one bar per role using different colors)
-	barH := float32(12)
-	barSpacing := float32(2)
-
-	startY := float32(y + 28)
-	for role := range node.Roles {
-		if startY+barH > float32(y+h-20) {
-			break // Don't overflow card
-		}
-
-		vramBudget := int64(node.VRAMBudget[role])
-		vramUsed := node.VRAMUsed // Use total node VRAM for now
-		ratio := 0.0
-		if vramBudget > 0 {
-			ratio = float64(vramUsed) / float64(vramBudget)
-			if ratio > 1.0 {
-				ratio = 1.0
-			}
-		}
-
-		// Draw VRAM bar background (gray)
-		barColor := getRoleColor(role)
-		vector.DrawFilledRect(screen, float32(x+8), startY, float32(w-16), barH, color.RGBA{40, 40, 60, 255}, false)
-
-		// Draw VRAM bar fill (role-specific color)
-		fillW := float32(float64(w-16) * ratio)
-		vector.DrawFilledRect(screen, float32(x+8), startY, fillW, barH, barColor, false)
-
-		startY += barH + barSpacing
-	}
+	// Draw per-role VRAM bars
+	drawRoleVRAMBars(screen, x, y, w, h, node)
 
 	if sl != nil {
 		sl.SetBounds(ui.Rect{X: x + 8, Y: y + 60, W: w - 16, H: 60})
 		sl.Draw(screen)
 	}
+}
+
+func drawRoleVRAMBars(screen *ebiten.Image, x, y, w, h int, node *uiapi.NodeState) {
+	barH := float32(12)
+	barSpacing := float32(2)
+	startY := float32(y + 28)
+
+	for role := range node.Roles {
+		if startY+barH > float32(y+h-20) {
+			break
+		}
+
+		vramBudget := int64(node.VRAMBudget[role])
+		if vramBudget <= 0 {
+			startY += barH + barSpacing
+			continue
+		}
+
+		vramUsed := node.VRAMUsed
+		ratio := float64(vramUsed) / float64(vramBudget)
+		if ratio > 1.0 {
+			ratio = 1.0
+		}
+
+		barColor := getRoleColor(role)
+		drawVRAMBar(screen, float32(x+8), startY, float32(w-16), barH, ratio, barColor)
+		startY += barH + barSpacing
+	}
+}
+
+func drawVRAMBar(screen *ebiten.Image, x, y, w, h float32, ratio float64, barColor color.RGBA) {
+	// Draw background
+	vector.DrawFilledRect(screen, x, y, w, h, color.RGBA{40, 40, 60, 255}, false)
+	// Draw fill
+	fillW := float32(float64(w) * ratio)
+	vector.DrawFilledRect(screen, x, y, fillW, h, barColor, false)
 }
 
 func getRoleColor(role string) color.RGBA {
