@@ -37,6 +37,7 @@ type NodeConfig struct {
 	OS          string            `yaml:"os"`
 	Accelerator string            `yaml:"accelerator"`
 	Role        string            `yaml:"role"`
+	Roles       []string          `yaml:"roles"`
 	Labels      map[string]string `yaml:"labels"`
 }
 
@@ -183,12 +184,25 @@ func findControlNode(nodes []NodeConfig) *NodeConfig {
 		if nodes[i].Role == "control" || nodes[i].Role == "both" {
 			return &nodes[i]
 		}
+		for _, role := range nodes[i].Roles {
+			if role == "control" {
+				return &nodes[i]
+			}
+		}
 	}
 	return nil
 }
 
 func isWorkerNode(node *NodeConfig) bool {
-	return node.Role == "worker" || node.Role == "both"
+	if node.Role == "worker" || node.Role == "both" {
+		return true
+	}
+	for _, role := range node.Roles {
+		if role == "worker" {
+			return true
+		}
+	}
+	return false
 }
 
 func installK3sServer(client *ssh.Client, config BootstrapConfig) error {

@@ -29,7 +29,7 @@ PYTHON_DIR  := python
 INVENTORY   ?= cluster/inventory.yaml
 
 .PHONY: help bootstrap up down sync train serve console console-wasm rag \
-        status join drain clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
+        status join drain deploy clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
         docs build tidy restore-test changelog release upgrade
 
 # --------------------------------------------------------------------------
@@ -83,6 +83,9 @@ join: ## Generate k3s join scripts for worker nodes in cluster/inventory.yaml
 
 drain: ## Drain and remove a node: make drain HOST=<hostname>
 	$(GO) run $(GOFLAGS) ./cmd/drain $(if $(HOST),$(HOST),)
+
+deploy: ## Deploy node(s) with auto-tuning: make deploy ROLES=chat or ROLES=chat,image-generation
+	$(GO) run $(GOFLAGS) ./cmd/node-deploy --roles $(ROLES)
 
 restore-test: ## Quarterly DR drill: verify latest backup restores cleanly in an ephemeral namespace
 	@TS="$$(date +%s)"; NS="restore-test-$$TS"; \

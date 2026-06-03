@@ -41,6 +41,7 @@ type DeclaredNode struct {
 	Arch        string            `yaml:"arch"`
 	OS          string            `yaml:"os"`
 	Role        string            `yaml:"role"`
+	Roles       []string          `yaml:"roles"`
 	Accelerator string            `yaml:"accelerator"`
 	VRAMgb      int               `yaml:"vram_gb"`
 	Labels      map[string]string `yaml:"labels"`

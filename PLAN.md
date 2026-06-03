@@ -362,33 +362,33 @@ with `status`, `output_text`, `output_image_url`, `output_video_url`).
 
 ### Phase 0 — Schema & Backward Compatibility
 
-- [ ] Create `internal/inventory/node.go` with `Node{Roles []string, Services []ServiceBinding, VRAMBudget map[string]int}` and backward-compat `Role()` accessor
-- [ ] Add `ServiceBinding{Role, Port string}` to `internal/inventory/node.go`
-- [ ] Update `cluster/inventory.yaml` to add `roles` list alongside existing `role` fields
-- [ ] Update `cmd/cluster-probe/main.go` to import `internal/inventory` and emit `roles`
-- [ ] Update `cmd/cluster-bootstrap/main.go` to use `internal/inventory.Node`
-- [ ] Update `cmd/gateway/main.go` inline `Backend` struct to load `Roles`/`Services` from inventory via `internal/inventory`
-- [ ] Update `cmd/status/main.go` to use `internal/inventory`
-- [ ] Update `internal/uiapi/types.go`: add `Roles []string` to `NodeState`; keep `Role` marshaled for one release
-- [ ] Add `ServiceBinding` and `VRAMBudget` fields to `internal/uiapi.NodeState`
-- [ ] Write `docs/adr/008-multi-role-colocation.md` ADR stub (status: Proposed)
-- [ ] Run `make lint` and `make test` — no regressions
+- [x] Create `internal/inventory/node.go` with `Node{Roles []string, Services []ServiceBinding, VRAMBudget map[string]int}` and backward-compat `Role()` accessor
+- [x] Add `ServiceBinding{Role, Port string}` to `internal/inventory/node.go`
+- [x] Update `cluster/inventory.yaml` to add `roles` list alongside existing `role` fields
+- [x] Update `cmd/cluster-probe/main.go` to import `internal/inventory` and emit `roles`
+- [x] Update `cmd/cluster-bootstrap/main.go` to use `internal/inventory.Node`
+- [x] Update `cmd/gateway/main.go` inline `Backend` struct to load `Roles`/`Services` from inventory via `internal/inventory`
+- [x] Update `cmd/status/main.go` to use `internal/inventory`
+- [x] Update `internal/uiapi/types.go`: add `Roles []string` to `NodeState`; keep `Role` marshaled for one release
+- [x] Add `ServiceBinding` and `VRAMBudget` fields to `internal/uiapi.NodeState`
+- [x] Write `docs/adr/008-multi-role-colocation.md` ADR stub (status: Proposed)
+- [x] Run `make lint` and `make test` — no regressions
 
 ### Phase 1 — node-deploy + autotuner
 
-- [ ] Create `internal/autotuner/autotuner.go`: `HardwareProfile` struct; `Probe() HardwareProfile` (reuses SSH-free local-probe logic from `cmd/cluster-probe`)
-- [ ] Create `internal/autotuner/colocation.go`: `BudgetSplit(roles []string, hw HardwareProfile, overrides map[string]int) map[string]ResourceBudget`
-- [ ] Create `internal/autotuner/ollama.go`: `OllamaConfig(role string, budget ResourceBudget) OllamaEnv`
-- [ ] Create `internal/autotuner/swarmui.go`: `SwarmUIConfig(budget ResourceBudget) SwarmUIArgs`
-- [ ] Create `internal/autotuner/training.go`: `TrainingConfig(budget ResourceBudget) TrainingEnv`
-- [ ] Create `internal/serviceinstall/linux.go`: systemd unit file writer for node-agent + role daemons
-- [ ] Create `internal/serviceinstall/darwin.go`: launchd plist writer
-- [ ] Create `cmd/node-deploy/main.go`: parse `--roles`, call autotuner, call serviceinstall, write `cluster/inventory.yaml` entry
-- [ ] Add `deploy` Makefile target: `go run ./cmd/node-deploy --roles $(ROLES)`
-- [ ] Write `docs/adr/009-discovery-protocol.md` ADR stub (UDP beacon vs. mDNS)
-- [ ] Write `docs/adr/010-auto-tuning-budgeting.md` ADR stub
-- [ ] Run `make lint` and `make test` — no regressions
-- [ ] Manual smoke test: `node-deploy --roles chat` on a Linux dev box; verify Ollama unit file is generated with correct `--num-gpu`
+- [x] Create `internal/autotuner/autotuner.go`: `HardwareProfile` struct; `Probe() HardwareProfile` (reuses SSH-free local-probe logic from `cmd/cluster-probe`)
+- [x] Create `internal/autotuner/colocation.go`: `BudgetSplit(roles []string, hw HardwareProfile, overrides map[string]int) map[string]ResourceBudget`
+- [x] Create `internal/autotuner/ollama.go`: `OllamaConfig(role string, budget ResourceBudget) OllamaEnv`
+- [x] Create `internal/autotuner/swarmui.go`: `SwarmUIConfig(budget ResourceBudget) SwarmUIArgs`
+- [x] Create `internal/autotuner/training.go`: `TrainingConfig(budget ResourceBudget) TrainingEnv`
+- [x] Create `internal/serviceinstall/linux.go`: systemd unit file writer for node-agent + role daemons
+- [x] Create `internal/serviceinstall/darwin.go`: launchd plist writer
+- [x] Create `cmd/node-deploy/main.go`: parse `--roles`, call autotuner, call serviceinstall, write `cluster/inventory.yaml` entry
+- [x] Add `deploy` Makefile target: `go run ./cmd/node-deploy --roles $(ROLES)`
+- [x] Write `docs/adr/009-discovery-protocol.md` ADR stub (UDP beacon vs. mDNS)
+- [x] Write `docs/adr/010-auto-tuning-budgeting.md` ADR stub
+- [x] Run `make lint` and `make test` — no regressions
+- [x] Manual smoke test: `node-deploy --roles chat` on a Linux dev box; verify Ollama unit file is generated with correct `--num-gpu`
 
 ### Phase 2 — node-agent + discovery
 

@@ -41,16 +41,25 @@ type ClusterState struct {
 
 // NodeState represents a single cluster node.
 type NodeState struct {
-	Name      string            `json:"name"`
-	Role      string            `json:"role"`
-	Labels    map[string]string `json:"labels"`
-	Healthy   bool              `json:"healthy"`
-	Models    []string          `json:"models"`
-	GPUName   string            `json:"gpu_name,omitempty"`
-	VRAMTotal int64             `json:"vram_total_mb,omitempty"`
-	VRAMUsed  int64             `json:"vram_used_mb,omitempty"`
-	CPUPct    float64           `json:"cpu_pct,omitempty"`
-	MemPct    float64           `json:"mem_pct,omitempty"`
+	Name        string                   `json:"name"`
+	Role        string                   `json:"role"`                   // deprecated: use Roles instead
+	Roles       []string                 `json:"roles,omitempty"`        // new: multiple roles
+	Services    []NodeService            `json:"services,omitempty"`     // service bindings
+	VRAMBudget  map[string]int           `json:"vram_budget,omitempty"` // VRAM allocation per role
+	Labels      map[string]string        `json:"labels"`
+	Healthy     bool                     `json:"healthy"`
+	Models      []string                 `json:"models"`
+	GPUName     string                   `json:"gpu_name,omitempty"`
+	VRAMTotal   int64                    `json:"vram_total_mb,omitempty"`
+	VRAMUsed    int64                    `json:"vram_used_mb,omitempty"`
+	CPUPct      float64                  `json:"cpu_pct,omitempty"`
+	MemPct      float64                  `json:"mem_pct,omitempty"`
+}
+
+// NodeService represents a service binding on a node.
+type NodeService struct {
+	Role string `json:"role"`
+	Port string `json:"port"`
 }
 
 // NodeMetrics is a periodic metrics update for a single node.
