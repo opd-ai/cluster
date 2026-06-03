@@ -293,7 +293,10 @@ func parseInventory(path string) []*Node {
 		case "address":
 			current.Address = kv[1]
 		case "vram_gb":
-			v, _ := strconv.Atoi(kv[1])
+			v, err := strconv.Atoi(kv[1])
+			if err != nil {
+				log.Printf("warning: node %q has invalid vram_gb value %q: %v; defaulting to 0", current.Name, kv[1], err)
+			}
 			current.VRAM = v
 			current.FreeVRAM = v
 		case "arch":
