@@ -1,93 +1,181 @@
-# Implementation Gaps — 2026-06-01
+# Implementation Gaps — 2026-06-02
 
-This document records gaps between what the `opd-ai/cluster` project claims to do and what the code actually implements. Each gap is assessed against the README, GoDoc comments, and in-code documentation.
-
----
-
-## Gap 1: Placer and FedCoord Cannot Parse Real Inventory Files
-
-- **Stated Goal**: `cmd/placer` reads the cluster inventory and produces a model-placement plan; `cmd/fedcoord` reads the same inventory to coordinate federated training across nodes.
-- **Current State**: Both commands search for `"- name:"` in the inventory YAML. The actual inventory format — as written by `cluster-bootstrap`, `cluster-join`, and `cluster-probe` — uses `"- hostname:"`. No real inventory file will match. Both tools always return zero nodes, making their output empty or nonsensical.
-- **Impact**: Model placement is entirely non-functional. Federated training coordination cannot discover any nodes. Both features are effectively dead for any user following the documented workflow.
-- **Closing the Gap**: Change `"- name:"` to `"- hostname:"` in `cmd/placer/main.go` (`parseInventory`) and `cmd/fedcoord/main.go` (`loadFedNodes`). Add a validation step that logs an error and exits if zero nodes are parsed from a non-empty inventory file. Consider extracting a shared inventory parser (see Gap 7).
+This document records gaps between what the `opd-ai/cluster` project claims to do
+(README, GoDoc package headers, in-code comments) and what the code actually
+implements. Each gap is cross-referenced with the corresponding `AUDIT.md`
+finding where applicable.
 
 ---
 
-## Gap 2: Gateway Load Balancing Is Not Round-Robin
+## Gap 1: Model Placement Ignores VRAM Entirely
 
-- **Stated Goal**: The gateway README section and code comments describe a "round-robin" fallback for distributing inference traffic when no sticky session exists.
-- **Current State**: `pickBackend` selects `candidates[0]` — the first healthy backend by slice index — on every call. There is no cycle counter, no atomic index, and no randomization. All traffic that does not hit an existing sticky session goes to the same backend indefinitely.
-- **Impact**: In a multi-backend deployment, all load falls on one backend. Other backends sit idle. The performance and redundancy benefit of multiple backends is unrealized.
-- **Closing the Gap**: Add an atomic counter to `Gateway` and increment it on each backend selection. Documented in AUDIT.md finding M5.
-
----
-
-## Gap 3: Bootstrap Never Reports Failure
-
-- **Stated Goal**: `cluster-bootstrap` orchestrates multi-step node setup (OS packages, k3s, GPU drivers) and is expected to exit with an error if any critical step fails.
-- **Current State**: `executeBootstrapSteps` always returns `nil`. All step failures are demoted to warnings printed to stdout. `bootstrapNode` and its caller always see success regardless of how many steps failed.
-- **Impact**: A user running `cluster-bootstrap` on a machine where k3s fails to install or GPU drivers fail to load receives a success exit code and a "Bootstrap complete" message. The node is silently in a broken state.
-- **Closing the Gap**: Accumulate errors from non-idempotent step failures and return them from `executeBootstrapSteps`. Documented in AUDIT.md finding H1.
-
----
-
-## Gap 4: Nightly RAG Re-Index Fires 60× Per Night
-
-- **Stated Goal**: `rag-reindex` is documented as providing "nightly" re-ingestion — a single scheduled full re-ingest per day triggered at the configured UTC hour.
-- **Current State**: The ticker fires every minute. During the target hour (60 minutes), the condition `t.UTC().Hour() == *nightlyHour` is true on every tick. A full re-ingest is triggered 60 times rather than once.
-- **Impact**: Every repository is re-embedded 60× per night. This generates 60× the expected LLM API calls and Qdrant upsert operations, depleting API quotas and causing significant Qdrant write amplification.
-- **Closing the Gap**: Track the last-triggered day and skip re-ingest if it has already run today. Documented in AUDIT.md finding H7.
+- **Stated Goal**: `cmd/placer` "decides which node(s) should serve a given model
+  based on … Available VRAM (from the `vram` node label — GiB as integer)" and
+  offers a `--multi-device` split that "together satisfy the model's VRAM
+  requirement" (`cmd/placer/main.go:1-13`).
+- **Current State**: The inventory schema produced by `cmd/cluster-probe` and
+  shipped in `cluster/inventory.yaml` uses the field name **`vram_gb`**, but
+  `placer`'s parser only recognizes `case "vram":` (`cmd/placer/main.go:282`).
+  Every node is parsed with `VRAM == 0`, so the GPU candidate set
+  (`n.VRAM > 0`) is always empty and `buildPlan` unconditionally returns
+  "no GPU nodes available; using CPU fallback".
+- **Impact**: VRAM-aware placement and multi-device splitting — placer's entire
+  reason to exist — never run against any real inventory. Every model is
+  assigned to an arbitrary CPU node.
+- **Closing the Gap**: Match `vram_gb` (accept both `vram` and `vram_gb`) in
+  `parseInventory` and keep the `strconv.Atoi` conversion. Add a startup warning
+  when a non-empty inventory yields zero VRAM-bearing nodes. Tracked as
+  **AUDIT.md C1**.
 
 ---
 
-## Gap 5: Federated Training Is Not Parallel
+## Gap 2: dataset-build Reports Success on Truncated Output
 
-- **Stated Goal**: `cmd/fedcoord` is described as a "federated learning coordinator" that triggers local training across cluster nodes simultaneously, aggregates adapters, and distributes merged weights.
-- **Current State**: `triggerLocalTraining` iterates nodes in a sequential `for` loop with a blocking SSH command per node. There is no parallelism. For N nodes each taking T minutes, total training time is N×T minutes rather than approximately T minutes.
-- **Impact**: The defining performance characteristic of federated learning — local parallel training — is completely absent. A two-node setup takes twice as long as a single-node setup rather than approximately the same time.
-- **Closing the Gap**: Use goroutines with a `sync.WaitGroup` to train all nodes concurrently. Documented in AUDIT.md finding M15.
-
----
-
-## Gap 6: Console Session Tokens Have No Expiry
-
-- **Stated Goal**: The console provides "secure multi-user access" to the cluster management UI. The login endpoint returns a "token" for subsequent API and WebSocket authentication.
-- **Current State**: The token issued by `handleLogin` is the raw API key itself (acknowledged in a code comment: "For now, the session token is the API key itself"). It never expires. There is no session revocation. Any client that obtains the token has permanent, unrestricted access to all console APIs.
-- **Impact**: A leaked browser session (via browser history, shared clipboard, network logging, or XSS in rendered log output) provides a permanent backdoor. Revoking access requires changing the gateway API key, which affects all services using it.
-- **Closing the Gap**: Issue short-lived signed JWTs at login. The JWT payload should contain the user role and expiry; the raw API key should never leave the server. Documented in AUDIT.md finding M8.
+- **Stated Goal**: `cmd/dataset-build` builds per-namespace and per-repo training
+  datasets (`dataset.jsonl`) consumed by the training pipeline.
+- **Current State**: Writer `Flush` and file `Close` errors are discarded
+  (`cmd/dataset-build/main.go:148-149,153-154`). On a short write or full disk,
+  buffered JSONL lines are lost while the command logs "dataset written" and
+  exits 0.
+- **Impact**: Training silently consumes truncated datasets; the failure is
+  invisible until model quality regresses, with no error trail.
+- **Closing the Gap**: Propagate `Flush`/`Close` errors and fail the run.
+  Tracked as **AUDIT.md H2**.
 
 ---
 
-## Gap 7: Inventory Schema Is Defined Five Times Inconsistently
+## Gap 3: Cluster Bring-Up Hides Worker-Join Failures
 
-- **Stated Goal**: The cluster inventory (`inventory.yaml`) is the single source of truth for node hostnames, addresses, roles, and hardware. Multiple tools are expected to interoperate by reading the same file.
-- **Current State**: Inventory parsing is implemented independently in `cmd/cluster-bootstrap`, `cmd/cluster-join`, `cmd/cluster-probe`, `cmd/cluster-label`, `cmd/placer`, and `cmd/fedcoord` — six separate parsers. Four of them hand-roll a fragile indent-counting parser that cannot handle standard YAML. Two of them use a different field name (`name` instead of `hostname`) and are therefore broken (see Gap 1). There is no single canonical schema definition.
-- **Impact**: Changes to the inventory file format must be applied to at minimum six locations. Any inconsistency between parsers causes silent data loss. The hand-rolled parsers silently drop nodes when YAML uses quoted values, anchors, or inline comments.
-- **Closing the Gap**: Define an `internal/inventory` package with a canonical `Node` struct and `Load(path string) ([]Node, error)` function backed by `gopkg.in/yaml.v3`. Replace all six parsers with calls to this function. This also resolves the `hostname`/`name` mismatch in Gap 1.
-
----
-
-## Gap 8: No Test Coverage for Any Feature
-
-- **Stated Goal**: The repository includes a `Makefile` target `make test` implying the project has a test suite. The README positions this as a production-grade cluster tool for AI workloads.
-- **Current State**: There are zero test files (`.go` files with `_test.go` suffix) anywhere in the repository. `make test` runs `go test ./...` against packages with no test files, which exits 0 with `[no test files]` for every package. No function, handler, or data-processing path has any automated validation.
-- **Impact**: Every bug identified in this audit could have been caught by tests. Regressions introduced by fixes to H1, H2, H7, M5, M6, L3, and others will have no safety net. The project cannot be safely refactored or maintained at scale without tests.
-- **Closing the Gap**: Prioritize unit tests for the highest-risk functions: `pickBackend`, `executeBootstrapSteps`, `parseInventory`, `diskUsagePct`, `chunkText`, `bm25Score`, and the YAML inventory parser. Add integration tests for the gateway's OpenAI-compatible endpoint using a mock backend.
+- **Stated Goal**: `cluster-bootstrap --up` "brings up the cluster (k3s
+  control-plane + workers)" and is expected to surface failures.
+- **Current State**: Worker-join errors are logged and skipped; `bringUpCluster`
+  returns `nil` regardless (`cmd/cluster-bootstrap/main.go:153-160,171`).
+  Control-plane install errors do propagate, but a run where all workers fail
+  still prints "✓ k3s control-plane is up" and exits 0.
+- **Impact**: Operators believe a multi-node cluster is healthy when only the
+  control plane exists.
+- **Closing the Gap**: Aggregate worker-join failures and return a non-nil error
+  (or exit non-zero with a summary). Tracked as **AUDIT.md H3**.
 
 ---
 
-## Gap 9: BM25 Retrieval Omits IDF; Stated "Hybrid BM25+Vector" Is Incomplete
+## Gap 4: Console Jobs and Logs Endpoints Are Empty Shells
 
-- **Stated Goal**: `cmd/rag` documents a "hybrid BM25 + dense vector" retrieval strategy. BM25 is the industry-standard sparse retrieval algorithm that combines term frequency (TF) with inverse document frequency (IDF).
-- **Current State**: `bm25Score` computes only the TF component with length normalization. The IDF term is absent. Without IDF, common stop-words (e.g., "the", "is", "model") score as highly as rare, information-bearing terms (e.g., "transformer", "quantization"). The retrieval function in use is TF-normalized, not BM25.
-- **Impact**: Hybrid retrieval quality is degraded. Queries containing common words over-retrieve irrelevant documents. The `--bm25-weight` flag controls the contribution of a non-standard scoring function that does not match documented behavior.
-- **Closing the Gap**: Build an IDF index from the retrieved Qdrant candidate set at query time (approximation), or maintain a document-frequency store in a Qdrant collection metadata field. Update the `bm25Score` signature to accept an `idf map[string]float64` argument. Documented in AUDIT.md finding L2.
+- **Stated Goal**: The console exposes `GET /api/jobs` ("recent JobState list")
+  and `GET /api/logs?source=…` ("last N log lines") (`cmd/console/main.go:7-11`).
+- **Current State**: The backing fields `s.jobs` and `s.logBuf` are read by the
+  handlers but never written anywhere in the package; `pollGateway` only
+  populates `s.state`. Both endpoints always return `null`/`[]`
+  (`cmd/console/main.go:235-250`).
+- **Impact**: Two documented console features are non-functional, with no error
+  to indicate they are unimplemented.
+- **Closing the Gap**: Populate `s.jobs`/`s.logBuf` from the gateway poll (or a
+  dedicated source), or remove the endpoints from the documented surface until
+  implemented. Tracked as **AUDIT.md H4**.
 
 ---
 
-## Gap 10: Video Job Persistence Is Not Implemented
+## Gap 5: "Hybrid BM25 + Vector" Retrieval Has No Real IDF
 
-- **Stated Goal**: `cmd/gateway/videos.go` documents "Jobs are stored in-memory (restart clears queue). Persistent storage is on the roadmap (MinIO outputs/<date>/<job-id>/)."
-- **Current State**: All job state is in `globalVideoJobs` (a package-level in-memory map). A gateway restart discards all pending and completed jobs. Clients polling for a job that was running when the gateway crashed receive a 404.
-- **Impact**: Long video generation jobs (up to 20 minutes) are lost on any gateway restart or deployment update. Clients have no way to recover job status. The MinIO integration described in the roadmap comment does not exist.
-- **Closing the Gap**: Persist job state to a file, SQLite, or MinIO metadata object on creation and status change. On startup, reload pending jobs (those in `pending` or `running` state at shutdown should be marked `failed` since the backend job was interrupted).
+- **Stated Goal**: `cmd/rag` documents "hybrid BM25 + dense vector" retrieval.
+- **Current State**: `bm25Score` computes `df` from the single candidate
+  document (always 0 or 1) with a hardcoded `N = 1000`, so the IDF term is a
+  constant for every matched term and never down-weights common words
+  (`cmd/rag/main.go:71-85`). The function is effectively TF-with-length-
+  normalization; it is hedged in-code as "BM25-like … simplified".
+- **Impact**: Retrieval ranking quality is degraded; queries with common words
+  are not penalized as standard BM25 would. The `--bm25-weight` flag tunes a
+  non-standard score.
+- **Closing the Gap**: Maintain a corpus document-frequency store and supply
+  real per-term `df`, or update the documentation to describe TF-only scoring.
+  Tracked as **AUDIT.md M5**.
+
+---
+
+## Gap 6: RAG Collection ACL Fails Open for Unlisted Keys
+
+- **Stated Goal**: `cmd/rag` supports a per-key `collection-acl` restricting
+  which collection each API key may query.
+- **Current State**: When an ACL is configured but a valid key is not listed in
+  it, `collectionAllowed` returns `true` and grants access to any collection
+  (`cmd/rag/main.go:430`).
+- **Impact**: A key the operator simply forgot to add to the ACL bypasses the
+  restriction entirely — the control fails open and is undocumented.
+- **Closing the Gap**: Deny keys absent from a configured ACL (fail closed) and
+  document the semantics. Tracked as **AUDIT.md M4**.
+
+---
+
+## Gap 7: Per-Repo Modelfiles Reference a Directory Instead of a GGUF
+
+- **Stated Goal**: `cmd/modelfile-gen` renders Ollama `Modelfile`s whose `FROM`
+  is a GGUF path or an Ollama tag.
+- **Current State**: The per-repo `FROM` is computed from
+  `…/namespace/merged` — a directory — rather than a `model.gguf` file
+  (`cmd/modelfile-gen/main.go:151,157`), unlike the namespace Modelfile which
+  correctly uses `…/namespace/model.gguf`. When the `merged` directory exists,
+  the rendered `FROM` is an unusable directory path.
+- **Impact**: Repo-level model builds produce invalid Modelfiles whenever the
+  namespace merged directory is present.
+- **Closing the Gap**: Use the namespace GGUF file (or `merged/model.gguf`)
+  consistently. Tracked as **AUDIT.md M1**.
+
+---
+
+## Gap 8: Video Jobs Have No Persistence or Eviction
+
+- **Stated Goal**: `cmd/gateway/videos.go` states "Jobs are stored in-memory
+  (restart clears queue). Persistent storage is on the roadmap."
+- **Current State**: `globalVideoJobs` is an in-memory map that is only ever
+  inserted into — there is no eviction, TTL, or size cap
+  (`cmd/gateway/videos.go:62-70`). State is also lost on restart (a 404 for
+  in-flight jobs), as the comment acknowledges.
+- **Impact**: (a) long video jobs are lost on any gateway restart; (b) the map
+  grows unbounded for the process lifetime — a slow memory leak driven by
+  authenticated requests.
+- **Closing the Gap**: Add a retention sweep / LRU cap now (addresses the leak,
+  **AUDIT.md M2**); persist job metadata (file/SQLite/MinIO) to address restart
+  durability per the roadmap.
+
+---
+
+## Gap 9: No Automated Test Coverage Anywhere
+
+- **Stated Goal**: The `Makefile` provides `make test` (`go test -race ./...`),
+  implying an existing test suite, and the README positions the project as
+  production tooling for AI workloads.
+- **Current State**: There are **zero** `_test.go` files in the repository;
+  `go test -race ./...` reports `[no test files]` for every one of the 31
+  packages.
+- **Impact**: None of the bugs in `AUDIT.md` (C1, H2, H3, H4, the inventory
+  field-name mismatch, the recall metric, etc.) would be caught by tests, and
+  there is no regression safety net for any fix. The audit's dynamic
+  race/panic evidence is necessarily absent.
+- **Closing the Gap**: Add unit tests for the highest-risk pure functions first
+  — `parseInventory` (placer/fedcoord), `bm25Score`, `recallHit`, `pickBackend`,
+  `parseSizeStr`, `executeBootstrapSteps` — and handler tests for the gateway,
+  rag, and console HTTP surfaces using mock backends.
+
+---
+
+## Notes on Previously-Reported Gaps Now Closed
+
+The following gaps from the prior (2026-06-01) report have been verified as
+resolved in the current code and are **not** re-reported:
+
+- **Placer/fedcoord inventory `- name:` vs `- hostname:`** — both now parse
+  `hostname:` (`cmd/placer/main.go:264`, `cmd/fedcoord/main.go:263`). *(Note:
+  the residual `vram` vs `vram_gb` mismatch is a distinct, still-open bug — see
+  Gap 1.)*
+- **Gateway "round-robin" actually pinned to `candidates[0]`** — now uses an
+  atomic counter (`cmd/gateway/main.go:536`).
+- **Nightly RAG re-index firing 60×/night** — now guarded by a `lastNightlyDay`
+  day key in `cmd/rag-reindex`.
+- **Federated training sequential despite "parallel" claim** — `fedcoord`
+  `triggerLocalTraining` now runs nodes concurrently with `sync.WaitGroup`
+  (`cmd/fedcoord/main.go:152-189`).
+- **Console session token == raw, non-expiring API key** — now a 32-byte
+  `crypto/rand` token with a 24h TTL and pruning (`cmd/console/main.go:40,
+  173-223`).
+- **`executeBootstrapSteps` always returns nil** — now returns
+  `errors.Join(errs...)` (`cmd/cluster-bootstrap/main.go:504-523`).
