@@ -1,22 +1,92 @@
 {
   "metadata": {
     "repository": "/tmp/workspace/opd-ai/cluster",
-    "generated_at": "2026-06-03T14:17:32.759591263Z",
-    "analysis_time": 768456710,
+    "generated_at": "2026-06-03T17:05:47.767671336Z",
+    "analysis_time": 852561852,
     "files_processed": 80,
     "tool_version": "1.0.0",
     "go_version": ""
   },
   "overview": {
-    "total_lines_of_code": 7861,
-    "total_functions": 313,
-    "total_methods": 167,
+    "total_lines_of_code": 8083,
+    "total_functions": 314,
+    "total_methods": 170,
     "total_structs": 164,
     "total_interfaces": 4,
     "total_packages": 12,
     "total_files": 80
   },
   "functions": [
+    {
+      "name": "main",
+      "package": "main",
+      "file": "cmd/bootstrap/main.go",
+      "line": 33,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 42,
+        "code": 36,
+        "comments": 2,
+        "blank": 4
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 6,
+        "cognitive": 6,
+        "nesting_depth": 1,
+        "overall": 8.3
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "resolveClusterBootstrap",
+      "package": "main",
+      "file": "cmd/bootstrap/main.go",
+      "line": 83,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 24,
+        "code": 18,
+        "comments": 3,
+        "blank": 3
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.6
+      },
+      "complexity": {
+        "cyclomatic": 6,
+        "cognitive": 6,
+        "nesting_depth": 2,
+        "overall": 8.8
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 256,
+        "has_example": false,
+        "quality_score": 0.4
+      }
+    },
     {
       "name": "accessTime",
       "package": "main",
@@ -90,83 +160,13 @@
     {
       "name": "main",
       "package": "main",
-      "file": "cmd/bootstrap/main.go",
-      "line": 33,
+      "file": "cmd/cache-gc/main.go",
+      "line": 50,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 42,
-        "code": 36,
-        "comments": 2,
-        "blank": 4
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
-      },
-      "complexity": {
-        "cyclomatic": 6,
-        "cognitive": 6,
-        "nesting_depth": 1,
-        "overall": 8.3
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "resolveClusterBootstrap",
-      "package": "main",
-      "file": "cmd/bootstrap/main.go",
-      "line": 83,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 24,
-        "code": 18,
-        "comments": 3,
-        "blank": 3
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.6
-      },
-      "complexity": {
-        "cyclomatic": 6,
-        "cognitive": 6,
-        "nesting_depth": 2,
-        "overall": 8.8
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 256,
-        "has_example": false,
-        "quality_score": 0.4
-      }
-    },
-    {
-      "name": "main",
-      "package": "main",
-      "file": "cmd/cluster-label/main.go",
-      "line": 58,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 23,
-        "code": 21,
+        "total": 15,
+        "code": 13,
         "comments": 0,
         "blank": 2
       },
@@ -180,45 +180,10 @@
         "signature_complexity": 0
       },
       "complexity": {
-        "cyclomatic": 6,
-        "cognitive": 6,
-        "nesting_depth": 2,
-        "overall": 8.8
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "applyLabels",
-      "package": "main",
-      "file": "cmd/cluster-label/main.go",
-      "line": 84,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 7,
-        "code": 7,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
+        "cyclomatic": 3,
+        "cognitive": 3,
         "nesting_depth": 1,
-        "overall": 3.1
+        "overall": 4.4
       },
       "documentation": {
         "has_comment": false,
@@ -228,26 +193,61 @@
       }
     },
     {
-      "name": "buildLabels",
+      "name": "runGC",
       "package": "main",
-      "file": "cmd/cluster-label/main.go",
-      "line": 94,
+      "file": "cmd/cache-gc/main.go",
+      "line": 68,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 18,
-        "code": 15,
-        "comments": 0,
-        "blank": 3
+        "total": 46,
+        "code": 37,
+        "comments": 1,
+        "blank": 8
       },
       "signature": {
         "parameter_count": 1,
         "return_count": 1,
         "has_variadic": false,
-        "returns_error": false,
+        "returns_error": true,
         "interface_parameters": 0,
         "generic_parameters": null,
         "signature_complexity": 0.8
+      },
+      "complexity": {
+        "cyclomatic": 9,
+        "cognitive": 9,
+        "nesting_depth": 2,
+        "overall": 12.7
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "collectEntries",
+      "package": "main",
+      "file": "cmd/cache-gc/main.go",
+      "line": 119,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 30,
+        "code": 25,
+        "comments": 0,
+        "blank": 5
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.6
       },
       "complexity": {
         "cyclomatic": 5,
@@ -256,127 +256,22 @@
         "overall": 7
       },
       "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
+        "has_comment": true,
+        "comment_length": 105,
         "has_example": false,
-        "quality_score": 0
+        "quality_score": 0.5
       }
     },
     {
-      "name": "applyTaints",
+      "name": "diskUsagePct",
       "package": "main",
-      "file": "cmd/cluster-label/main.go",
-      "line": 115,
+      "file": "cmd/cache-gc/main.go",
+      "line": 154,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 8,
-        "code": 8,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 2,
-        "overall": 4.9
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "buildTaints",
-      "package": "main",
-      "file": "cmd/cluster-label/main.go",
-      "line": 126,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 5,
-        "code": 5,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.8
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "kubectl",
-      "package": "main",
-      "file": "cmd/cluster-label/main.go",
-      "line": 134,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 10,
-        "code": 10,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "loadInventory",
-      "package": "main",
-      "file": "cmd/cluster-label/main.go",
-      "line": 147,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 18,
-        "code": 18,
+        "total": 9,
+        "code": 9,
         "comments": 0,
         "blank": 0
       },
@@ -390,16 +285,16 @@
         "signature_complexity": 1.1
       },
       "complexity": {
-        "cyclomatic": 5,
-        "cognitive": 5,
-        "nesting_depth": 2,
-        "overall": 7.5
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
       },
       "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
+        "has_comment": true,
+        "comment_length": 82,
         "has_example": false,
-        "quality_score": 0
+        "quality_score": 0.42800000000000005
       }
     },
     {
@@ -928,6 +823,251 @@
         "comment_length": 38,
         "has_example": false,
         "quality_score": 0.15200000000000002
+      }
+    },
+    {
+      "name": "main",
+      "package": "main",
+      "file": "cmd/cluster-label/main.go",
+      "line": 58,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 23,
+        "code": 21,
+        "comments": 0,
+        "blank": 2
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 6,
+        "cognitive": 6,
+        "nesting_depth": 2,
+        "overall": 8.8
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "applyLabels",
+      "package": "main",
+      "file": "cmd/cluster-label/main.go",
+      "line": 84,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 7,
+        "code": 7,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "buildLabels",
+      "package": "main",
+      "file": "cmd/cluster-label/main.go",
+      "line": 94,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 18,
+        "code": 15,
+        "comments": 0,
+        "blank": 3
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.8
+      },
+      "complexity": {
+        "cyclomatic": 5,
+        "cognitive": 5,
+        "nesting_depth": 1,
+        "overall": 7
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "applyTaints",
+      "package": "main",
+      "file": "cmd/cluster-label/main.go",
+      "line": 115,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 8,
+        "code": 8,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 2,
+        "overall": 4.9
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "buildTaints",
+      "package": "main",
+      "file": "cmd/cluster-label/main.go",
+      "line": 126,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 5,
+        "code": 5,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.8
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "kubectl",
+      "package": "main",
+      "file": "cmd/cluster-label/main.go",
+      "line": 134,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 10,
+        "code": 10,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "loadInventory",
+      "package": "main",
+      "file": "cmd/cluster-label/main.go",
+      "line": 147,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 18,
+        "code": 18,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.1
+      },
+      "complexity": {
+        "cyclomatic": 5,
+        "cognitive": 5,
+        "nesting_depth": 2,
+        "overall": 7.5
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
       }
     },
     {
@@ -1950,41 +2090,6 @@
       }
     },
     {
-      "name": "serveWebSocket",
-      "package": "main",
-      "file": "cmd/console/ws.go",
-      "line": 16,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 38,
-        "code": 33,
-        "comments": 2,
-        "blank": 3
-      },
-      "signature": {
-        "parameter_count": 3,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.5
-      },
-      "complexity": {
-        "cyclomatic": 11,
-        "cognitive": 11,
-        "nesting_depth": 4,
-        "overall": 16.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 125,
-        "has_example": false,
-        "quality_score": 0.4
-      }
-    },
-    {
       "name": "jsGlobal",
       "package": "main",
       "file": "cmd/console-wasm/js_stub.go",
@@ -2055,38 +2160,38 @@
       }
     },
     {
-      "name": "jsGlobal",
+      "name": "serveWebSocket",
       "package": "main",
-      "file": "cmd/console-wasm/js_wasm.go",
-      "line": 9,
+      "file": "cmd/console/ws.go",
+      "line": 16,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 5,
-        "code": 5,
-        "comments": 0,
-        "blank": 0
+        "total": 38,
+        "code": 33,
+        "comments": 2,
+        "blank": 3
       },
       "signature": {
-        "parameter_count": 1,
-        "return_count": 1,
+        "parameter_count": 3,
+        "return_count": 0,
         "has_variadic": false,
         "returns_error": false,
         "interface_parameters": 0,
         "generic_parameters": null,
-        "signature_complexity": 0.8
+        "signature_complexity": 1.5
       },
       "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
+        "cyclomatic": 11,
+        "cognitive": 11,
+        "nesting_depth": 4,
+        "overall": 16.3
       },
       "documentation": {
         "has_comment": true,
-        "comment_length": 132,
+        "comment_length": 125,
         "has_example": false,
-        "quality_score": 0.5
+        "quality_score": 0.4
       }
     },
     {
@@ -2825,432 +2930,6 @@
       }
     },
     {
-      "name": "main",
-      "package": "main",
-      "file": "cmd/cache-gc/main.go",
-      "line": 50,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 15,
-        "code": 13,
-        "comments": 0,
-        "blank": 2
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "runGC",
-      "package": "main",
-      "file": "cmd/cache-gc/main.go",
-      "line": 68,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 46,
-        "code": 37,
-        "comments": 1,
-        "blank": 8
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.8
-      },
-      "complexity": {
-        "cyclomatic": 9,
-        "cognitive": 9,
-        "nesting_depth": 2,
-        "overall": 12.7
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "collectEntries",
-      "package": "main",
-      "file": "cmd/cache-gc/main.go",
-      "line": 119,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 30,
-        "code": 25,
-        "comments": 0,
-        "blank": 5
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.6
-      },
-      "complexity": {
-        "cyclomatic": 5,
-        "cognitive": 5,
-        "nesting_depth": 1,
-        "overall": 7
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 105,
-        "has_example": false,
-        "quality_score": 0.5
-      }
-    },
-    {
-      "name": "diskUsagePct",
-      "package": "main",
-      "file": "cmd/cache-gc/main.go",
-      "line": 154,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 9,
-        "code": 9,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.1
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 82,
-        "has_example": false,
-        "quality_score": 0.42800000000000005
-      }
-    },
-    {
-      "name": "ApplyMessage",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 56,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*SharedState",
-      "lines": {
-        "total": 21,
-        "code": 19,
-        "comments": 1,
-        "blank": 1
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.5
-      },
-      "complexity": {
-        "cyclomatic": 6,
-        "cognitive": 6,
-        "nesting_depth": 4,
-        "overall": 9.8
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 53,
-        "has_example": false,
-        "quality_score": 0.21200000000000002
-      }
-    },
-    {
-      "name": "NewApp",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 94,
-      "is_exported": true,
-      "is_method": false,
-      "lines": {
-        "total": 7,
-        "code": 7,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.8
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 26,
-        "has_example": false,
-        "quality_score": 0.10400000000000001
-      }
-    },
-    {
-      "name": "registerScenes",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 104,
-      "is_exported": false,
-      "is_method": true,
-      "receiver_type": "*App",
-      "lines": {
-        "total": 17,
-        "code": 17,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "connectWS",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 125,
-      "is_exported": false,
-      "is_method": true,
-      "receiver_type": "*App",
-      "lines": {
-        "total": 6,
-        "code": 6,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.5
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 42,
-        "has_example": false,
-        "quality_score": 0.168
-      }
-    },
-    {
-      "name": "Update",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 135,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*App",
-      "lines": {
-        "total": 5,
-        "code": 5,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.3
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 31,
-        "has_example": false,
-        "quality_score": 0.124
-      }
-    },
-    {
-      "name": "Draw",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 144,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*App",
-      "lines": {
-        "total": 5,
-        "code": 5,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.5
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 29,
-        "has_example": false,
-        "quality_score": 0.11599999999999999
-      }
-    },
-    {
-      "name": "Layout",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 153,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*App",
-      "lines": {
-        "total": 1,
-        "code": 1,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.1
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 31,
-        "has_example": false,
-        "quality_score": 0.124
-      }
-    },
-    {
-      "name": "main",
-      "package": "main",
-      "file": "cmd/console-wasm/main.go",
-      "line": 161,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 10,
-        "code": 7,
-        "comments": 1,
-        "blank": 2
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
       "name": "newServer",
       "package": "main",
       "file": "cmd/console/main.go",
@@ -3918,6 +3597,327 @@
         "cognitive": 4,
         "nesting_depth": 1,
         "overall": 5.7
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "jsGlobal",
+      "package": "main",
+      "file": "cmd/console-wasm/js_wasm.go",
+      "line": 9,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 5,
+        "code": 5,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.8
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 132,
+        "has_example": false,
+        "quality_score": 0.5
+      }
+    },
+    {
+      "name": "ApplyMessage",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 56,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*SharedState",
+      "lines": {
+        "total": 21,
+        "code": 19,
+        "comments": 1,
+        "blank": 1
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.5
+      },
+      "complexity": {
+        "cyclomatic": 6,
+        "cognitive": 6,
+        "nesting_depth": 4,
+        "overall": 9.8
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 53,
+        "has_example": false,
+        "quality_score": 0.21200000000000002
+      }
+    },
+    {
+      "name": "NewApp",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 94,
+      "is_exported": true,
+      "is_method": false,
+      "lines": {
+        "total": 7,
+        "code": 7,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.8
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 26,
+        "has_example": false,
+        "quality_score": 0.10400000000000001
+      }
+    },
+    {
+      "name": "registerScenes",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 104,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*App",
+      "lines": {
+        "total": 17,
+        "code": 17,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "connectWS",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 125,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*App",
+      "lines": {
+        "total": 6,
+        "code": 6,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.5
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 42,
+        "has_example": false,
+        "quality_score": 0.168
+      }
+    },
+    {
+      "name": "Update",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 135,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*App",
+      "lines": {
+        "total": 5,
+        "code": 5,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.3
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 31,
+        "has_example": false,
+        "quality_score": 0.124
+      }
+    },
+    {
+      "name": "Draw",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 144,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*App",
+      "lines": {
+        "total": 5,
+        "code": 5,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.5
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 29,
+        "has_example": false,
+        "quality_score": 0.11599999999999999
+      }
+    },
+    {
+      "name": "Layout",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 153,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*App",
+      "lines": {
+        "total": 1,
+        "code": 1,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.1
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 31,
+        "has_example": false,
+        "quality_score": 0.124
+      }
+    },
+    {
+      "name": "main",
+      "package": "main",
+      "file": "cmd/console-wasm/main.go",
+      "line": 161,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 10,
+        "code": 7,
+        "comments": 1,
+        "blank": 2
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
       },
       "documentation": {
         "has_comment": false,
@@ -5070,6 +5070,149 @@
       }
     },
     {
+      "name": "newWSClient",
+      "package": "main",
+      "file": "cmd/console-wasm/ws.go",
+      "line": 25,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 1,
+        "code": 1,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 36,
+        "has_example": false,
+        "quality_score": 0.144
+      }
+    },
+    {
+      "name": "run",
+      "package": "main",
+      "file": "cmd/console-wasm/ws.go",
+      "line": 30,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*wsClient",
+      "lines": {
+        "total": 6,
+        "code": 6,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 2,
+        "overall": 4.9
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 56,
+        "has_example": false,
+        "quality_score": 0.32400000000000007
+      }
+    },
+    {
+      "name": "connect",
+      "package": "main",
+      "file": "cmd/console-wasm/ws.go",
+      "line": 40,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*wsClient",
+      "lines": {
+        "total": 22,
+        "code": 20,
+        "comments": 0,
+        "blank": 2
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.3
+      },
+      "complexity": {
+        "cyclomatic": 5,
+        "cognitive": 5,
+        "nesting_depth": 2,
+        "overall": 7.5
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 73,
+        "has_example": false,
+        "quality_score": 0.392
+      }
+    },
+    {
+      "name": "close",
+      "package": "main",
+      "file": "cmd/console-wasm/ws.go",
+      "line": 66,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*wsClient",
+      "lines": {
+        "total": 3,
+        "code": 3,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 38,
+        "has_example": false,
+        "quality_score": 0.15200000000000002
+      }
+    },
+    {
       "name": "newVideoStudioScene",
       "package": "main",
       "file": "cmd/console-wasm/scene_videostudio.go",
@@ -5249,160 +5392,17 @@
       }
     },
     {
-      "name": "newWSClient",
-      "package": "main",
-      "file": "cmd/console-wasm/ws.go",
-      "line": 25,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 1,
-        "code": 1,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 36,
-        "has_example": false,
-        "quality_score": 0.144
-      }
-    },
-    {
-      "name": "run",
-      "package": "main",
-      "file": "cmd/console-wasm/ws.go",
-      "line": 30,
-      "is_exported": false,
-      "is_method": true,
-      "receiver_type": "*wsClient",
-      "lines": {
-        "total": 6,
-        "code": 6,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 2,
-        "overall": 4.9
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 56,
-        "has_example": false,
-        "quality_score": 0.32400000000000007
-      }
-    },
-    {
-      "name": "connect",
-      "package": "main",
-      "file": "cmd/console-wasm/ws.go",
-      "line": 40,
-      "is_exported": false,
-      "is_method": true,
-      "receiver_type": "*wsClient",
-      "lines": {
-        "total": 22,
-        "code": 20,
-        "comments": 0,
-        "blank": 2
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.3
-      },
-      "complexity": {
-        "cyclomatic": 5,
-        "cognitive": 5,
-        "nesting_depth": 2,
-        "overall": 7.5
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 73,
-        "has_example": false,
-        "quality_score": 0.392
-      }
-    },
-    {
-      "name": "close",
-      "package": "main",
-      "file": "cmd/console-wasm/ws.go",
-      "line": 66,
-      "is_exported": false,
-      "is_method": true,
-      "receiver_type": "*wsClient",
-      "lines": {
-        "total": 3,
-        "code": 3,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 38,
-        "has_example": false,
-        "quality_score": 0.15200000000000002
-      }
-    },
-    {
       "name": "main",
       "package": "main",
       "file": "cmd/dataset-build/main.go",
-      "line": 95,
+      "line": 97,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 69,
-        "code": 60,
+        "total": 109,
+        "code": 95,
         "comments": 0,
-        "blank": 9
+        "blank": 14
       },
       "signature": {
         "parameter_count": 0,
@@ -5414,10 +5414,10 @@
         "signature_complexity": 0
       },
       "complexity": {
-        "cyclomatic": 15,
-        "cognitive": 15,
-        "nesting_depth": 3,
-        "overall": 21
+        "cyclomatic": 25,
+        "cognitive": 25,
+        "nesting_depth": 4,
+        "overall": 34.5
       },
       "documentation": {
         "has_comment": false,
@@ -5430,7 +5430,7 @@
       "name": "writeLine",
       "package": "main",
       "file": "cmd/dataset-build/main.go",
-      "line": 168,
+      "line": 210,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -5465,33 +5465,33 @@
       "name": "walkRepo",
       "package": "main",
       "file": "cmd/dataset-build/main.go",
-      "line": 177,
+      "line": 220,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 61,
-        "code": 51,
-        "comments": 3,
-        "blank": 7
+        "total": 77,
+        "code": 59,
+        "comments": 8,
+        "blank": 10
       },
       "signature": {
-        "parameter_count": 4,
+        "parameter_count": 5,
         "return_count": 2,
         "has_variadic": false,
         "returns_error": true,
         "interface_parameters": 0,
         "generic_parameters": null,
-        "signature_complexity": 2.6
+        "signature_complexity": 3.1
       },
       "complexity": {
-        "cyclomatic": 13,
-        "cognitive": 13,
-        "nesting_depth": 2,
-        "overall": 17.9
+        "cyclomatic": 16,
+        "cognitive": 16,
+        "nesting_depth": 4,
+        "overall": 22.8
       },
       "documentation": {
         "has_comment": true,
-        "comment_length": 105,
+        "comment_length": 246,
         "has_example": true,
         "quality_score": 0.6000000000000001
       }
@@ -5500,7 +5500,7 @@
       "name": "isBinary",
       "package": "main",
       "file": "cmd/dataset-build/main.go",
-      "line": 242,
+      "line": 301,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -5535,7 +5535,7 @@
       "name": "contentHash",
       "package": "main",
       "file": "cmd/dataset-build/main.go",
-      "line": 252,
+      "line": 311,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -5570,7 +5570,7 @@
       "name": "mergeHyperparams",
       "package": "main",
       "file": "cmd/dataset-build/main.go",
-      "line": 260,
+      "line": 319,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -5605,7 +5605,7 @@
       "name": "loadNamespaces",
       "package": "main",
       "file": "cmd/dataset-build/main.go",
-      "line": 293,
+      "line": 352,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -5634,6 +5634,531 @@
         "comment_length": 58,
         "has_example": false,
         "quality_score": 0.23199999999999998
+      }
+    },
+    {
+      "name": "main",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 76,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 41,
+        "code": 34,
+        "comments": 0,
+        "blank": 7
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 6,
+        "cognitive": 6,
+        "nesting_depth": 1,
+        "overall": 8.3
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "runDrain",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 120,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 24,
+        "code": 23,
+        "comments": 0,
+        "blank": 1
+      },
+      "signature": {
+        "parameter_count": 3,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.8
+      },
+      "complexity": {
+        "cyclomatic": 4,
+        "cognitive": 4,
+        "nesting_depth": 2,
+        "overall": 6.2
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "cordonNode",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 147,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 1,
+        "code": 1,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "drainPods",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 151,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 7,
+        "code": 7,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "deregisterFromGateway",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 164,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 18,
+        "code": 17,
+        "comments": 1,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 4,
+        "cognitive": 4,
+        "nesting_depth": 1,
+        "overall": 5.7
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 199,
+        "has_example": false,
+        "quality_score": 0.5
+      }
+    },
+    {
+      "name": "leaveTailnet",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 185,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 15,
+        "code": 14,
+        "comments": 1,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 3,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.8
+      },
+      "complexity": {
+        "cyclomatic": 4,
+        "cognitive": 4,
+        "nesting_depth": 1,
+        "overall": 5.7
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "deleteK3sNode",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 203,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 1,
+        "code": 1,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "kubectl",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 208,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 7,
+        "code": 7,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": true,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 2.3
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 66,
+        "has_example": false,
+        "quality_score": 0.264
+      }
+    },
+    {
+      "name": "loadInventory",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 218,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 11,
+        "code": 11,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.1
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "findNode",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 232,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 6,
+        "code": 6,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 2,
+        "overall": 4.9
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "loadSSHKey",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 241,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 4,
+        "code": 4,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.1
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "signerFromAgent",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 249,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 9,
+        "code": 9,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.6
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 75,
+        "has_example": false,
+        "quality_score": 0.4
+      }
+    },
+    {
+      "name": "signerFromFile",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 262,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 16,
+        "code": 16,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.1
+      },
+      "complexity": {
+        "cyclomatic": 5,
+        "cognitive": 5,
+        "nesting_depth": 2,
+        "overall": 7.5
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 52,
+        "has_example": false,
+        "quality_score": 0.20800000000000002
+      }
+    },
+    {
+      "name": "createSSHClient",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 281,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 14,
+        "code": 12,
+        "comments": 0,
+        "blank": 2
+      },
+      "signature": {
+        "parameter_count": 3,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 2.1
+      },
+      "complexity": {
+        "cyclomatic": 2,
+        "cognitive": 2,
+        "nesting_depth": 1,
+        "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "remoteCmd",
+      "package": "main",
+      "file": "cmd/drain/main.go",
+      "line": 298,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 14,
+        "code": 12,
+        "comments": 0,
+        "blank": 2
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.6
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
       }
     },
     {
@@ -6479,533 +7004,8 @@
     {
       "name": "main",
       "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 76,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 41,
-        "code": 34,
-        "comments": 0,
-        "blank": 7
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
-      },
-      "complexity": {
-        "cyclomatic": 6,
-        "cognitive": 6,
-        "nesting_depth": 1,
-        "overall": 8.3
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "runDrain",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 120,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 24,
-        "code": 23,
-        "comments": 0,
-        "blank": 1
-      },
-      "signature": {
-        "parameter_count": 3,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.8
-      },
-      "complexity": {
-        "cyclomatic": 4,
-        "cognitive": 4,
-        "nesting_depth": 2,
-        "overall": 6.2
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "cordonNode",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 147,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 1,
-        "code": 1,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "drainPods",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 151,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 7,
-        "code": 7,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "deregisterFromGateway",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 164,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 18,
-        "code": 17,
-        "comments": 1,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 4,
-        "cognitive": 4,
-        "nesting_depth": 1,
-        "overall": 5.7
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 199,
-        "has_example": false,
-        "quality_score": 0.5
-      }
-    },
-    {
-      "name": "leaveTailnet",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 185,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 15,
-        "code": 14,
-        "comments": 1,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 3,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.8
-      },
-      "complexity": {
-        "cyclomatic": 4,
-        "cognitive": 4,
-        "nesting_depth": 1,
-        "overall": 5.7
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "deleteK3sNode",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 203,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 1,
-        "code": 1,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "kubectl",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 208,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 7,
-        "code": 7,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": true,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 2.3
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 66,
-        "has_example": false,
-        "quality_score": 0.264
-      }
-    },
-    {
-      "name": "loadInventory",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 218,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 11,
-        "code": 11,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.1
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "findNode",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 232,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 6,
-        "code": 6,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 2,
-        "overall": 4.9
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "loadSSHKey",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 241,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 4,
-        "code": 4,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.1
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "signerFromAgent",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 249,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 9,
-        "code": 9,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.6
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 75,
-        "has_example": false,
-        "quality_score": 0.4
-      }
-    },
-    {
-      "name": "signerFromFile",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 262,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 16,
-        "code": 16,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.1
-      },
-      "complexity": {
-        "cyclomatic": 5,
-        "cognitive": 5,
-        "nesting_depth": 2,
-        "overall": 7.5
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 52,
-        "has_example": false,
-        "quality_score": 0.20800000000000002
-      }
-    },
-    {
-      "name": "createSSHClient",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 281,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 14,
-        "code": 12,
-        "comments": 0,
-        "blank": 2
-      },
-      "signature": {
-        "parameter_count": 3,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 2.1
-      },
-      "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
-        "nesting_depth": 1,
-        "overall": 3.1
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "remoteCmd",
-      "package": "main",
-      "file": "cmd/drain/main.go",
-      "line": 298,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 14,
-        "code": 12,
-        "comments": 0,
-        "blank": 2
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.6
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "main",
-      "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 76,
+      "line": 77,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7040,7 +7040,7 @@
       "name": "evaluate",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 146,
+      "line": 147,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7075,14 +7075,14 @@
       "name": "generate",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 207,
+      "line": 208,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 37,
-        "code": 34,
-        "comments": 0,
-        "blank": 3
+        "total": 43,
+        "code": 38,
+        "comments": 1,
+        "blank": 4
       },
       "signature": {
         "parameter_count": 3,
@@ -7094,10 +7094,10 @@
         "signature_complexity": 2.1
       },
       "complexity": {
-        "cyclomatic": 7,
-        "cognitive": 7,
+        "cyclomatic": 8,
+        "cognitive": 8,
         "nesting_depth": 1,
-        "overall": 9.6
+        "overall": 10.9
       },
       "documentation": {
         "has_comment": true,
@@ -7110,7 +7110,7 @@
       "name": "loadHoldout",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 248,
+      "line": 255,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7145,7 +7145,7 @@
       "name": "writeSummary",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 275,
+      "line": 282,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7180,7 +7180,7 @@
       "name": "tokenF1",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 296,
+      "line": 303,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7215,7 +7215,7 @@
       "name": "unigramPrecision",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 315,
+      "line": 322,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7250,7 +7250,7 @@
       "name": "tokenize",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 326,
+      "line": 333,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7285,7 +7285,7 @@
       "name": "countCommon",
       "package": "main",
       "file": "cmd/eval-harness/main.go",
-      "line": 331,
+      "line": 338,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7600,7 +7600,7 @@
       "name": "handleImageGenerations",
       "package": "main",
       "file": "cmd/gateway/images.go",
-      "line": 57,
+      "line": 59,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -7636,7 +7636,7 @@
       "name": "handleImageEdits",
       "package": "main",
       "file": "cmd/gateway/images.go",
-      "line": 100,
+      "line": 102,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -7672,7 +7672,7 @@
       "name": "callSwarm",
       "package": "main",
       "file": "cmd/gateway/images.go",
-      "line": 144,
+      "line": 146,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -7683,13 +7683,13 @@
         "blank": 4
       },
       "signature": {
-        "parameter_count": 2,
+        "parameter_count": 3,
         "return_count": 2,
         "has_variadic": false,
         "returns_error": true,
         "interface_parameters": 0,
         "generic_parameters": null,
-        "signature_complexity": 1.6
+        "signature_complexity": 2.1
       },
       "complexity": {
         "cyclomatic": 7,
@@ -7708,29 +7708,29 @@
       "name": "buildImageResponse",
       "package": "main",
       "file": "cmd/gateway/images.go",
-      "line": 181,
+      "line": 183,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 17,
-        "code": 16,
-        "comments": 1,
+        "total": 38,
+        "code": 36,
+        "comments": 2,
         "blank": 0
       },
       "signature": {
-        "parameter_count": 2,
+        "parameter_count": 3,
         "return_count": 1,
         "has_variadic": false,
         "returns_error": false,
         "interface_parameters": 0,
         "generic_parameters": null,
-        "signature_complexity": 1.3
+        "signature_complexity": 1.8
       },
       "complexity": {
-        "cyclomatic": 4,
-        "cognitive": 4,
+        "cyclomatic": 8,
+        "cognitive": 8,
         "nesting_depth": 3,
-        "overall": 6.7
+        "overall": 11.9
       },
       "documentation": {
         "has_comment": true,
@@ -7743,14 +7743,14 @@
       "name": "normalizeImageParams",
       "package": "main",
       "file": "cmd/gateway/images.go",
-      "line": 202,
+      "line": 225,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 7,
-        "code": 7,
-        "comments": 0,
-        "blank": 0
+        "total": 19,
+        "code": 15,
+        "comments": 2,
+        "blank": 2
       },
       "signature": {
         "parameter_count": 2,
@@ -7762,10 +7762,10 @@
         "signature_complexity": 1.6
       },
       "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
+        "cyclomatic": 4,
+        "cognitive": 4,
+        "nesting_depth": 2,
+        "overall": 6.2
       },
       "documentation": {
         "has_comment": true,
@@ -7778,7 +7778,7 @@
       "name": "parseSizeStr",
       "package": "main",
       "file": "cmd/gateway/images.go",
-      "line": 213,
+      "line": 248,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7813,7 +7813,7 @@
       "name": "swarmModel",
       "package": "main",
       "file": "cmd/gateway/images.go",
-      "line": 223,
+      "line": 258,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -7991,12 +7991,12 @@
       "name": "main",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 95,
+      "line": 97,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 173,
-        "code": 137,
+        "total": 174,
+        "code": 138,
         "comments": 14,
         "blank": 22
       },
@@ -8026,7 +8026,7 @@
       "name": "telemetryPing",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 281,
+      "line": 284,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8061,7 +8061,7 @@
       "name": "authMiddleware",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 318,
+      "line": 321,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8097,7 +8097,7 @@
       "name": "extractBearerToken",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 347,
+      "line": 350,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8132,7 +8132,7 @@
       "name": "handleHealthz",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 359,
+      "line": 362,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8167,7 +8167,7 @@
       "name": "handleStatus",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 368,
+      "line": 371,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8203,7 +8203,7 @@
       "name": "handleMetrics",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 399,
+      "line": 402,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8239,7 +8239,7 @@
       "name": "handleListModels",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 434,
+      "line": 437,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8275,7 +8275,7 @@
       "name": "handleChatCompletions",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 460,
+      "line": 463,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8311,7 +8311,7 @@
       "name": "handleCompletions",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 501,
+      "line": 504,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8347,7 +8347,7 @@
       "name": "handleEmbeddings",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 526,
+      "line": 529,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8383,7 +8383,7 @@
       "name": "pickBackend",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 553,
+      "line": 556,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8419,7 +8419,7 @@
       "name": "containsModel",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 600,
+      "line": 603,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8454,7 +8454,7 @@
       "name": "proxyTo",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 611,
+      "line": 614,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8490,7 +8490,7 @@
       "name": "probeLoop",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 662,
+      "line": 665,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8526,7 +8526,7 @@
       "name": "discoveryLoop",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 676,
+      "line": 679,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8562,7 +8562,7 @@
       "name": "probeAll",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 714,
+      "line": 717,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -8598,7 +8598,7 @@
       "name": "probeBackend",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 743,
+      "line": 746,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8633,7 +8633,7 @@
       "name": "probeSwarm",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 771,
+      "line": 774,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8668,7 +8668,7 @@
       "name": "discoverBackends",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 800,
+      "line": 803,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8703,7 +8703,7 @@
       "name": "loadAPIKeys",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 842,
+      "line": 845,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8738,7 +8738,7 @@
       "name": "writeJSON",
       "package": "main",
       "file": "cmd/gateway/main.go",
-      "line": 876,
+      "line": 879,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -8849,10 +8849,10 @@
       "is_method": true,
       "receiver_type": "*Gateway",
       "lines": {
-        "total": 21,
-        "code": 17,
-        "comments": 1,
-        "blank": 3
+        "total": 26,
+        "code": 20,
+        "comments": 2,
+        "blank": 4
       },
       "signature": {
         "parameter_count": 2,
@@ -8880,15 +8880,15 @@
       "name": "handleGetPipelineStatus",
       "package": "main",
       "file": "cmd/gateway/pipelines.go",
-      "line": 62,
+      "line": 67,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
       "lines": {
-        "total": 15,
-        "code": 11,
-        "comments": 2,
-        "blank": 2
+        "total": 17,
+        "code": 14,
+        "comments": 0,
+        "blank": 3
       },
       "signature": {
         "parameter_count": 2,
@@ -8900,10 +8900,10 @@
         "signature_complexity": 1
       },
       "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
+        "cyclomatic": 3,
+        "cognitive": 3,
         "nesting_depth": 1,
-        "overall": 3.1
+        "overall": 4.4
       },
       "documentation": {
         "has_comment": true,
@@ -9060,7 +9060,7 @@
       "name": "extractRAGTools",
       "package": "main",
       "file": "cmd/gateway/rag.go",
-      "line": 51,
+      "line": 52,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9095,14 +9095,14 @@
       "name": "retrieveRAGContext",
       "package": "main",
       "file": "cmd/gateway/rag.go",
-      "line": 75,
+      "line": 76,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 40,
-        "code": 36,
+        "total": 45,
+        "code": 40,
         "comments": 0,
-        "blank": 4
+        "blank": 5
       },
       "signature": {
         "parameter_count": 5,
@@ -9114,10 +9114,10 @@
         "signature_complexity": 3.1
       },
       "complexity": {
-        "cyclomatic": 8,
-        "cognitive": 8,
+        "cyclomatic": 9,
+        "cognitive": 9,
         "nesting_depth": 1,
-        "overall": 10.9
+        "overall": 12.2
       },
       "documentation": {
         "has_comment": true,
@@ -9130,7 +9130,7 @@
       "name": "injectRAGContextRaw",
       "package": "main",
       "file": "cmd/gateway/rag.go",
-      "line": 120,
+      "line": 126,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -9166,7 +9166,7 @@
       "name": "extractLastUserMessageRaw",
       "package": "main",
       "file": "cmd/gateway/rag.go",
-      "line": 197,
+      "line": 203,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9201,7 +9201,7 @@
       "name": "extractLastUserMessage",
       "package": "main",
       "file": "cmd/gateway/rag.go",
-      "line": 214,
+      "line": 220,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9233,16 +9233,52 @@
       }
     },
     {
-      "name": "add",
+      "name": "canAdd",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 66,
+      "line": 74,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*videoJobStore",
       "lines": {
-        "total": 3,
-        "code": 3,
+        "total": 9,
+        "code": 9,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.8
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
+      "name": "add",
+      "package": "main",
+      "file": "cmd/gateway/videos.go",
+      "line": 86,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*videoJobStore",
+      "lines": {
+        "total": 5,
+        "code": 5,
         "comments": 0,
         "blank": 0
       },
@@ -9269,10 +9305,46 @@
       }
     },
     {
+      "name": "markTerminal",
+      "package": "main",
+      "file": "cmd/gateway/videos.go",
+      "line": 94,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*videoJobStore",
+      "lines": {
+        "total": 8,
+        "code": 8,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.5
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
       "name": "get",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 72,
+      "line": 105,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*videoJobStore",
@@ -9308,7 +9380,7 @@
       "name": "getSnapshot",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 81,
+      "line": 114,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*videoJobStore",
@@ -9344,7 +9416,7 @@
       "name": "pruneOldJobs",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 93,
+      "line": 126,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*videoJobStore",
@@ -9380,13 +9452,13 @@
       "name": "handleVideoGenerations",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 141,
+      "line": 176,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
       "lines": {
-        "total": 29,
-        "code": 24,
+        "total": 33,
+        "code": 28,
         "comments": 0,
         "blank": 5
       },
@@ -9400,10 +9472,10 @@
         "signature_complexity": 1
       },
       "complexity": {
-        "cyclomatic": 5,
-        "cognitive": 5,
+        "cyclomatic": 6,
+        "cognitive": 6,
         "nesting_depth": 1,
-        "overall": 7
+        "overall": 8.3
       },
       "documentation": {
         "has_comment": true,
@@ -9416,13 +9488,13 @@
       "name": "handleVideoEdits",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 174,
+      "line": 213,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
       "lines": {
-        "total": 34,
-        "code": 29,
+        "total": 39,
+        "code": 34,
         "comments": 0,
         "blank": 5
       },
@@ -9436,10 +9508,10 @@
         "signature_complexity": 1
       },
       "complexity": {
-        "cyclomatic": 5,
-        "cognitive": 5,
+        "cyclomatic": 6,
+        "cognitive": 6,
         "nesting_depth": 1,
-        "overall": 7
+        "overall": 8.3
       },
       "documentation": {
         "has_comment": true,
@@ -9452,7 +9524,7 @@
       "name": "handleVideoJobStatus",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 212,
+      "line": 256,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
@@ -9488,23 +9560,23 @@
       "name": "newVideoJob",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 226,
+      "line": 270,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 20,
-        "code": 19,
+        "total": 22,
+        "code": 21,
         "comments": 1,
         "blank": 0
       },
       "signature": {
-        "parameter_count": 1,
+        "parameter_count": 2,
         "return_count": 1,
         "has_variadic": false,
         "returns_error": false,
         "interface_parameters": 0,
         "generic_parameters": null,
-        "signature_complexity": 0.8
+        "signature_complexity": 1.3
       },
       "complexity": {
         "cyclomatic": 2,
@@ -9523,15 +9595,15 @@
       "name": "runVideoJob",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 249,
+      "line": 295,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
       "lines": {
-        "total": 18,
-        "code": 15,
-        "comments": 0,
-        "blank": 3
+        "total": 23,
+        "code": 18,
+        "comments": 1,
+        "blank": 4
       },
       "signature": {
         "parameter_count": 1,
@@ -9559,7 +9631,7 @@
       "name": "setJobStatus",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 270,
+      "line": 321,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9594,13 +9666,13 @@
       "name": "generateVideo",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 281,
+      "line": 332,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*Gateway",
       "lines": {
-        "total": 70,
-        "code": 60,
+        "total": 74,
+        "code": 64,
         "comments": 1,
         "blank": 9
       },
@@ -9614,10 +9686,10 @@
         "signature_complexity": 1.9
       },
       "complexity": {
-        "cyclomatic": 12,
-        "cognitive": 12,
-        "nesting_depth": 1,
-        "overall": 16.1
+        "cyclomatic": 14,
+        "cognitive": 14,
+        "nesting_depth": 2,
+        "overall": 19.2
       },
       "documentation": {
         "has_comment": true,
@@ -9630,7 +9702,7 @@
       "name": "swarmVideoModel",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 355,
+      "line": 410,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9665,7 +9737,7 @@
       "name": "pruneVideoJobsLoop",
       "package": "main",
       "file": "cmd/gateway/videos.go",
-      "line": 378,
+      "line": 433,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9700,14 +9772,14 @@
       "name": "main",
       "package": "main",
       "file": "cmd/k8s-trainer/main.go",
-      "line": 134,
+      "line": 133,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 102,
-        "code": 84,
+        "total": 108,
+        "code": 89,
         "comments": 6,
-        "blank": 12
+        "blank": 13
       },
       "signature": {
         "parameter_count": 0,
@@ -9719,10 +9791,10 @@
         "signature_complexity": 0
       },
       "complexity": {
-        "cyclomatic": 15,
-        "cognitive": 15,
+        "cyclomatic": 16,
+        "cognitive": 16,
         "nesting_depth": 2,
-        "overall": 20.5
+        "overall": 21.8
       },
       "documentation": {
         "has_comment": false,
@@ -9735,7 +9807,7 @@
       "name": "validateJobSpec",
       "package": "main",
       "file": "cmd/k8s-trainer/main.go",
-      "line": 245,
+      "line": 250,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9770,7 +9842,7 @@
       "name": "writeJobManifest",
       "package": "main",
       "file": "cmd/k8s-trainer/main.go",
-      "line": 267,
+      "line": 272,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9805,7 +9877,7 @@
       "name": "kubectlRun",
       "package": "main",
       "file": "cmd/k8s-trainer/main.go",
-      "line": 280,
+      "line": 285,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9840,7 +9912,7 @@
       "name": "kubectlOutput",
       "package": "main",
       "file": "cmd/k8s-trainer/main.go",
-      "line": 289,
+      "line": 294,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9875,7 +9947,7 @@
       "name": "streamLogs",
       "package": "main",
       "file": "cmd/k8s-trainer/main.go",
-      "line": 297,
+      "line": 302,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -9910,7 +9982,7 @@
       "name": "isValidK8sName",
       "package": "main",
       "file": "cmd/k8s-trainer/main.go",
-      "line": 314,
+      "line": 319,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10124,10 +10196,10 @@
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 138,
-        "code": 115,
-        "comments": 9,
-        "blank": 14
+        "total": 175,
+        "code": 144,
+        "comments": 13,
+        "blank": 18
       },
       "signature": {
         "parameter_count": 0,
@@ -10139,10 +10211,10 @@
         "signature_complexity": 0
       },
       "complexity": {
-        "cyclomatic": 18,
-        "cognitive": 18,
+        "cyclomatic": 22,
+        "cognitive": 22,
         "nesting_depth": 5,
-        "overall": 25.9
+        "overall": 31.1
       },
       "documentation": {
         "has_comment": false,
@@ -10155,7 +10227,7 @@
       "name": "handleInfo",
       "package": "main",
       "file": "cmd/node-agent/main.go",
-      "line": 193,
+      "line": 230,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*apiHandlers",
@@ -10191,7 +10263,7 @@
       "name": "handleHealth",
       "package": "main",
       "file": "cmd/node-agent/main.go",
-      "line": 211,
+      "line": 248,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*apiHandlers",
@@ -10227,7 +10299,7 @@
       "name": "handleMetrics",
       "package": "main",
       "file": "cmd/node-agent/main.go",
-      "line": 232,
+      "line": 269,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*apiHandlers",
@@ -10263,7 +10335,7 @@
       "name": "handlePeers",
       "package": "main",
       "file": "cmd/node-agent/main.go",
-      "line": 256,
+      "line": 293,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*apiHandlers",
@@ -10299,7 +10371,7 @@
       "name": "handlePipelineSubmit",
       "package": "main",
       "file": "cmd/node-agent/main.go",
-      "line": 266,
+      "line": 303,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*apiHandlers",
@@ -10335,7 +10407,7 @@
       "name": "handlePipelineResult",
       "package": "main",
       "file": "cmd/node-agent/main.go",
-      "line": 327,
+      "line": 364,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*apiHandlers",
@@ -10368,10 +10440,46 @@
       }
     },
     {
+      "name": "cleanupOldJobs",
+      "package": "main",
+      "file": "cmd/node-agent/main.go",
+      "line": 390,
+      "is_exported": false,
+      "is_method": true,
+      "receiver_type": "*apiHandlers",
+      "lines": {
+        "total": 15,
+        "code": 13,
+        "comments": 1,
+        "blank": 1
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.5
+      },
+      "complexity": {
+        "cyclomatic": 4,
+        "cognitive": 4,
+        "nesting_depth": 3,
+        "overall": 6.7
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 73,
+        "has_example": false,
+        "quality_score": 0.292
+      }
+    },
+    {
       "name": "buildServices",
       "package": "main",
       "file": "cmd/node-agent/main.go",
-      "line": 352,
+      "line": 408,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10581,7 +10689,7 @@
       "name": "main",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 91,
+      "line": 92,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10616,7 +10724,7 @@
       "name": "runNamespace",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 135,
+      "line": 136,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10651,7 +10759,7 @@
       "name": "runStep",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 221,
+      "line": 222,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10686,7 +10794,7 @@
       "name": "runPython",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 226,
+      "line": 227,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10721,7 +10829,7 @@
       "name": "runPythonRepo",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 237,
+      "line": 238,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10756,14 +10864,14 @@
       "name": "runConvert",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 251,
+      "line": 252,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 44,
-        "code": 39,
+        "total": 52,
+        "code": 45,
         "comments": 3,
-        "blank": 2
+        "blank": 4
       },
       "signature": {
         "parameter_count": 2,
@@ -10775,10 +10883,10 @@
         "signature_complexity": 1.3
       },
       "complexity": {
-        "cyclomatic": 13,
-        "cognitive": 13,
+        "cyclomatic": 14,
+        "cognitive": 14,
         "nesting_depth": 4,
-        "overall": 18.9
+        "overall": 20.2
       },
       "documentation": {
         "has_comment": true,
@@ -10791,7 +10899,7 @@
       "name": "registerOutputs",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 299,
+      "line": 308,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10826,7 +10934,7 @@
       "name": "runCmd",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 324,
+      "line": 333,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10861,7 +10969,7 @@
       "name": "isSkipCode",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 337,
+      "line": 346,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10896,7 +11004,7 @@
       "name": "skipRepo",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 348,
+      "line": 357,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -10931,7 +11039,7 @@
       "name": "stageEnabled",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 358,
+      "line": 367,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*pipelineConfig",
@@ -10967,7 +11075,7 @@
       "name": "parseSet",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 366,
+      "line": 375,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -11002,7 +11110,7 @@
       "name": "loadNamespaces",
       "package": "main",
       "file": "cmd/pipeline/main.go",
-      "line": 378,
+      "line": 387,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -11821,8 +11929,8 @@
       "is_method": true,
       "receiver_type": "*server",
       "lines": {
-        "total": 37,
-        "code": 34,
+        "total": 40,
+        "code": 37,
         "comments": 0,
         "blank": 3
       },
@@ -11836,10 +11944,10 @@
         "signature_complexity": 1.6
       },
       "complexity": {
-        "cyclomatic": 7,
-        "cognitive": 7,
+        "cyclomatic": 8,
+        "cognitive": 8,
         "nesting_depth": 1,
-        "overall": 9.6
+        "overall": 10.9
       },
       "documentation": {
         "has_comment": false,
@@ -11852,7 +11960,7 @@
       "name": "checkAuth",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 425,
+      "line": 428,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*server",
@@ -11888,14 +11996,14 @@
       "name": "collectionAllowed",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 437,
+      "line": 440,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*server",
       "lines": {
-        "total": 6,
-        "code": 6,
-        "comments": 0,
+        "total": 11,
+        "code": 9,
+        "comments": 2,
         "blank": 0
       },
       "signature": {
@@ -11908,10 +12016,10 @@
         "signature_complexity": 1.3
       },
       "complexity": {
-        "cyclomatic": 2,
-        "cognitive": 2,
+        "cyclomatic": 3,
+        "cognitive": 3,
         "nesting_depth": 1,
-        "overall": 3.1
+        "overall": 4.4
       },
       "documentation": {
         "has_comment": false,
@@ -11924,7 +12032,7 @@
       "name": "extractBearer",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 446,
+      "line": 454,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -11959,7 +12067,7 @@
       "name": "stringPayload",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 458,
+      "line": 466,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -11994,7 +12102,7 @@
       "name": "int64Payload",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 470,
+      "line": 478,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12029,7 +12137,7 @@
       "name": "normalise",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 483,
+      "line": 491,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12064,7 +12172,7 @@
       "name": "writeJSON",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 491,
+      "line": 499,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12099,7 +12207,7 @@
       "name": "main",
       "package": "main",
       "file": "cmd/rag/main.go",
-      "line": 502,
+      "line": 510,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12134,7 +12242,7 @@
       "name": "newRAGClient",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 70,
+      "line": 71,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12169,7 +12277,7 @@
       "name": "query",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 83,
+      "line": 84,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ragClient",
@@ -12205,7 +12313,7 @@
       "name": "answer",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 114,
+      "line": 115,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ragClient",
@@ -12241,7 +12349,7 @@
       "name": "judgeAnswer",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 138,
+      "line": 139,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ragClient",
@@ -12277,15 +12385,15 @@
       "name": "post",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 172,
+      "line": 173,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ragClient",
       "lines": {
-        "total": 16,
-        "code": 16,
-        "comments": 0,
-        "blank": 0
+        "total": 23,
+        "code": 20,
+        "comments": 1,
+        "blank": 2
       },
       "signature": {
         "parameter_count": 3,
@@ -12297,10 +12405,10 @@
         "signature_complexity": 2.1
       },
       "complexity": {
-        "cyclomatic": 4,
-        "cognitive": 4,
+        "cyclomatic": 5,
+        "cognitive": 5,
         "nesting_depth": 1,
-        "overall": 5.7
+        "overall": 7
       },
       "documentation": {
         "has_comment": false,
@@ -12313,13 +12421,13 @@
       "name": "evalCollection",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 195,
+      "line": 203,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 68,
-        "code": 60,
-        "comments": 0,
+        "total": 67,
+        "code": 58,
+        "comments": 1,
         "blank": 8
       },
       "signature": {
@@ -12332,10 +12440,10 @@
         "signature_complexity": 2.6
       },
       "complexity": {
-        "cyclomatic": 12,
-        "cognitive": 12,
+        "cyclomatic": 11,
+        "cognitive": 11,
         "nesting_depth": 2,
-        "overall": 16.6
+        "overall": 15.3
       },
       "documentation": {
         "has_comment": false,
@@ -12345,15 +12453,15 @@
       }
     },
     {
-      "name": "recallHit",
+      "name": "recallFraction",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 266,
+      "line": 274,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 12,
-        "code": 11,
+        "total": 14,
+        "code": 13,
         "comments": 1,
         "blank": 0
       },
@@ -12373,17 +12481,17 @@
         "overall": 8
       },
       "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
+        "has_comment": true,
+        "comment_length": 82,
         "has_example": false,
-        "quality_score": 0
+        "quality_score": 0.42800000000000005
       }
     },
     {
       "name": "percentile",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 281,
+      "line": 291,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12418,7 +12526,7 @@
       "name": "main",
       "package": "main",
       "file": "cmd/rag-eval/main.go",
-      "line": 299,
+      "line": 309,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12453,7 +12561,7 @@
       "name": "chunkText",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 85,
+      "line": 84,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12488,7 +12596,7 @@
       "name": "sha256Hex",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 118,
+      "line": 117,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12523,7 +12631,7 @@
       "name": "embed",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 127,
+      "line": 126,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12558,7 +12666,7 @@
       "name": "ensureCollection",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 178,
+      "line": 177,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12593,7 +12701,7 @@
       "name": "upsert",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 197,
+      "line": 196,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12628,7 +12736,7 @@
       "name": "newIngestor",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 218,
+      "line": 217,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12663,7 +12771,7 @@
       "name": "init",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 236,
+      "line": 235,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ingestor",
@@ -12699,15 +12807,15 @@
       "name": "ingestFile",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 240,
+      "line": 239,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ingestor",
       "lines": {
-        "total": 47,
-        "code": 41,
-        "comments": 0,
-        "blank": 6
+        "total": 55,
+        "code": 47,
+        "comments": 1,
+        "blank": 7
       },
       "signature": {
         "parameter_count": 2,
@@ -12719,10 +12827,10 @@
         "signature_complexity": 1.3
       },
       "complexity": {
-        "cyclomatic": 6,
-        "cognitive": 6,
-        "nesting_depth": 1,
-        "overall": 8.3
+        "cyclomatic": 7,
+        "cognitive": 7,
+        "nesting_depth": 2,
+        "overall": 10.1
       },
       "documentation": {
         "has_comment": false,
@@ -12735,7 +12843,7 @@
       "name": "ingestDir",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 290,
+      "line": 297,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ingestor",
@@ -12771,7 +12879,7 @@
       "name": "cloneAndIngest",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 305,
+      "line": 312,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ingestor",
@@ -12807,7 +12915,7 @@
       "name": "fetchURL",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 321,
+      "line": 328,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ingestor",
@@ -12843,7 +12951,7 @@
       "name": "backup",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 359,
+      "line": 366,
       "is_exported": false,
       "is_method": true,
       "receiver_type": "*ingestor",
@@ -12879,7 +12987,7 @@
       "name": "main",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 375,
+      "line": 382,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -12914,12 +13022,12 @@
       "name": "splitColon",
       "package": "main",
       "file": "cmd/rag-ingest/main.go",
-      "line": 446,
+      "line": 453,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 19,
-        "code": 19,
+        "total": 8,
+        "code": 8,
         "comments": 0,
         "blank": 0
       },
@@ -12933,10 +13041,10 @@
         "signature_complexity": 0.8
       },
       "complexity": {
-        "cyclomatic": 6,
-        "cognitive": 6,
+        "cyclomatic": 3,
+        "cognitive": 3,
         "nesting_depth": 2,
-        "overall": 8.8
+        "overall": 4.9
       },
       "documentation": {
         "has_comment": false,
@@ -12953,10 +13061,10 @@
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 85,
-        "code": 68,
-        "comments": 7,
-        "blank": 10
+        "total": 95,
+        "code": 75,
+        "comments": 8,
+        "blank": 12
       },
       "signature": {
         "parameter_count": 0,
@@ -12968,10 +13076,10 @@
         "signature_complexity": 0
       },
       "complexity": {
-        "cyclomatic": 17,
-        "cognitive": 17,
-        "nesting_depth": 4,
-        "overall": 24.1
+        "cyclomatic": 20,
+        "cognitive": 20,
+        "nesting_depth": 5,
+        "overall": 28.5
       },
       "documentation": {
         "has_comment": false,
@@ -12984,7 +13092,7 @@
       "name": "loadNamespaces",
       "package": "main",
       "file": "cmd/rag-reindex/main.go",
-      "line": 148,
+      "line": 158,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13019,7 +13127,7 @@
       "name": "buildRepoMap",
       "package": "main",
       "file": "cmd/rag-reindex/main.go",
-      "line": 158,
+      "line": 168,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13054,7 +13162,7 @@
       "name": "sanitizeLabel",
       "package": "main",
       "file": "cmd/rag-reindex/main.go",
-      "line": 174,
+      "line": 184,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13089,13 +13197,13 @@
       "name": "dirAndCollectionForPath",
       "package": "main",
       "file": "cmd/rag-reindex/main.go",
-      "line": 182,
+      "line": 192,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 6,
+        "total": 7,
         "code": 6,
-        "comments": 0,
+        "comments": 1,
         "blank": 0
       },
       "signature": {
@@ -13124,7 +13232,7 @@
       "name": "addWatchRecursive",
       "package": "main",
       "file": "cmd/rag-reindex/main.go",
-      "line": 191,
+      "line": 202,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13159,7 +13267,7 @@
       "name": "runIngest",
       "package": "main",
       "file": "cmd/rag-reindex/main.go",
-      "line": 203,
+      "line": 214,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13616,14 +13724,14 @@
       "name": "main",
       "package": "main",
       "file": "cmd/repo-sync/main.go",
-      "line": 62,
+      "line": 64,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 41,
-        "code": 36,
-        "comments": 0,
-        "blank": 5
+        "total": 67,
+        "code": 56,
+        "comments": 3,
+        "blank": 8
       },
       "signature": {
         "parameter_count": 0,
@@ -13635,10 +13743,10 @@
         "signature_complexity": 0
       },
       "complexity": {
-        "cyclomatic": 8,
-        "cognitive": 8,
+        "cyclomatic": 13,
+        "cognitive": 13,
         "nesting_depth": 3,
-        "overall": 11.9
+        "overall": 18.4
       },
       "documentation": {
         "has_comment": false,
@@ -13651,7 +13759,7 @@
       "name": "syncRepo",
       "package": "main",
       "file": "cmd/repo-sync/main.go",
-      "line": 107,
+      "line": 135,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13686,7 +13794,7 @@
       "name": "cloneRepo",
       "package": "main",
       "file": "cmd/repo-sync/main.go",
-      "line": 116,
+      "line": 144,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13721,7 +13829,7 @@
       "name": "fetchRepo",
       "package": "main",
       "file": "cmd/repo-sync/main.go",
-      "line": 125,
+      "line": 153,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13756,7 +13864,7 @@
       "name": "gitCmd",
       "package": "main",
       "file": "cmd/repo-sync/main.go",
-      "line": 133,
+      "line": 161,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13791,7 +13899,7 @@
       "name": "sanitizeLabel",
       "package": "main",
       "file": "cmd/repo-sync/main.go",
-      "line": 146,
+      "line": 174,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13826,12 +13934,12 @@
       "name": "loadRepos",
       "package": "main",
       "file": "cmd/repo-sync/main.go",
-      "line": 151,
+      "line": 179,
       "is_exported": false,
       "is_method": false,
       "lines": {
-        "total": 18,
-        "code": 16,
+        "total": 21,
+        "code": 19,
         "comments": 0,
         "blank": 2
       },
@@ -13843,41 +13951,6 @@
         "interface_parameters": 0,
         "generic_parameters": null,
         "signature_complexity": 1.1
-      },
-      "complexity": {
-        "cyclomatic": 5,
-        "cognitive": 5,
-        "nesting_depth": 1,
-        "overall": 7
-      },
-      "documentation": {
-        "has_comment": false,
-        "comment_length": 0,
-        "has_example": false,
-        "quality_score": 0
-      }
-    },
-    {
-      "name": "main",
-      "package": "main",
-      "file": "cmd/status/main.go",
-      "line": 86,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 44,
-        "code": 35,
-        "comments": 2,
-        "blank": 7
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0
       },
       "complexity": {
         "cyclomatic": 6,
@@ -13893,10 +13966,80 @@
       }
     },
     {
+      "name": "BudgetSplit",
+      "package": "autotuner",
+      "file": "internal/autotuner/colocation.go",
+      "line": 15,
+      "is_exported": true,
+      "is_method": false,
+      "lines": {
+        "total": 77,
+        "code": 60,
+        "comments": 5,
+        "blank": 12
+      },
+      "signature": {
+        "parameter_count": 3,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.8
+      },
+      "complexity": {
+        "cyclomatic": 14,
+        "cognitive": 14,
+        "nesting_depth": 2,
+        "overall": 19.2
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 163,
+        "has_example": false,
+        "quality_score": 0.5
+      }
+    },
+    {
+      "name": "main",
+      "package": "main",
+      "file": "cmd/status/main.go",
+      "line": 87,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 50,
+        "code": 39,
+        "comments": 4,
+        "blank": 7
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 7,
+        "cognitive": 7,
+        "nesting_depth": 2,
+        "overall": 10.1
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    },
+    {
       "name": "loadDeclaredNodes",
       "package": "main",
       "file": "cmd/status/main.go",
-      "line": 133,
+      "line": 140,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13931,7 +14074,7 @@
       "name": "fetchActualNodes",
       "package": "main",
       "file": "cmd/status/main.go",
-      "line": 149,
+      "line": 156,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -13966,7 +14109,7 @@
       "name": "diffNodes",
       "package": "main",
       "file": "cmd/status/main.go",
-      "line": 174,
+      "line": 181,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -14001,7 +14144,7 @@
       "name": "checkServices",
       "package": "main",
       "file": "cmd/status/main.go",
-      "line": 205,
+      "line": 212,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -14036,7 +14179,7 @@
       "name": "printTextReport",
       "package": "main",
       "file": "cmd/status/main.go",
-      "line": 238,
+      "line": 245,
       "is_exported": false,
       "is_method": false,
       "lines": {
@@ -14065,112 +14208,6 @@
         "comment_length": 0,
         "has_example": false,
         "quality_score": 0
-      }
-    },
-    {
-      "name": "BudgetSplit",
-      "package": "autotuner",
-      "file": "internal/autotuner/colocation.go",
-      "line": 15,
-      "is_exported": true,
-      "is_method": false,
-      "lines": {
-        "total": 81,
-        "code": 62,
-        "comments": 6,
-        "blank": 13
-      },
-      "signature": {
-        "parameter_count": 3,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.8
-      },
-      "complexity": {
-        "cyclomatic": 15,
-        "cognitive": 15,
-        "nesting_depth": 2,
-        "overall": 20.5
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 163,
-        "has_example": false,
-        "quality_score": 0.5
-      }
-    },
-    {
-      "name": "OllamaConfig",
-      "package": "autotuner",
-      "file": "internal/autotuner/ollama.go",
-      "line": 15,
-      "is_exported": true,
-      "is_method": false,
-      "lines": {
-        "total": 23,
-        "code": 16,
-        "comments": 4,
-        "blank": 3
-      },
-      "signature": {
-        "parameter_count": 3,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.8
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 126,
-        "has_example": false,
-        "quality_score": 0.4
-      }
-    },
-    {
-      "name": "EnvVars",
-      "package": "autotuner",
-      "file": "internal/autotuner/ollama.go",
-      "line": 42,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "OllamaEnv",
-      "lines": {
-        "total": 5,
-        "code": 5,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.3
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 86,
-        "has_example": false,
-        "quality_score": 0.44400000000000006
       }
     },
     {
@@ -14486,6 +14523,77 @@
         "comment_length": 56,
         "has_example": false,
         "quality_score": 0.32400000000000007
+      }
+    },
+    {
+      "name": "OllamaConfig",
+      "package": "autotuner",
+      "file": "internal/autotuner/ollama.go",
+      "line": 15,
+      "is_exported": true,
+      "is_method": false,
+      "lines": {
+        "total": 23,
+        "code": 16,
+        "comments": 4,
+        "blank": 3
+      },
+      "signature": {
+        "parameter_count": 3,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.8
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 126,
+        "has_example": false,
+        "quality_score": 0.4
+      }
+    },
+    {
+      "name": "EnvVars",
+      "package": "autotuner",
+      "file": "internal/autotuner/ollama.go",
+      "line": 42,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "OllamaEnv",
+      "lines": {
+        "total": 5,
+        "code": 5,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.3
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 86,
+        "has_example": false,
+        "quality_score": 0.44400000000000006
       }
     },
     {
@@ -15233,9 +15341,9 @@
       },
       "documentation": {
         "has_comment": true,
-        "comment_length": 97,
+        "comment_length": 107,
         "has_example": false,
-        "quality_score": 0.388
+        "quality_score": 0.4
       }
     },
     {
@@ -15376,9 +15484,9 @@
       },
       "documentation": {
         "has_comment": true,
-        "comment_length": 97,
+        "comment_length": 107,
         "has_example": false,
-        "quality_score": 0.388
+        "quality_score": 0.4
       }
     },
     {
@@ -15557,6 +15665,41 @@
         "comment_length": 51,
         "has_example": false,
         "quality_score": 0.20400000000000001
+      }
+    },
+    {
+      "name": "supportsModel",
+      "package": "lb",
+      "file": "internal/lb/picker.go",
+      "line": 100,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 9,
+        "code": 9,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 4,
+        "cognitive": 4,
+        "nesting_depth": 2,
+        "overall": 6.2
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 133,
+        "has_example": false,
+        "quality_score": 0.4
       }
     },
     {
@@ -15954,76 +16097,6 @@
       }
     },
     {
-      "name": "WriteLinuxUnit",
-      "package": "serviceinstall",
-      "file": "internal/serviceinstall/linux.go",
-      "line": 21,
-      "is_exported": true,
-      "is_method": false,
-      "lines": {
-        "total": 14,
-        "code": 11,
-        "comments": 0,
-        "blank": 3
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 2,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.6
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 75,
-        "has_example": false,
-        "quality_score": 0.30000000000000004
-      }
-    },
-    {
-      "name": "renderSystemdTemplate",
-      "package": "serviceinstall",
-      "file": "internal/serviceinstall/linux.go",
-      "line": 39,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 20,
-        "code": 17,
-        "comments": 0,
-        "blank": 3
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.8
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 69,
-        "has_example": false,
-        "quality_score": 0.27599999999999997
-      }
-    },
-    {
       "name": "MarshalJSON",
       "package": "pipeline",
       "file": "internal/pipeline/spec.go",
@@ -16096,41 +16169,6 @@
       }
     },
     {
-      "name": "renderTemplate",
-      "package": "serviceinstall",
-      "file": "internal/serviceinstall/template.go",
-      "line": 10,
-      "is_exported": false,
-      "is_method": false,
-      "lines": {
-        "total": 11,
-        "code": 9,
-        "comments": 0,
-        "blank": 2
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 1,
-        "overall": 4.4
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 62,
-        "has_example": false,
-        "quality_score": 0.248
-      }
-    },
-    {
       "name": "WriteDarwinUnit",
       "package": "serviceinstall",
       "file": "internal/serviceinstall/darwin.go",
@@ -16198,6 +16236,111 @@
         "comment_length": 65,
         "has_example": false,
         "quality_score": 0.26
+      }
+    },
+    {
+      "name": "WriteLinuxUnit",
+      "package": "serviceinstall",
+      "file": "internal/serviceinstall/linux.go",
+      "line": 21,
+      "is_exported": true,
+      "is_method": false,
+      "lines": {
+        "total": 14,
+        "code": 11,
+        "comments": 0,
+        "blank": 3
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 2,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.6
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 75,
+        "has_example": false,
+        "quality_score": 0.30000000000000004
+      }
+    },
+    {
+      "name": "renderSystemdTemplate",
+      "package": "serviceinstall",
+      "file": "internal/serviceinstall/linux.go",
+      "line": 39,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 20,
+        "code": 17,
+        "comments": 0,
+        "blank": 3
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.8
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 69,
+        "has_example": false,
+        "quality_score": 0.27599999999999997
+      }
+    },
+    {
+      "name": "renderTemplate",
+      "package": "serviceinstall",
+      "file": "internal/serviceinstall/template.go",
+      "line": 10,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 11,
+        "code": 9,
+        "comments": 0,
+        "blank": 2
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 1,
+        "overall": 4.4
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 62,
+        "has_example": false,
+        "quality_score": 0.248
       }
     },
     {
@@ -16376,185 +16519,6 @@
       }
     },
     {
-      "name": "NewButton",
-      "package": "ui",
-      "file": "internal/ui/button.go",
-      "line": 28,
-      "is_exported": true,
-      "is_method": false,
-      "lines": {
-        "total": 8,
-        "code": 8,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 2,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 1.3
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 48,
-        "has_example": false,
-        "quality_score": 0.192
-      }
-    },
-    {
-      "name": "Bounds",
-      "package": "ui",
-      "file": "internal/ui/button.go",
-      "line": 40,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*Button",
-      "lines": {
-        "total": 0,
-        "code": 0,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.3
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 26,
-        "has_example": false,
-        "quality_score": 0.10400000000000001
-      }
-    },
-    {
-      "name": "SetBounds",
-      "package": "ui",
-      "file": "internal/ui/button.go",
-      "line": 43,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*Button",
-      "lines": {
-        "total": 0,
-        "code": 0,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.5
-      },
-      "complexity": {
-        "cyclomatic": 1,
-        "cognitive": 1,
-        "nesting_depth": 0,
-        "overall": 1.3
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 29,
-        "has_example": false,
-        "quality_score": 0.11599999999999999
-      }
-    },
-    {
-      "name": "Update",
-      "package": "ui",
-      "file": "internal/ui/button.go",
-      "line": 46,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*Button",
-      "lines": {
-        "total": 11,
-        "code": 11,
-        "comments": 0,
-        "blank": 0
-      },
-      "signature": {
-        "parameter_count": 0,
-        "return_count": 1,
-        "has_variadic": false,
-        "returns_error": true,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.3
-      },
-      "complexity": {
-        "cyclomatic": 4,
-        "cognitive": 4,
-        "nesting_depth": 3,
-        "overall": 6.7
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 26,
-        "has_example": false,
-        "quality_score": 0.10400000000000001
-      }
-    },
-    {
-      "name": "Draw",
-      "package": "ui",
-      "file": "internal/ui/button.go",
-      "line": 61,
-      "is_exported": true,
-      "is_method": true,
-      "receiver_type": "*Button",
-      "lines": {
-        "total": 10,
-        "code": 9,
-        "comments": 0,
-        "blank": 1
-      },
-      "signature": {
-        "parameter_count": 1,
-        "return_count": 0,
-        "has_variadic": false,
-        "returns_error": false,
-        "interface_parameters": 0,
-        "generic_parameters": null,
-        "signature_complexity": 0.5
-      },
-      "complexity": {
-        "cyclomatic": 3,
-        "cognitive": 3,
-        "nesting_depth": 2,
-        "overall": 4.9
-      },
-      "documentation": {
-        "has_comment": true,
-        "comment_length": 24,
-        "has_example": false,
-        "quality_score": 0.096
-      }
-    },
-    {
       "name": "NewProgressBar",
       "package": "ui",
       "file": "internal/ui/progressbar.go",
@@ -16725,6 +16689,185 @@
         "cognitive": 2,
         "nesting_depth": 1,
         "overall": 3.1
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 24,
+        "has_example": false,
+        "quality_score": 0.096
+      }
+    },
+    {
+      "name": "NewButton",
+      "package": "ui",
+      "file": "internal/ui/button.go",
+      "line": 28,
+      "is_exported": true,
+      "is_method": false,
+      "lines": {
+        "total": 8,
+        "code": 8,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 2,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 1.3
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 48,
+        "has_example": false,
+        "quality_score": 0.192
+      }
+    },
+    {
+      "name": "Bounds",
+      "package": "ui",
+      "file": "internal/ui/button.go",
+      "line": 40,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*Button",
+      "lines": {
+        "total": 0,
+        "code": 0,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.3
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 26,
+        "has_example": false,
+        "quality_score": 0.10400000000000001
+      }
+    },
+    {
+      "name": "SetBounds",
+      "package": "ui",
+      "file": "internal/ui/button.go",
+      "line": 43,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*Button",
+      "lines": {
+        "total": 0,
+        "code": 0,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.5
+      },
+      "complexity": {
+        "cyclomatic": 1,
+        "cognitive": 1,
+        "nesting_depth": 0,
+        "overall": 1.3
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 29,
+        "has_example": false,
+        "quality_score": 0.11599999999999999
+      }
+    },
+    {
+      "name": "Update",
+      "package": "ui",
+      "file": "internal/ui/button.go",
+      "line": 46,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*Button",
+      "lines": {
+        "total": 11,
+        "code": 11,
+        "comments": 0,
+        "blank": 0
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 1,
+        "has_variadic": false,
+        "returns_error": true,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.3
+      },
+      "complexity": {
+        "cyclomatic": 4,
+        "cognitive": 4,
+        "nesting_depth": 3,
+        "overall": 6.7
+      },
+      "documentation": {
+        "has_comment": true,
+        "comment_length": 26,
+        "has_example": false,
+        "quality_score": 0.10400000000000001
+      }
+    },
+    {
+      "name": "Draw",
+      "package": "ui",
+      "file": "internal/ui/button.go",
+      "line": 61,
+      "is_exported": true,
+      "is_method": true,
+      "receiver_type": "*Button",
+      "lines": {
+        "total": 10,
+        "code": 9,
+        "comments": 0,
+        "blank": 1
+      },
+      "signature": {
+        "parameter_count": 1,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0.5
+      },
+      "complexity": {
+        "cyclomatic": 3,
+        "cognitive": 3,
+        "nesting_depth": 2,
+        "overall": 4.9
       },
       "documentation": {
         "has_comment": true,
@@ -17049,46 +17192,41 @@
       "overall": 70.5
     },
     "quality": {
-      "average_length": 84.0428134556575,
+      "average_length": 82.33106134371957,
       "code_examples": 20,
-      "inline_comments": 1835,
+      "inline_comments": 1882,
       "block_comments": 1,
       "quality_score": 88.2
     },
     "todo_comments": [
       {
-        "file": "/tmp/workspace/opd-ai/cluster/cmd/gateway/pipelines.go",
-        "line": 69,
-        "description": "Retrieve pipeline status from storage/cache"
-      },
-      {
         "file": "/tmp/workspace/opd-ai/cluster/cmd/node-agent/main.go",
-        "line": 217,
+        "line": 254,
         "description": "actually check process status"
       },
       {
         "file": "/tmp/workspace/opd-ai/cluster/cmd/node-agent/main.go",
-        "line": 218,
+        "line": 255,
         "description": "actually check model readiness"
       },
       {
         "file": "/tmp/workspace/opd-ai/cluster/cmd/node-agent/main.go",
-        "line": 238,
+        "line": 275,
         "description": "read from nvidia-smi or similar"
       },
       {
         "file": "/tmp/workspace/opd-ai/cluster/cmd/node-agent/main.go",
-        "line": 241,
+        "line": 278,
         "description": "get from role process"
       },
       {
         "file": "/tmp/workspace/opd-ai/cluster/cmd/node-agent/main.go",
-        "line": 248,
+        "line": 285,
         "description": "read from /proc/stat"
       },
       {
         "file": "/tmp/workspace/opd-ai/cluster/cmd/node-agent/main.go",
-        "line": 249,
+        "line": 286,
         "description": "read from /proc/meminfo"
       }
     ],
@@ -17122,7 +17260,7 @@
     "stale_annotations": 0,
     "annotations_by_category": {
       "DEPRECATED": 4,
-      "TODO": 7
+      "TODO": 6
     }
   },
   "generics": {
@@ -17140,9 +17278,9 @@
     "complexity_score": 0
   },
   "duplication": {
-    "clone_pairs": 22,
-    "duplicated_lines": 252,
-    "duplication_ratio": 0.01734820322180917,
+    "clone_pairs": 21,
+    "duplicated_lines": 242,
+    "duplication_ratio": 0.016306178828919885,
     "largest_clone_size": 18,
     "clones": [
       {
@@ -17241,14 +17379,14 @@
         "instances": [
           {
             "file": "cmd/eval-harness/main.go",
-            "start_line": 77,
-            "end_line": 82,
+            "start_line": 78,
+            "end_line": 83,
             "node_count": 54
           },
           {
             "file": "cmd/pipeline/main.go",
-            "start_line": 97,
-            "end_line": 102,
+            "start_line": 98,
+            "end_line": 103,
             "node_count": 54
           }
         ],
@@ -17283,14 +17421,14 @@
         "instances": [
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 416,
-            "end_line": 421,
+            "start_line": 419,
+            "end_line": 424,
             "node_count": 44
           },
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 422,
-            "end_line": 427,
+            "start_line": 425,
+            "end_line": 430,
             "node_count": 44
           },
           {
@@ -17310,14 +17448,14 @@
         "instances": [
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 102,
-            "end_line": 108,
+            "start_line": 104,
+            "end_line": 110,
             "node_count": 63
           },
           {
             "file": "cmd/k8s-trainer/main.go",
-            "start_line": 137,
-            "end_line": 143,
+            "start_line": 136,
+            "end_line": 142,
             "node_count": 63
           }
         ],
@@ -17394,20 +17532,20 @@
         "instances": [
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 227,
-            "end_line": 234,
+            "start_line": 230,
+            "end_line": 237,
             "node_count": 54
           },
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 237,
-            "end_line": 246,
+            "start_line": 240,
+            "end_line": 249,
             "node_count": 54
           },
           {
             "file": "cmd/node-agent/main.go",
-            "start_line": 132,
-            "end_line": 137,
+            "start_line": 162,
+            "end_line": 167,
             "node_count": 54
           }
         ],
@@ -17421,8 +17559,8 @@
         "instances": [
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 412,
-            "end_line": 421,
+            "start_line": 415,
+            "end_line": 424,
             "node_count": 70
           },
           {
@@ -17464,27 +17602,6 @@
         "suggestion": "Extract 10-line duplicate code block into a shared function. Found in 3 locations"
       },
       {
-        "hash": "f36e0b7de7fae116",
-        "type": "renamed",
-        "instances": [
-          {
-            "file": "cmd/dataset-build/main.go",
-            "start_line": 96,
-            "end_line": 105,
-            "node_count": 60
-          },
-          {
-            "file": "cmd/modelfile-gen/main.go",
-            "start_line": 109,
-            "end_line": 118,
-            "node_count": 60
-          }
-        ],
-        "line_count": 10,
-        "severity": "warning",
-        "suggestion": "Extract 10-line duplicate code block into a shared function. Found in 2 locations. Consider using generics or interface-based abstraction"
-      },
-      {
         "hash": "44dfc73f995989f1",
         "type": "exact",
         "instances": [
@@ -17511,14 +17628,14 @@
         "instances": [
           {
             "file": "cmd/gateway/images.go",
-            "start_line": 64,
-            "end_line": 78,
+            "start_line": 66,
+            "end_line": 80,
             "node_count": 80
           },
           {
             "file": "cmd/gateway/images.go",
-            "start_line": 107,
-            "end_line": 121,
+            "start_line": 109,
+            "end_line": 123,
             "node_count": 80
           }
         ],
@@ -17553,14 +17670,14 @@
         "instances": [
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 253,
-            "end_line": 268,
+            "start_line": 256,
+            "end_line": 271,
             "node_count": 98
           },
           {
             "file": "cmd/rag/main.go",
-            "start_line": 578,
-            "end_line": 593,
+            "start_line": 586,
+            "end_line": 601,
             "node_count": 98
           }
         ],
@@ -17595,14 +17712,14 @@
         "instances": [
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 502,
-            "end_line": 519,
+            "start_line": 505,
+            "end_line": 522,
             "node_count": 101
           },
           {
             "file": "cmd/gateway/main.go",
-            "start_line": 527,
-            "end_line": 544,
+            "start_line": 530,
+            "end_line": 547,
             "node_count": 101
           }
         ],
