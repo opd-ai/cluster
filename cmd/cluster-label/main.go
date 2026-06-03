@@ -39,9 +39,9 @@ import (
 
 // LabelConfig holds CLI flags.
 type LabelConfig struct {
-	InventoryPath string
+	InventoryPath  string
 	KubeconfigPath string
-	DryRun        bool
+	DryRun         bool
 }
 
 // InventoryNode holds the fields needed to compute labels and taints.

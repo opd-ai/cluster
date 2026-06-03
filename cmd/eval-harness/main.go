@@ -52,25 +52,25 @@ type holdoutExample struct {
 
 // evalResult captures one generation result.
 type evalResult struct {
-	Source       string  `json:"source"`
-	Reference    string  `json:"reference"`
-	Generated    string  `json:"generated"`
-	ExactMatch   bool    `json:"exact_match"`
-	TokenF1      float64 `json:"token_f1"`
-	UnigramPrec  float64 `json:"unigram_precision"`
+	Source      string  `json:"source"`
+	Reference   string  `json:"reference"`
+	Generated   string  `json:"generated"`
+	ExactMatch  bool    `json:"exact_match"`
+	TokenF1     float64 `json:"token_f1"`
+	UnigramPrec float64 `json:"unigram_precision"`
 }
 
 // evalSummary holds aggregate metrics for one model evaluation.
 type evalSummary struct {
-	Model        string       `json:"model"`
-	Namespace    string       `json:"namespace"`
-	Repo         string       `json:"repo"`
-	ExactMatchAcc float64     `json:"exact_match_accuracy"`
-	AvgTokenF1   float64     `json:"avg_token_f1"`
-	AvgUnigramP  float64     `json:"avg_unigram_precision"`
-	N            int          `json:"n_examples"`
-	CreatedAt    time.Time    `json:"created_at"`
-	Results      []evalResult `json:"results"`
+	Model         string       `json:"model"`
+	Namespace     string       `json:"namespace"`
+	Repo          string       `json:"repo"`
+	ExactMatchAcc float64      `json:"exact_match_accuracy"`
+	AvgTokenF1    float64      `json:"avg_token_f1"`
+	AvgUnigramP   float64      `json:"avg_unigram_precision"`
+	N             int          `json:"n_examples"`
+	CreatedAt     time.Time    `json:"created_at"`
+	Results       []evalResult `json:"results"`
 }
 
 func main() {

@@ -4,8 +4,8 @@
 // It reads configs/namespaces.yaml and the checkpoints directory, then emits
 // one Modelfile per namespace and one per repo adapter:
 //
-//   modelfiles/<namespace>/Modelfile           — namespace-wide adapter
-//   modelfiles/<namespace>/<repo>/Modelfile    — per-repo adapter
+//	modelfiles/<namespace>/Modelfile           — namespace-wide adapter
+//	modelfiles/<namespace>/<repo>/Modelfile    — per-repo adapter
 //
 // Usage:
 //
