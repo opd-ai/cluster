@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -183,6 +184,13 @@ func (c *ragClient) post(ctx context.Context, url string, body []byte) ([]byte, 
 		return nil, err
 	}
 	defer resp.Body.Close()
+	
+	// Check for successful status code
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed: status %d: %s", resp.StatusCode, string(body))
+	}
+	
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(resp.Body)
 	return buf.Bytes(), err
