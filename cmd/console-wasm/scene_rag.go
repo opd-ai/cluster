@@ -14,9 +14,9 @@ import (
 
 // ragChunk is a single RAG document chunk shown in the browser.
 type ragChunk struct {
-	ID      string `json:"id"`
-	Source  string `json:"source"`
-	Content string `json:"content"`
+	ID      string  `json:"id"`
+	Source  string  `json:"source"`
+	Content string  `json:"content"`
 	Score   float64 `json:"score,omitempty"`
 }
 
@@ -27,15 +27,15 @@ type ragQueryResponse struct {
 
 // ragAdminScene lets operators browse/ingest RAG collections.
 type ragAdminScene struct {
-	onBack       func()
-	backBtn      *ui.Button
-	queryBtn     *ui.Button
-	ingestBtn    *ui.Button
-	queryInput   string
-	collection   string
-	chunks       []ragChunk
-	statusMsg    string
-	busy         bool
+	onBack     func()
+	backBtn    *ui.Button
+	queryBtn   *ui.Button
+	ingestBtn  *ui.Button
+	queryInput string
+	collection string
+	chunks     []ragChunk
+	statusMsg  string
+	busy       bool
 }
 
 func newRAGAdminScene(onBack func()) *ragAdminScene {

@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -20,6 +21,7 @@ type chatMessage struct {
 
 // chatScene is the chat playground for testing LLM completions.
 type chatScene struct {
+	mu       sync.Mutex
 	onBack   func()
 	backBtn  *ui.Button
 	sendBtn  *ui.Button
@@ -39,17 +41,26 @@ func newChatScene(onBack func()) *chatScene {
 
 func (s *chatScene) sendMessage() {
 	text := strings.TrimSpace(s.input)
-	if text == "" || s.busy {
+	if text == "" {
+		return
+	}
+
+	s.mu.Lock()
+	if s.busy {
+		s.mu.Unlock()
 		return
 	}
 	s.messages = append(s.messages, chatMessage{Role: "user", Content: text})
 	s.input = ""
 	s.busy = true
+	s.mu.Unlock()
 
 	go func() {
 		reply := s.callChat(text)
+		s.mu.Lock()
 		s.messages = append(s.messages, chatMessage{Role: "assistant", Content: reply})
 		s.busy = false
+		s.mu.Unlock()
 	}()
 }
 

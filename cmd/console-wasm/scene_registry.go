@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"net/http"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -23,13 +24,14 @@ type modelEntry struct {
 
 // registryScene lets operators browse the model registry.
 type registryScene struct {
-	onBack    func()
-	backBtn   *ui.Button
+	mu         sync.Mutex
+	onBack     func()
+	backBtn    *ui.Button
 	refreshBtn *ui.Button
-	models    []modelEntry
-	selected  int
-	busy      bool
-	statusMsg string
+	models     []modelEntry
+	selected   int
+	busy       bool
+	statusMsg  string
 }
 
 func newRegistryScene(onBack func()) *registryScene {
@@ -45,15 +47,21 @@ func newRegistryScene(onBack func()) *registryScene {
 }
 
 func (s *registryScene) fetchModels() {
+	s.mu.Lock()
 	if s.busy {
+		s.mu.Unlock()
 		return
 	}
 	s.busy = true
+	s.mu.Unlock()
+
 	go func() {
-		defer func() { s.busy = false }()
 		resp, err := http.Get("/v1/models")
 		if err != nil {
+			s.mu.Lock()
 			s.statusMsg = "fetch error: " + err.Error()
+			s.busy = false
+			s.mu.Unlock()
 			return
 		}
 		defer resp.Body.Close()
@@ -61,18 +69,27 @@ func (s *registryScene) fetchModels() {
 			Data []modelEntry `json:"data"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			s.mu.Lock()
 			s.statusMsg = "decode error"
+			s.busy = false
+			s.mu.Unlock()
 			return
 		}
+		s.mu.Lock()
 		s.models = result.Data
 		s.statusMsg = fmt.Sprintf("%d models", len(s.models))
+		s.busy = false
+		s.mu.Unlock()
 	}()
 }
 
 func (s *registryScene) Update(_ *SharedState) error {
 	_ = s.backBtn.Update()
 	_ = s.refreshBtn.Update()
-	if s.models == nil {
+	s.mu.Lock()
+	modelsEmpty := s.models == nil
+	s.mu.Unlock()
+	if modelsEmpty {
 		s.fetchModels()
 	}
 	return nil
@@ -89,14 +106,19 @@ func (s *registryScene) Draw(screen *ebiten.Image, _ *SharedState) {
 	// Detail panel.
 	vector.DrawFilledRect(screen, 632, 60, 632, 720, color.RGBA{18, 18, 30, 255}, false)
 
+	s.mu.Lock()
+	models := s.models
+	selected := s.selected
+	s.mu.Unlock()
+
 	rowH := float32(42)
-	for i, m := range s.models {
+	for i, m := range models {
 		if i >= 16 {
 			break
 		}
 		y := float32(68) + float32(i)*rowH
 		bg := color.RGBA{28, 28, 44, 255}
-		if i == s.selected {
+		if i == selected {
 			bg = color.RGBA{50, 50, 80, 255}
 		}
 		vector.DrawFilledRect(screen, 24, y, 584, rowH-4, bg, false)
