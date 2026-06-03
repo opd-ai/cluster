@@ -131,6 +131,10 @@ func broadcastAdapter(nodes []FedNode, adapterPath, roundDir string, dry bool) e
 		return nil
 	}
 	for _, n := range nodes {
+		// Validate node fields to prevent argument injection.
+		if !isValidNodeArg(n.SSHUser) || !isValidNodeArg(n.Address) {
+			return fmt.Errorf("node %s: invalid SSHUser or Address characters", n.Name)
+		}
 		dst := fmt.Sprintf("%s@%s:%s/input/", n.SSHUser, n.Address, roundDir)
 		if dry {
 			log.Printf("  rsync %s %s", adapterPath, dst)
@@ -152,6 +156,10 @@ func triggerLocalTraining(nodes []FedNode, nsName, namespacesPath, baseAdapter,
 	var wg sync.WaitGroup
 	errs := make([]error, len(nodes))
 	for i, n := range nodes {
+		// Validate node fields to prevent argument injection.
+		if !isValidNodeArg(n.SSHUser) || !isValidNodeArg(n.Address) || !isValidNodeArg(n.Name) {
+			return fmt.Errorf("node %s: invalid SSHUser, Address, or Name characters", n.Name)
+		}
 		outputDir := fmt.Sprintf("%s/%s/", roundDir, n.Name)
 		args := []string{
 			n.SSHUser + "@" + n.Address,
@@ -300,4 +308,20 @@ func parseKV(line string) [2]string {
 		return [2]string{"", ""}
 	}
 	return [2]string{strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])}
+}
+
+// isValidNodeArg validates that a string is safe to use in shell commands.
+// Rejects empty strings, leading dashes, and disallowed characters.
+func isValidNodeArg(s string) bool {
+	if s == "" || s[0] == '-' {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '.' || c == '-' ||
+			c == ':' || c == '_' || c == '/' || c == '@') {
+			return false
+		}
+	}
+	return true
 }

@@ -165,6 +165,11 @@ func main() {
 		defer close(stopLora)
 	}
 
+	// Start video job pruning (remove completed/failed jobs older than 24h).
+	stopVideoPrune := make(chan struct{})
+	go pruneVideoJobsLoop(stopVideoPrune)
+	defer close(stopVideoPrune)
+
 	// Start anonymous usage ping (opt-in, off by default).
 	if *telemetry {
 		go telemetryPing(ctx, len(gw.backends))

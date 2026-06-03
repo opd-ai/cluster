@@ -255,14 +255,18 @@ func evalCollection(ctx context.Context, client *ragClient, collection, qaFile s
 }
 
 func recallHit(retrieved, expected []string) bool {
+	if len(expected) == 0 {
+		return false
+	}
 	for _, e := range expected {
 		for _, r := range retrieved {
-			if strings.HasSuffix(r, e) || strings.HasSuffix(e, r) {
+			// Exact match or path-boundary match (prevent suffix false positives).
+			if r == e || strings.HasSuffix(r, "/"+e) {
 				return true
 			}
 		}
 	}
-	return len(expected) == 0
+	return false
 }
 
 func percentile(durations []time.Duration, p int) time.Duration {

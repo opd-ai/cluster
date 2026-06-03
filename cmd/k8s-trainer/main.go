@@ -158,6 +158,14 @@ func main() {
 		log.Fatal("-repo is required for stage=train-repo")
 	}
 
+	// Validate nsName and repo to prevent argument injection in kubectl commands.
+	if !isValidK8sName(nsName) {
+		log.Fatalf("invalid namespace name %q: contains disallowed characters", nsName)
+	}
+	if *repo != "" && !isValidK8sName(*repo) {
+		log.Fatalf("invalid repo name %q: contains disallowed characters", *repo)
+	}
+
 	jobName := fmt.Sprintf("cluster-train-%s-%s-%d", nsName, stage, time.Now().Unix())
 	if *repo != "" {
 		jobName = fmt.Sprintf("cluster-train-%s-%s-%s-%d", nsName, stage, *repo, time.Now().Unix())
@@ -297,4 +305,14 @@ func streamLogs(env []string, jobName string) {
 		return
 	}
 	_ = kubectlRun(env, "logs", strings.TrimSpace(podName))
+}
+
+// isValidK8sName validates that a string is a safe Kubernetes name.
+// Kubernetes names must match [a-z0-9]([-a-z0-9]*[a-z0-9])? per DNS-1123.
+func isValidK8sName(s string) bool {
+	if s == "" || len(s) > 63 {
+		return false
+	}
+	re := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+	return re.MatchString(s)
 }
