@@ -1,19 +1,70 @@
 # Runbook: Add a Node
 
-This runbook describes how to add a new node to a running cluster using the
-`make join` target (powered by `cmd/cluster-join`).
+This runbook describes how to add a new node to a running cluster. The **recommended approach** is zero-configuration deployment, where nodes automatically discover each other. Manual inventory configuration is also supported for environments that require explicit control.
 
 ---
 
 ## Prerequisites
 
-- The control node is running and `cluster/kubeconfig` exists.
-- You have SSH access to the new node (key-based auth, same key used during initial bootstrap).
 - The new node meets hardware prerequisites (see `docs/ollama-daemon-setup.md`).
+- Tailscale is installed and the node is on the same tailnet as existing nodes.
+- For k3s integration: SSH access to the new node (key-based auth).
 
 ---
 
-## Steps
+## Zero-Configuration (Recommended)
+
+With zero-conf deployment, nodes automatically discover each other via UDP multicast beacons.
+
+### 1. Deploy services on the new node
+
+```bash
+# On the new node
+git clone https://github.com/opd-ai/cluster.git && cd cluster
+make build
+
+# Deploy services for the node's roles (auto-detects hardware)
+make deploy ROLES=chat,image-generation
+```
+
+The `node-deploy` command will:
+1. Detect hardware capabilities (GPU, VRAM, RAM, CPU).
+2. Apply resource budgets using `internal/autotuner`.
+3. Install systemd units (Linux) or launchd plists (macOS).
+
+### 2. Start the node agent
+
+```bash
+# Start the node agent (broadcasts discovery beacons)
+NODE_AGENT_API_KEY=change-me
+go run ./cmd/node-agent --roles chat,image-generation --address "$(tailscale ip -4)" --api-key "$NODE_AGENT_API_KEY"
+```
+
+The node-agent will:
+1. Start broadcasting UDP beacons every 10 seconds on `239.77.0.1:9977`.
+2. Serve HTTP endpoints at `:9977` (`/api/v1/info`, `/api/v1/health`, `/api/v1/metrics`).
+
+### 3. Verify discovery
+
+The gateway and other node-agents will automatically discover the new node. Verify:
+
+```bash
+# From any node in the cluster
+curl http://localhost:8080/v1/models | jq '.data[].id'
+# Should include models from the new node
+
+# Or check the node-agent directly
+curl -H "Authorization: ******" \
+  http://<new-node-address>:9977/api/v1/info | jq
+```
+
+The node is now part of the cluster and eligible for request routing.
+
+---
+
+## Manual Inventory Configuration (Legacy)
+
+For environments where auto-discovery is not desired, you can manually configure nodes.
 
 ### 1. Append the new node to the inventory
 
@@ -42,7 +93,7 @@ if you are using GitOps.
 
 ---
 
-### 2. Bootstrap the new node's prerequisites
+### 2. Bootstrap the new node's prerequisites (manual path)
 
 ```bash
 make bootstrap
@@ -55,7 +106,7 @@ Python build dependencies (trainer nodes only) on the new node.
 
 ---
 
-### 3. Join the node to the k3s cluster
+### 3. Join the node to the k3s cluster (manual path)
 
 ```bash
 mkdir -p /tmp/join-scripts
@@ -73,7 +124,7 @@ ssh worker-3 'sudo sh /tmp/worker-3-join.sh'
 
 ---
 
-### 4. Apply node labels
+### 4. Apply node labels (manual path)
 
 ```bash
 go run ./cmd/cluster-label --inventory cluster/inventory.yaml
@@ -116,7 +167,20 @@ For nodes with `role=imagegen`, register the new ComfyUI backend in SwarmUI:
 
 ---
 
-### Rollback
+### Rollback (Zero-Conf)
+
+For zero-conf nodes, stop the `cmd/node-agent` process (or stop whichever
+service manager entry you created locally):
+
+```bash
+# On the node
+pkill -f 'cmd/node-agent'  # if running directly from go run/bin
+```
+
+The gateway will stop receiving fresh beacons. Routing health updates happen via
+periodic backend probes (default interval: 15s).
+
+### Rollback (Manual Inventory)
 
 If the join fails or the node misbehaves:
 

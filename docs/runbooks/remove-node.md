@@ -1,20 +1,57 @@
 # Runbook: Remove a Node
 
-This runbook describes how to safely remove a node from a running cluster
-using `cmd/drain`.
+This runbook describes how to safely remove a node from a running cluster.
+For **zero-conf nodes**, simply stop the node-agent. For nodes with k3s integration, use `cmd/drain`.
 
 ---
 
 ## Prerequisites
 
-- The cluster is reachable via `cluster/kubeconfig`.
-- You have SSH access to the target node.
+- For zero-conf removal: Access to the node to stop services.
+- For k3s removal: The cluster is reachable via `cluster/kubeconfig`.
 - All stateful data on the node (adapters, vector shards) has a replica on
   at least one peer node, **or** you accept the data loss.
 
 ---
 
-## Steps
+## Zero-Configuration Removal (Recommended)
+
+For nodes added via zero-conf deployment, removal is straightforward:
+
+### 1. Stop the node-agent
+
+```bash
+# If node-agent is running directly
+pkill -f 'cmd/node-agent'
+
+# Or stop the service unit/plist name you configured locally
+# (node-deploy writes role units such as ollama-chat / swarmui-image-generation)
+```
+
+### 2. Verify removal
+
+The gateway and other nodes will stop receiving beacons from this node. Backend
+health status is then updated by periodic `/api/tags` probes (`--probe-interval`,
+default 15s).
+
+```bash
+# Verify the node is no longer being routed to
+curl -H "Authorization: ******" http://localhost:8080/v1/models | jq '.data[].id'
+```
+
+### 3. Optional: Clean up services
+
+```bash
+# Stop Ollama and other services
+sudo systemctl stop ollama-chat
+sudo systemctl stop swarmui-image-generation  # if image-gen role
+```
+
+---
+
+## Manual Inventory / k3s Removal (Legacy)
+
+For nodes configured via manual inventory or integrated with k3s:
 
 ### 1. Verify the node is healthy enough to drain
 

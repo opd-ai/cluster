@@ -5,9 +5,17 @@
 
 ## Overview
 
+The cluster uses a **zero-configuration architecture** for node beacons on `239.77.0.1:9977`. Nodes automatically discover each other via UDP multicast, and the gateway can route to discovered backends when started with `--discovery=true`. Manual inventory configuration remains supported.
+
 ```
                     ┌─────────────────────────────────────────────┐
                     │                 Tailnet (VPN)                │
+                    │                                              │
+                    │  ┌────────────────────────────────────────┐ │
+                    │  │  UDP Multicast Discovery (239.77.0.1)  │ │
+                    │  │  • node-agent broadcasts every 10s     │ │
+                    │  │  • gateway/peers auto-discover nodes   │ │
+                    │  └────────────────────────────────────────┘ │
                     │                                              │
   Client ──HTTPS──► │  Gateway :8080 (ai-cluster namespace)       │
                     │    │                                         │
@@ -23,17 +31,40 @@
                     └─────────────────────────────────────────────┘
 ```
 
+## Node Discovery Flow
+
+Zero-configuration deployment uses the following discovery mechanism:
+
+```
+Node A (node-agent)
+  │  Start node-agent with --roles and --address
+  │  UDP beacon every 10s → 239.77.0.1:9977
+  │    Payload: {hostname, roles, address, port, seq}
+  ▼
+Multicast Group (239.77.0.1:9977)
+  │  Gateway and other node-agents join group
+  ▼
+Gateway / Peer Nodes
+  │  Receive beacon, deduplicate by (address, seq)
+  │  Gateway maps beacon services to backend roles/ports
+  ▼
+Node registered in lb.BackendRegistry
+  │  Available for request routing
+```
+
 ## Data Flow
 
-### LLM Inference
+### LLM Inference (Zero-Conf Path)
 
 ```
 Client
   │  POST /v1/chat/completions {model, messages}
   ▼
-Gateway (cmd/gateway)
+Gateway (cmd/gateway) [with --discovery=true]
   │  auth via API key (Authorization: Bearer)
-  │  select backend via Placer (inventory health check)
+  │  select backend via lb.BackendRegistry
+  │    → auto-discovered backends from multicast
+  │    → or manually configured inventory
   ▼
 Ollama :11434 (Linux/GPU node or Mac node)
   │  POST /api/chat
@@ -46,7 +77,9 @@ CPU-only node and verification to the full model on a GPU node. Draft and
 full model run in separate Ollama processes on different tailnet addresses.
 
 Hot-swap: Gateway re-reads inventory on SIGHUP; in-flight requests drain to
-old backend while new requests are routed to the new backend.
+old backend while new requests are routed to the new backend. Auto-discovered
+nodes are registered when discovery is enabled; backend health is tracked by
+periodic `/api/tags` probes.
 
 ### Federated Training Flow
 

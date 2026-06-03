@@ -1,15 +1,18 @@
 # Two-Node Quickstart
 
-Bring up a complete two-node AI cluster on your laptop using Vagrant and
-VirtualBox. The cluster runs:
+Bring up a complete two-node AI cluster using **zero-configuration deployment**.
+Nodes automatically discover each other via UDP multicast beacons—no manual
+inventory editing required.
 
-- **Gateway** — OpenAI-compatible API router
+The cluster runs:
+
+- **Gateway** — OpenAI-compatible API router (auto-discovers backends)
 - **Ollama** — LLM inference on both nodes (qwen2.5:1.5b, ~2 GB)
 - **RAG** — retrieval-augmented generation service
 - **Qdrant** — vector store
 - **Console** — Ebitengine WASM web console
 
-**Expected time**: < 60 minutes on a modern laptop (SSD, 16 GB RAM, 8 cores).
+**Expected time**: < 30 minutes with zero-conf (faster than manual inventory setup).
 
 ## Prerequisites
 
@@ -23,19 +26,28 @@ sudo apt-get install vagrant virtualbox
 
 Minimum host resources: 8 CPU cores, 16 GB RAM free, 40 GB disk.
 
-## Start the cluster
+## Start the cluster (Zero-Conf)
 
 ```bash
 cd examples/quickstart-2node
-vagrant up   # ~20 minutes: downloads Ubuntu box, installs k3s, Ollama
+vagrant up   # ~15 minutes: downloads Ubuntu box, installs dependencies
 ```
+
+The Vagrant provisioner will:
+1. Install Ollama on both nodes.
+2. Write `cluster/inventory.yaml` for the two VMs.
+3. Bootstrap k3s on the control VM and join the worker VM.
 
 ## Verify the cluster
 
 ```bash
 vagrant ssh control
-kubectl get nodes      # should show control + worker1 Ready
-kubectl get pods -A    # gateway, rag, qdrant, console should be Running
+
+# Check both nodes are in k3s
+kubectl get nodes -o wide
+
+# Check gateway service is running in-cluster
+kubectl -n ai-cluster get svc gateway
 ```
 
 ## Query the gateway (LLM inference)

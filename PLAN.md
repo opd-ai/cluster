@@ -20,21 +20,29 @@ This plan describes the design, implementation, and validation of multi-role nod
 
 ## Summary
 
-This plan extends the `opd-ai/cluster` Go 1.25 monorepo to deliver single-command, zero-config
-node deployment with automatic LAN peer discovery, intelligent load balancing, cross-node
-WebUI observability, and generative pipeline chaining. A central design constraint is that
-**a single physical host must be able to run any combination of node types simultaneously**
-(`chat`, `image-generation`, `training`); the inventory `Node` schema supports a `Roles []string`
-list, and resource budgeting logic in `internal/autotuner` partitions GPU/VRAM, CPU, and RAM
-across co-located roles at deploy time. Manual `cluster/inventory.yaml` editing remains fully
-supported; auto-discovery is additive and reconciles into the same schema via
-`internal/discovery/reconciler.go`.
+**Zero-configuration deployment is now the default path for the cluster.** This plan documents
+the design, implementation, and validation of the auto-discovery system that enables single-command,
+zero-config node deployment with automatic LAN peer discovery, intelligent load balancing, cross-node
+WebUI observability, and generative pipeline chaining.
+
+A central design constraint is that **a single physical host must be able to run any combination of
+node types simultaneously** (`chat`, `image-generation`, `training`); the inventory `Node` schema
+supports a `Roles []string` list, and resource budgeting logic in `internal/autotuner` partitions
+GPU/VRAM, CPU, and RAM across co-located roles at deploy time.
+
+**Deployment Paths:**
+- **Zero-Configuration (Default):** Run `make deploy` and start `cmd/node-agent` with
+  `--api-key` (or `--open`) on each node. Nodes auto-discover via UDP multicast
+  (`239.77.0.1:9977`) and are added to the gateway backend registry when
+  gateway discovery is enabled (`-discovery=true`).
+- **Manual Inventory (Legacy):** Edit `cluster/inventory.yaml` and run `make bootstrap` + `make up`.
+  Auto-discovery reconciles into the same schema via `internal/discovery/reconciler.go`.
 
 **Current Status (2026-06-03):** Core infrastructure is implemented—the schema changes,
 `cmd/node-deploy`, `cmd/node-agent`, `internal/discovery`, `internal/lb`, `internal/pipeline`,
-and ADRs 008–011 are in place. Remaining work focuses on integration testing, completing
-gateway routing with `lb.BackendRegistry`, WebUI aggregation loops, and fixing known gaps
-documented in `GAPS.md`.
+and ADRs 008–011 are in place. Zero-conf is now the documented default deployment path.
+Remaining work focuses on integration testing, completing gateway routing with `lb.BackendRegistry`,
+WebUI aggregation loops, and fixing known gaps documented in `GAPS.md`.
 
 **Recent Documentation Improvements:**
 - Consolidated phase status with clear completion percentages
@@ -531,7 +539,7 @@ execution persistence by ID.
 | **Inventory YAML corruption on concurrent writes** | Medium | `internal/discovery/reconciler.go` uses `os.CreateTemp` + `os.Rename` (atomic on POSIX); single-writer mutex guards file operations | ✅ Implemented |
 | **Port conflicts when operator manually assigns overlapping ports** | Low | `node-deploy` validates port availability on startup; exits with a clear error if a port is in use | ✅ Implemented in `cmd/node-deploy/main.go` |
 | **`discoverBackends` naive string-scan in gateway breaks with multi-role YAML** | High | P0 replaces this with `internal/inventory` proper YAML parsing via `gopkg.in/yaml.v3` | ✅ Implemented — inventory package used |
-| **New `cmd/node-agent` binary adds deployment complexity** | Medium | `node-deploy` installs and starts `node-agent` automatically; `make agent` provides a dev shortcut | ✅ Implemented |
+| **New `cmd/node-agent` binary adds deployment complexity** | Medium | `node-deploy` writes role service definitions; start `cmd/node-agent` separately with `--api-key` (or `--open`) | ✅ Implemented |
 | **mDNS alternative dependency** | Low | Plan avoids new direct dep by using stdlib UDP multicast; if DNS-SD interop is later required, `golang.org/x/net/dns/dnsmessage` (already transitive) can be used | ✅ N/A — UDP multicast chosen |
 | **WASM binary size growth from new uiapi types** | Low | New types are small structs; no binary size concern expected | ✅ Types added, size acceptable |
 | **Pipeline stage timeout / partial failure** | Medium | `pipeline.Executor` applies per-stage timeout (configurable, default 5 min); partial results are returned with `status: partial`; gateway returns HTTP 206 | ✅ Implemented |
