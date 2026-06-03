@@ -368,8 +368,8 @@ execution persistence by ID.
 - [x] **Update `cmd/gateway/main.go`:** Replace `pickBackend()` / `discoverBackends()` with `lb.BackendRegistry` + `lb.Picker`
 - [x] **FIX GAPS.md:** Add model filtering to all pickers (empty model = any; otherwise filter by `BackendRecord.Models`)
 - [x] **Ensure multi-role routing:** Gateway uses `ServiceBinding.Port` to route image-gen to port 7860 on a host also serving chat on 11434
-- [ ] Run `make lint` and `make test`
-- [ ] Load test: simulate 3 backends, one with queue=10; verify `least-queue` strategy routes away from it
+- [x] Run `make lint` and `make test`
+- [x] Load test: simulate 3 backends, one with queue=10; verify `least-queue` strategy routes away from it
 
 ### Phase 4 — uiapi extensions + console 🔄 IN PROGRESS
 
