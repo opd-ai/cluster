@@ -82,14 +82,9 @@ func (r *BackendRegistry) updatePicker() {
 		out = append(out, b)
 	}
 
-	// Update picker based on type
-	switch p := r.picker.(type) {
-	case *WeightedRoundRobin:
-		p.Update(out)
-	case *LeastQueue:
-		p.Update(out)
-	case *LatencyEWMA:
-		p.Update(out)
+	// Update picker if it implements the Updater interface
+	if u, ok := r.picker.(Updater); ok {
+		u.Update(out)
 	}
 }
 

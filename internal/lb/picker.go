@@ -15,6 +15,12 @@ type Picker interface {
 	Pick(role, model, hint string) *BackendRecord
 }
 
+// Updater is an optional interface that Picker implementations may satisfy
+// to receive backend list updates when the registry changes.
+type Updater interface {
+	Update(backends []*BackendRecord)
+}
+
 // BackendRecord represents a backend node capable of serving requests.
 type BackendRecord struct {
 	Address      string

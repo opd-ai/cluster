@@ -2,6 +2,7 @@
 package lb
 
 import (
+	"math"
 	"sync"
 )
 
@@ -34,7 +35,7 @@ func (l *LatencyEWMA) Pick(role, model, hint string) *BackendRecord {
 	}
 
 	var best *BackendRecord
-	minLatency := float64(^uint(0) >> 1) // max float
+	minLatency := math.MaxFloat64
 
 	for _, b := range l.backends {
 		if !b.Healthy || !hasRole(b, role) {

@@ -2,32 +2,51 @@
 package discovery
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
+	"syscall"
 	"time"
 
 	"github.com/opd-ai/cluster/internal/nodeapi"
 	"golang.org/x/net/ipv4"
+	"golang.org/x/sys/unix"
 )
 
 // Listener receives UDP multicast discovery beacons from peer nodes.
 type Listener struct {
-	conn    *ipv4.PacketConn
-	done    chan struct{}
-	msgCh   chan nodeapi.BeaconMessage
-	seen    map[string]int // address -> seq for dedup
+	conn  *ipv4.PacketConn
+	done  chan struct{}
+	msgCh chan nodeapi.BeaconMessage
+	seen  map[string]int // address -> seq for dedup
 }
 
 // NewListener creates a new beacon listener on the multicast group.
 func NewListener(bufferSize int) (*Listener, error) {
-	addr := net.UDPAddr{
-		Port: MulticastPort,
-		IP:   net.ParseIP("0.0.0.0"),
+	lc := net.ListenConfig{
+		Control: func(network, address string, c syscall.RawConn) error {
+			var setSockOptErr error
+			err := c.Control(func(fd uintptr) {
+				setSockOptErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+			})
+			if err != nil {
+				return err
+			}
+			return setSockOptErr
+		},
 	}
-	conn, err := net.ListenUDP("udp", &addr)
+
+	addrStr := fmt.Sprintf("0.0.0.0:%d", MulticastPort)
+	pc, err := lc.ListenPacket(context.Background(), "udp", addrStr)
 	if err != nil {
 		return nil, fmt.Errorf("listen UDP: %w", err)
+	}
+
+	conn, ok := pc.(*net.UDPConn)
+	if !ok {
+		pc.Close()
+		return nil, fmt.Errorf("unexpected PacketConn type")
 	}
 
 	packetConn := ipv4.NewPacketConn(conn)
@@ -130,11 +149,19 @@ func (l *Listener) run() {
 
 		l.seen[msg.Address] = msg.SeqNum
 
-		// Send on channel (non-blocking; drop if buffer full)
+		// Send on channel; if buffer is full, drop the oldest message to make room.
 		select {
 		case l.msgCh <- msg:
 		default:
-			// Buffer full; drop oldest message and retry
+			// Drop the oldest message and retry with the new one.
+			select {
+			case <-l.msgCh:
+			default:
+			}
+			select {
+			case l.msgCh <- msg:
+			default:
+			}
 		}
 	}
 }

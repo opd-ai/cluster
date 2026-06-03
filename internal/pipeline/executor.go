@@ -55,7 +55,7 @@ func (e *Executor) Execute(ctx context.Context, spec *PipelineSpec) (*PipelineEx
 			err := fmt.Errorf("no healthy backend available for role=%s model=%s", stage.Role, stage.Model)
 			result := StageResult{
 				ID:        stage.ID,
-				Index:     i,
+				Index:     stage.Index,
 				Role:      stage.Role,
 				Status:    "failed",
 				Error:     err.Error(),
@@ -67,8 +67,18 @@ func (e *Executor) Execute(ctx context.Context, spec *PipelineSpec) (*PipelineEx
 			return exec, err
 		}
 
+		// Apply per-stage timeout if specified.
+		stageCtx := ctx
+		var stageCancel context.CancelFunc
+		if stage.Timeout.Duration > 0 {
+			stageCtx, stageCancel = context.WithTimeout(ctx, stage.Timeout.Duration)
+		} else {
+			stageCtx, stageCancel = context.WithCancel(ctx)
+		}
+
 		// Execute the stage on the selected backend
-		result, err := e.executeStage(ctx, backend, stage, stageInput)
+		result, err := e.executeStage(stageCtx, backend, stage, stageInput)
+		stageCancel()
 		if err != nil {
 			result.Status = "failed"
 			result.Error = err.Error()
@@ -111,11 +121,11 @@ func (e *Executor) executeStage(ctx context.Context, backend *lb.BackendRecord, 
 
 	// Prepare pipeline submit request
 	submitReq := struct {
-		StageID   string         `json:"stage_id"`
-		Role      string         `json:"role"`
-		Model     string         `json:"model"`
-		Input     any            `json:"input"`
-		Config    map[string]any `json:"config"`
+		StageID string         `json:"stage_id"`
+		Role    string         `json:"role"`
+		Model   string         `json:"model"`
+		Input   any            `json:"input"`
+		Config  map[string]any `json:"config"`
 	}{
 		StageID: stage.ID,
 		Role:    stage.Role,
@@ -165,10 +175,8 @@ func (e *Executor) executeStage(ctx context.Context, backend *lb.BackendRecord, 
 		select {
 		case <-ctx.Done():
 			return result, ctx.Err()
-		default:
+		case <-time.After(backoff):
 		}
-
-		time.Sleep(backoff)
 
 		// Increase backoff, cap at 5s
 		if backoff < 5*time.Second {

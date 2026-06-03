@@ -56,6 +56,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/opd-ai/cluster/internal/discovery"
 	"github.com/opd-ai/cluster/internal/inventory"
+	"github.com/opd-ai/cluster/internal/lb"
 	"github.com/opd-ai/cluster/internal/tracing"
 	"gopkg.in/yaml.v3"
 )
@@ -70,22 +71,22 @@ type Backend struct {
 
 // Gateway is the main gateway state.
 type Gateway struct {
-	backends           []*Backend
-	apiKeys            map[string]struct{}
-	sticky             map[string]int // (key+model) → backend index
-	loraAdapters       map[string]LoRAAdapter
-	swarmURL           string
-	swarmHealthy       bool
-	ragURL             string
-	quotaCfg           *quotaConfig
-	mu                 sync.RWMutex
-	httpClient         *http.Client  // shared client for connection pooling
-	rrIdx              atomic.Uint64 // round-robin counter for pickBackend
-	speculative        bool
-	reqTotal           atomic.Int64 // total requests handled
-	reqErrors          atomic.Int64 // total gateway request failures
-	pipelineIDCounter  atomic.Int64
-	pipelineExecutor   *pipelineExecutor
+	backends          []*Backend
+	apiKeys           map[string]struct{}
+	sticky            map[string]int // (key+model) → backend index
+	loraAdapters      map[string]LoRAAdapter
+	swarmURL          string
+	swarmHealthy      bool
+	ragURL            string
+	quotaCfg          *quotaConfig
+	mu                sync.RWMutex
+	httpClient        *http.Client  // shared client for connection pooling
+	rrIdx             atomic.Uint64 // round-robin counter for pickBackend
+	speculative       bool
+	reqTotal          atomic.Int64 // total requests handled
+	reqErrors         atomic.Int64 // total gateway request failures
+	pipelineIDCounter atomic.Int64
+	pipelineExecutor  *pipelineExecutor
 }
 
 // maxStickyEntries limits the sticky session map size to prevent unbounded growth.
@@ -135,7 +136,19 @@ func main() {
 		},
 	}
 
+	// Initialize load balancing registry with the requested strategy.
 	log.Printf("Gateway starting with lb-strategy=%s", *lbStrategy)
+	var picker lb.Picker
+	switch *lbStrategy {
+	case "least-queue":
+		picker = lb.NewLeastQueue(nil)
+	case "latency-ewma":
+		picker = lb.NewLatencyEWMA(nil, 0.2)
+	default:
+		picker = lb.NewWeightedRoundRobin(nil)
+	}
+	lbRegistry := lb.NewBackendRegistry(picker)
+	gw.pipelineExecutor = NewPipelineExecutor(lbRegistry)
 
 	// Shared HTTP client with connection pooling (H8).
 	gw.httpClient = &http.Client{
@@ -174,11 +187,13 @@ func main() {
 
 	// Start discovery listener if enabled
 	if *discoveryFlag {
-		stopDiscovery := make(chan struct{})
 		listener, err := discovery.NewListener(100)
 		if err != nil {
 			log.Printf("Warning: discovery listener failed: %v", err)
 		} else {
+			listener.Start()
+			defer listener.Stop()
+			stopDiscovery := make(chan struct{})
 			go gw.discoveryLoop(listener, stopDiscovery)
 			defer close(stopDiscovery)
 		}
@@ -226,6 +241,10 @@ func main() {
 	r.Post("/v1/videos/generations", gw.handleVideoGenerations)
 	r.Post("/v1/videos/edits", gw.handleVideoEdits)
 	r.Get("/v1/videos/jobs/{id}", gw.handleVideoJobStatus)
+
+	// Multi-stage pipeline API
+	r.Post("/v1/pipelines", gw.handlePostPipelines)
+	r.Get("/v1/pipelines/{id}", gw.handleGetPipelineStatus)
 
 	log.Printf("gateway listening on %s (backends: %d, speculative: %v)",
 		*addr, len(gw.backends), *speculative)
@@ -657,21 +676,33 @@ func (gw *Gateway) probeLoop(interval time.Duration, stop <-chan struct{}) {
 func (gw *Gateway) discoveryLoop(listener *discovery.Listener, stop <-chan struct{}) {
 	for {
 		select {
-		case beacon := <-listener.MessagesCh():
-			// Convert beacon to a backend node; use node-agent HTTP endpoint
-			agentURL := fmt.Sprintf("http://%s:%d", beacon.Address, discovery.DefaultNodeAgentPort)
+		case beacon, ok := <-listener.MessagesCh():
+			if !ok {
+				// Channel closed; listener has stopped.
+				return
+			}
+			// Find the Ollama (chat) port from the beacon's service bindings.
+			// Fall back to the standard Ollama port 11434 if not advertised.
+			ollamaPort := "11434"
+			for _, svc := range beacon.Services {
+				if svc.Role == "chat" {
+					ollamaPort = svc.Port
+					break
+				}
+			}
+			backendURL := fmt.Sprintf("http://%s:%s", beacon.Address, ollamaPort)
 			gw.mu.Lock()
 			// Check if backend already exists
 			exists := false
 			for _, b := range gw.backends {
-				if b.URL == agentURL {
+				if b.URL == backendURL {
 					exists = true
 					break
 				}
 			}
 			if !exists {
-				log.Printf("Discovery: adding backend %s from beacon", agentURL)
-				gw.backends = append(gw.backends, &Backend{URL: agentURL, Healthy: true})
+				log.Printf("Discovery: adding backend %s from beacon", backendURL)
+				gw.backends = append(gw.backends, &Backend{URL: backendURL, Healthy: true})
 			}
 			gw.mu.Unlock()
 		case <-stop:

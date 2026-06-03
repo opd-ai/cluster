@@ -103,6 +103,10 @@ func main() {
 					if msg.Address != *address {
 						if err := reconciler.Merge(msg); err != nil {
 							log.Printf("error merging beacon from %s: %v", msg.Hostname, err)
+							continue
+						}
+						if err := reconciler.WriteInventory(); err != nil {
+							log.Printf("error writing inventory after beacon from %s: %v", msg.Hostname, err)
 						}
 					}
 				}
@@ -113,16 +117,16 @@ func main() {
 	// Start HTTP API server
 	mux := chi.NewRouter()
 	handlers := &apiHandlers{
-		hostname:   *hostname,
-		address:    *address,
-		roles:      roles,
-		vramGB:     *vramGB,
-		ramGB:      *ramGB,
-		peers:      make([]nodeapi.PeerRecord, 0),
-		peersMu:    &sync.RWMutex{},
-		listener:   listener,
-		jobs:       make(map[string]pipelineJob),
-		jobsMu:     &sync.RWMutex{},
+		hostname: *hostname,
+		address:  *address,
+		roles:    roles,
+		vramGB:   *vramGB,
+		ramGB:    *ramGB,
+		peers:    make([]nodeapi.PeerRecord, 0),
+		peersMu:  &sync.RWMutex{},
+		listener: listener,
+		jobs:     make(map[string]pipelineJob),
+		jobsMu:   &sync.RWMutex{},
 	}
 
 	mux.Get("/api/v1/info", handlers.handleInfo)
@@ -348,14 +352,15 @@ func (h *apiHandlers) handlePipelineResult(w http.ResponseWriter, r *http.Reques
 func buildServices(roles []string) []inventory.ServiceBinding {
 	// Map roles to ports based on PLAN specification
 	portMap := map[string]string{
-		"chat":               "11434",
-		"image-generation":   "7860",
-		"training":           "7861",
-		"embeddings":         "11434",
-		"node-agent":         "9977",
+		"chat":             "11434",
+		"image-generation": "7860",
+		"training":         "7861",
+		"embeddings":       "11434",
+		"node-agent":       "9977",
 	}
 
 	var services []inventory.ServiceBinding
+	hasNodeAgent := false
 	for _, role := range roles {
 		if port, ok := portMap[role]; ok {
 			services = append(services, inventory.ServiceBinding{
@@ -363,13 +368,18 @@ func buildServices(roles []string) []inventory.ServiceBinding {
 				Port: port,
 			})
 		}
+		if role == "node-agent" {
+			hasNodeAgent = true
+		}
 	}
 
-	// Always add node-agent service
-	services = append(services, inventory.ServiceBinding{
-		Role: "node-agent",
-		Port: "9977",
-	})
+	// Always ensure node-agent service is present, but only add it once.
+	if !hasNodeAgent {
+		services = append(services, inventory.ServiceBinding{
+			Role: "node-agent",
+			Port: "9977",
+		})
+	}
 
 	return services
 }
