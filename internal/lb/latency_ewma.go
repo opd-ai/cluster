@@ -25,7 +25,7 @@ func NewLatencyEWMA(backends []*BackendRecord, alpha float64) *LatencyEWMA {
 	}
 }
 
-// Pick selects the backend with the lowest latency EMA among healthy backends supporting the role.
+// Pick selects the backend with the lowest latency EMA among healthy backends supporting the role and model.
 func (l *LatencyEWMA) Pick(role, model, hint string) *BackendRecord {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -38,7 +38,7 @@ func (l *LatencyEWMA) Pick(role, model, hint string) *BackendRecord {
 	minLatency := math.MaxFloat64
 
 	for _, b := range l.backends {
-		if !b.Healthy || !hasRole(b, role) {
+		if !b.Healthy || !hasRole(b, role) || !supportsModel(b, model) {
 			continue
 		}
 

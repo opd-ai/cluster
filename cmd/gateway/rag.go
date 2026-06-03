@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -101,6 +102,11 @@ func retrieveRAGContext(ctx context.Context, client *http.Client, ragURL, query,
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("rag query failed with status %d: %s", resp.StatusCode, string(body))
+	}
 
 	var qr ragQueryResponse
 	if err := json.NewDecoder(resp.Body).Decode(&qr); err != nil {

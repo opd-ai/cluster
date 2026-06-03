@@ -18,7 +18,7 @@ func NewLeastQueue(backends []*BackendRecord) *LeastQueue {
 	}
 }
 
-// Pick selects the backend with the lowest queue depth among healthy backends supporting the role.
+// Pick selects the backend with the lowest queue depth among healthy backends supporting the role and model.
 func (l *LeastQueue) Pick(role, model, hint string) *BackendRecord {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -31,7 +31,7 @@ func (l *LeastQueue) Pick(role, model, hint string) *BackendRecord {
 	minQueue := int(^uint(0) >> 1) // max int
 
 	for _, b := range l.backends {
-		if !b.Healthy || !hasRole(b, role) {
+		if !b.Healthy || !hasRole(b, role) || !supportsModel(b, model) {
 			continue
 		}
 

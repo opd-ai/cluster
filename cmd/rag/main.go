@@ -179,7 +179,7 @@ func (s *server) handleQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := s.retrieve(r.Context(), req.Query, req.Collection, req.TopK)
+	results, err := s.retrieve(r.Context(), r.Header.Get("Authorization"), req.Query, req.Collection, req.TopK)
 	if err != nil {
 		log.Printf("retrieve: %v", err)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusInternalServerError)
@@ -231,7 +231,7 @@ func (s *server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		model = s.cfg.chatModel
 	}
 
-	hits, err := s.retrieve(r.Context(), req.Query, req.Collection, req.TopK)
+	hits, err := s.retrieve(r.Context(), r.Header.Get("Authorization"), req.Query, req.Collection, req.TopK)
 	if err != nil {
 		log.Printf("retrieve for answer: %v", err)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusInternalServerError)
@@ -269,9 +269,9 @@ func (s *server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 // Core retrieval
 // -------------------------------------------------------------------------
 
-func (s *server) retrieve(ctx context.Context, query, collection string, topK int) ([]result, error) {
+func (s *server) retrieve(ctx context.Context, authHeader, query, collection string, topK int) ([]result, error) {
 	// 1. Dense retrieval via Qdrant
-	vec, err := s.embed(ctx, query)
+	vec, err := s.embed(ctx, authHeader, query)
 	if err != nil {
 		return nil, fmt.Errorf("embed query: %w", err)
 	}
@@ -378,7 +378,7 @@ func (s *server) chatWithContext(ctx context.Context, query string, hits []resul
 // Embedding
 // -------------------------------------------------------------------------
 
-func (s *server) embed(ctx context.Context, text string) ([]float32, error) {
+func (s *server) embed(ctx context.Context, authHeader, text string) ([]float32, error) {
 	body := map[string]any{
 		"input": []string{text},
 		"model": s.cfg.embeddingModel,
@@ -394,6 +394,9 @@ func (s *server) embed(ctx context.Context, text string) ([]float32, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -440,7 +443,12 @@ func (s *server) collectionAllowed(r *http.Request, collection string) bool {
 	}
 	key := extractBearer(r)
 	allowed, ok := s.cfg.collectionACL[key]
-	return ok && (allowed == "" || allowed == collection)
+	if !ok {
+		// Default-allow: if the key has no ACL entry, allow access to any collection
+		return true
+	}
+	// Key has an ACL entry: check if the collection matches
+	return allowed == "" || allowed == collection
 }
 
 func extractBearer(r *http.Request) string {

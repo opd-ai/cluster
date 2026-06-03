@@ -68,20 +68,16 @@ func BudgetSplit(roles []string, hw *HardwareProfile, overrides map[string]int) 
 
 	// Allocate VRAM per role
 	allocatedVram := 0
-	for i, role := range filteredRoles {
+	for _, role := range filteredRoles {
 		minVram := roleMinVram[role]
+		remainingVram := hw.VramGB - allocatedVram
+		
 		allocated := int(float64(minVram) * vramScale)
-		if allocated < 1 && hw.VramGB > 0 {
+		if allocated < 1 && remainingVram > 0 {
 			allocated = 1
 		}
-
-		// Last role gets any remainder
-		if i == len(filteredRoles)-1 {
-			allocated = hw.VramGB - allocatedVram
-		}
-
-		if allocated < 0 {
-			allocated = 0
+		if allocated > remainingVram {
+			allocated = remainingVram
 		}
 
 		allocatedVram += allocated

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -183,6 +184,13 @@ func (c *ragClient) post(ctx context.Context, url string, body []byte) ([]byte, 
 		return nil, err
 	}
 	defer resp.Body.Close()
+	
+	// Check for successful status code
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed: status %d: %s", resp.StatusCode, string(body))
+	}
+	
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(resp.Body)
 	return buf.Bytes(), err
@@ -222,7 +230,7 @@ func evalCollection(ctx context.Context, client *ragClient, collection, qaFile s
 	}
 
 	var queryLatencies, answerLatencies []time.Duration
-	recallHits := 0
+	totalRecall := 0.0
 	faithHits := 0
 
 	for _, item := range items {
@@ -232,9 +240,8 @@ func evalCollection(ctx context.Context, client *ragClient, collection, qaFile s
 			log.Printf("query error: %v", err)
 			continue
 		}
-		if recallHit(files, item.ExpectedFiles) {
-			recallHits++
-		}
+		// Calculate fraction of expected files found
+		totalRecall += recallFraction(files, item.ExpectedFiles)
 
 		answer, al, err := client.answer(ctx, item.Question, collection)
 		answerLatencies = append(answerLatencies, al)
@@ -253,7 +260,7 @@ func evalCollection(ctx context.Context, client *ragClient, collection, qaFile s
 		}
 	}
 
-	result.RecallAtK = float64(recallHits) / float64(len(items))
+	result.RecallAtK = totalRecall / float64(len(items))
 	result.Faithfulness = float64(faithHits) / float64(len(items))
 	result.LatencyQueryP50 = percentile(queryLatencies, 50)
 	result.LatencyQueryP95 = percentile(queryLatencies, 95)
@@ -263,19 +270,22 @@ func evalCollection(ctx context.Context, client *ragClient, collection, qaFile s
 	return result, nil
 }
 
-func recallHit(retrieved, expected []string) bool {
+// recallFraction returns the fraction of expected files found in the retrieved list
+func recallFraction(retrieved, expected []string) float64 {
 	if len(expected) == 0 {
-		return false
+		return 0.0
 	}
+	found := 0
 	for _, e := range expected {
 		for _, r := range retrieved {
-			// Exact match or path-boundary match (prevent suffix false positives).
+			// Exact match or path-boundary match (prevent suffix false positives)
 			if r == e || strings.HasSuffix(r, "/"+e) {
-				return true
+				found++
+				break
 			}
 		}
 	}
-	return false
+	return float64(found) / float64(len(expected))
 }
 
 func percentile(durations []time.Duration, p int) time.Duration {

@@ -11,6 +11,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -86,14 +88,14 @@ func (gw *Gateway) handleImageGenerations(w http.ResponseWriter, r *http.Request
 		"model":     swarmModel(req.Model),
 	}
 
-	images, err := gw.callSwarm("/API/GenerateText2Image", swarmReq)
+	images, err := gw.callSwarm(r.Context(), "/API/GenerateText2Image", swarmReq)
 	if err != nil {
 		log.Printf("swarm generate: %v", err)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadGateway)
 		return
 	}
 
-	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL))
+	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL, gw.httpClient))
 }
 
 // handleImageEdits proxies POST /v1/images/edits to SwarmUI.
@@ -130,24 +132,24 @@ func (gw *Gateway) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 		"donotsave":  false,
 	}
 
-	images, err := gw.callSwarm("/API/GenerateImage2Image", swarmReq)
+	images, err := gw.callSwarm(r.Context(), "/API/GenerateImage2Image", swarmReq)
 	if err != nil {
 		log.Printf("swarm edit: %v", err)
 		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadGateway)
 		return
 	}
 
-	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL))
+	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL, gw.httpClient))
 }
 
 // callSwarm sends a request to the SwarmUI API and returns image paths/URLs.
-func (gw *Gateway) callSwarm(path string, body map[string]any) ([]string, error) {
+func (gw *Gateway) callSwarm(ctx context.Context, path string, body map[string]any) ([]string, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, gw.swarmURL+path, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, gw.swarmURL+path, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -178,11 +180,32 @@ func (gw *Gateway) callSwarm(path string, body map[string]any) ([]string, error)
 }
 
 // buildImageResponse converts SwarmUI image paths to an OpenAI-style response.
-func buildImageResponse(images []string, format, baseURL string) imageResponse {
+func buildImageResponse(images []string, format, baseURL string, client *http.Client) imageResponse {
 	var items []imageDataItem
 	for _, img := range images {
 		if format == "b64_json" {
-			items = append(items, imageDataItem{B64JSON: img})
+			// Fetch image and base64-encode it
+			fullURL := img
+			if len(img) > 0 && img[0] == '/' {
+				fullURL = baseURL + img
+			}
+			resp, err := client.Get(fullURL)
+			if err != nil {
+				log.Printf("fetch image for b64_json: %v", err)
+				continue // skip failed images
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				log.Printf("fetch image returned status %d", resp.StatusCode)
+				continue
+			}
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("read image body: %v", err)
+				continue
+			}
+			b64 := base64.StdEncoding.EncodeToString(data)
+			items = append(items, imageDataItem{B64JSON: b64})
 		} else {
 			// SwarmUI returns relative paths; prepend the base URL.
 			url := img
@@ -200,11 +223,23 @@ func buildImageResponse(images []string, format, baseURL string) imageResponse {
 
 // normalizeImageParams applies defaults to image request parameters.
 func normalizeImageParams(n int, size string) (int, string) {
+	// Cap maximum number of images per request
 	if n <= 0 {
 		n = 1
+	} else if n > 10 {
+		n = 10
 	}
-	if size == "" {
-		size = "1024x1024"
+	
+	// Allowlist valid image sizes
+	allowedSizes := map[string]bool{
+		"256x256":   true,
+		"512x512":   true,
+		"768x768":   true,
+		"1024x1024": true,
+	}
+	
+	if !allowedSizes[size] {
+		size = "1024x1024" // default
 	}
 	return n, size
 }

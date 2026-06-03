@@ -69,6 +69,7 @@ type DriftReport struct {
 	NodeDrift    []NodeDrift    `json:"node_drift,omitempty"`
 	ServiceDrift []ServiceDrift `json:"service_drift,omitempty"`
 	HasDrift     bool           `json:"has_drift"`
+	CheckError   string         `json:"check_error,omitempty"` // Non-empty if status check itself failed
 }
 
 // NodeDrift describes a mismatch between declared and actual node state.
@@ -104,7 +105,8 @@ func main() {
 	// Check k3s node membership.
 	actual, err := fetchActualNodes(*kubeconfigPath)
 	if err != nil {
-		log.Printf("warning: cannot fetch k3s nodes (%v); skipping node check", err)
+		log.Printf("error: cannot fetch k3s nodes (%v)", err)
+		report.CheckError = err.Error()
 	} else {
 		report.NodeDrift = diffNodes(declared, actual)
 	}
@@ -125,6 +127,11 @@ func main() {
 		printTextReport(report)
 	}
 
+	// Exit with code 2 if status check failed
+	if report.CheckError != "" {
+		os.Exit(2)
+	}
+	// Exit with code 1 if drift detected
 	if report.HasDrift {
 		os.Exit(1)
 	}

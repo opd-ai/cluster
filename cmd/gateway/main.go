@@ -57,6 +57,7 @@ import (
 	"github.com/opd-ai/cluster/internal/discovery"
 	"github.com/opd-ai/cluster/internal/inventory"
 	"github.com/opd-ai/cluster/internal/lb"
+	"github.com/opd-ai/cluster/internal/pipeline"
 	"github.com/opd-ai/cluster/internal/tracing"
 	"gopkg.in/yaml.v3"
 )
@@ -87,6 +88,7 @@ type Gateway struct {
 	reqErrors         atomic.Int64 // total gateway request failures
 	pipelineIDCounter atomic.Int64
 	pipelineExecutor  *pipelineExecutor
+	pipelineResults   map[string]*pipeline.PipelineExecution // id → execution result
 }
 
 // maxStickyEntries limits the sticky session map size to prevent unbounded growth.
@@ -122,12 +124,13 @@ func main() {
 	}
 
 	gw := &Gateway{
-		apiKeys:      make(map[string]struct{}),
-		sticky:       make(map[string]int),
-		loraAdapters: make(map[string]LoRAAdapter),
-		speculative:  *speculative,
-		swarmURL:     *swarmURL,
-		ragURL:       *ragURL,
+		apiKeys:           make(map[string]struct{}),
+		sticky:            make(map[string]int),
+		loraAdapters:      make(map[string]LoRAAdapter),
+		pipelineResults:   make(map[string]*pipeline.PipelineExecution),
+		speculative:       *speculative,
+		swarmURL:          *swarmURL,
+		ragURL:            *ragURL,
 		quotaCfg: &quotaConfig{
 			MaxImagesPerKeyPerDay: *maxImages,
 			MaxVideosPerKeyPerDay: *maxVideos,
