@@ -140,6 +140,10 @@ func main() {
 	intervalMS := flag.Int("interval", 10000, "Sample interval in milliseconds")
 	flag.Parse()
 
+	if *intervalMS <= 0 {
+		log.Fatalf("invalid -interval %d: must be positive", *intervalMS)
+	}
+
 	e := &exporter{}
 	go e.loop(*intervalMS)
 

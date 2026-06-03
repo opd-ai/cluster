@@ -336,6 +336,12 @@ func (ing *ingestor) fetchURL(ctx context.Context, rawURL string) error {
 	}
 	defer resp.Body.Close()
 
+	// Check for successful status code before reading body
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("fetch %s: HTTP %d: %s", rawURL, resp.StatusCode, string(body))
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err

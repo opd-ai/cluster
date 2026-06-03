@@ -145,12 +145,12 @@ func runDrain(node *InventoryNode, signer ssh.Signer, cfg DrainConfig) error {
 }
 
 func cordonNode(hostname string, cfg DrainConfig) error {
-	return kubectl(cfg.KubeconfigPath, "cordon", hostname)
+	return kubectl(cfg.KubeconfigPath, "cordon", "--", hostname)
 }
 
 func drainPods(hostname string, cfg DrainConfig) error {
 	return kubectl(cfg.KubeconfigPath,
-		"drain", hostname,
+		"drain", "--", hostname,
 		"--ignore-daemonsets",
 		"--delete-emptydir-data",
 		fmt.Sprintf("--grace-period=%d", cfg.GracePeriod),
@@ -251,6 +251,8 @@ func signerFromAgent() (ssh.Signer, bool) {
 	if err != nil {
 		return nil, false
 	}
+	defer conn.Close()
+	
 	signers, err := agent.NewClient(conn).Signers()
 	if err != nil || len(signers) == 0 {
 		return nil, false

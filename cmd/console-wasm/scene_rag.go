@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image/color"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -71,9 +72,13 @@ func (s *ragAdminScene) runQuery() {
 	s.mu.Unlock()
 
 	go func() {
-		url := fmt.Sprintf("/rag/query?collection=%s&q=%s&top_k=10",
-			s.collection, q)
-		resp, err := http.Get(url) // #nosec G107
+		// Build URL with properly encoded query parameters
+		params := url.Values{}
+		params.Set("collection", s.collection)
+		params.Set("q", q)
+		params.Set("top_k", "10")
+		u := "/rag/query?" + params.Encode()
+		resp, err := http.Get(u) // #nosec G107
 		if err != nil {
 			s.mu.Lock()
 			s.statusMsg = "query error: " + err.Error()

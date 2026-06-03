@@ -182,7 +182,13 @@ func writeScript(dir, hostname, script string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	path := filepath.Join(dir, hostname+"-join.sh")
+	// Use filepath.Base to prevent directory traversal attacks
+	safeName := filepath.Base(hostname)
+	path := filepath.Join(dir, safeName+"-join.sh")
+	// Verify the path is still within dir (defense in depth)
+	if !strings.HasPrefix(path, dir+string(filepath.Separator)) {
+		return fmt.Errorf("invalid hostname: %s escapes target directory", hostname)
+	}
 	return os.WriteFile(path, []byte(script), 0o750)
 }
 

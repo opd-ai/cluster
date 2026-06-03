@@ -56,8 +56,12 @@ func main() {
 	flag.BoolVar(&cfg.DryRun, "dry-run", false, "Log removals without deleting")
 	flag.Parse()
 
-	if cfg.HighWater <= cfg.LowWater {
-		log.Fatalf("-high-water (%d) must be greater than -low-water (%d)", cfg.HighWater, cfg.LowWater)
+	// Validate watermark range: 0 <= low < high <= 100
+	if cfg.LowWater < 0 || cfg.LowWater >= 100 {
+		log.Fatalf("-low-water (%d) must be in range [0, 100)", cfg.LowWater)
+	}
+	if cfg.HighWater <= cfg.LowWater || cfg.HighWater > 100 {
+		log.Fatalf("-high-water (%d) must be in range (%d, 100]", cfg.HighWater, cfg.LowWater)
 	}
 
 	if err := runGC(cfg); err != nil {

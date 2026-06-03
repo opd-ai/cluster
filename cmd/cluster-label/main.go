@@ -86,7 +86,7 @@ func applyLabels(node InventoryNode, cfg LabelConfig) error {
 	if len(labels) == 0 {
 		return nil
 	}
-	args := []string{"label", "--overwrite", "node", node.Hostname}
+	args := []string{"label", "--overwrite", "node", "--", node.Hostname}
 	args = append(args, labels...)
 	return kubectl(args, cfg)
 }
@@ -115,7 +115,7 @@ func buildLabels(node InventoryNode) []string {
 func applyTaints(node InventoryNode, cfg LabelConfig) error {
 	taints := buildTaints(node)
 	for _, taint := range taints {
-		args := []string{"taint", "--overwrite", "node", node.Hostname, taint}
+		args := []string{"taint", "--overwrite", "node", "--", node.Hostname, taint}
 		if err := kubectl(args, cfg); err != nil {
 			return err
 		}

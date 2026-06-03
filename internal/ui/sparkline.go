@@ -25,6 +25,9 @@ type Sparkline struct {
 
 // NewSparkline creates a Sparkline with a given window size.
 func NewSparkline(maxSamples int) *Sparkline {
+	if maxSamples < 1 {
+		maxSamples = 100 // default
+	}
 	return &Sparkline{
 		maxSamples: maxSamples,
 		LineColor:  color.RGBA{100, 200, 100, 255},

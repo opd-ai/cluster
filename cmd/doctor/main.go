@@ -126,6 +126,7 @@ func performLocalChecks(config DoctorConfig) HealthReport {
 func performRemoteChecks(host, user string, signer ssh.Signer, config DoctorConfig) HealthReport {
 	var report HealthReport
 	report.Hostname = host
+	report.AllPassed = true  // Assume passed until a check fails
 
 	client, err := createSSHClient(user, host, "22", signer, config)
 	if err != nil {

@@ -77,12 +77,19 @@ func (gw *Gateway) reloadAdapters(path string) error {
 		return err
 	}
 
+	// Build a new adapter map atomically
+	newAdapters := make(map[string]LoRAAdapter)
+	for _, adapter := range manifest.Adapters {
+		alias := adapter.Base + "+" + adapter.Name
+		newAdapters[alias] = adapter
+	}
+
 	gw.mu.Lock()
 	defer gw.mu.Unlock()
 
+	gw.loraAdapters = newAdapters
 	for _, adapter := range manifest.Adapters {
 		alias := adapter.Base + "+" + adapter.Name
-		gw.loraAdapters[alias] = adapter
 		log.Printf("lora watcher: registered adapter %q (base=%s, nodes=%v)",
 			alias, adapter.Base, adapter.Nodes)
 	}
