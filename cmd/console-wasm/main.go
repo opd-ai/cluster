@@ -62,45 +62,69 @@ func (s *SharedState) ApplyMessage(msg uiapi.Message) {
 
 	switch msg.Type {
 	case uiapi.MsgClusterState:
-		if raw, err := json.Marshal(msg.Payload); err == nil {
-			_ = json.Unmarshal(raw, &s.Cluster)
-		}
+		s.applyClusterState(msg.Payload)
 	case uiapi.MsgLogLine:
-		if raw, err := json.Marshal(msg.Payload); err == nil {
-			var line uiapi.LogLine
-			if err := json.Unmarshal(raw, &line); err == nil {
-				s.Logs = append(s.Logs, line)
-				if len(s.Logs) > 500 {
-					s.Logs = s.Logs[len(s.Logs)-500:]
-				}
-			}
-		}
+		s.applyLogLine(msg.Payload)
 	case uiapi.MsgJobProgress:
 		// Handled by specific scenes.
 	case uiapi.MsgAggregateMetrics:
-		if raw, err := json.Marshal(msg.Payload); err == nil {
-			_ = json.Unmarshal(raw, &s.AggMetrics)
-		}
+		s.applyAggregateMetrics(msg.Payload)
 	case uiapi.MsgGenerationEvent:
-		if raw, err := json.Marshal(msg.Payload); err == nil {
-			var evt uiapi.GenerationEvent
-			if err := json.Unmarshal(raw, &evt); err == nil {
-				s.GenerationEvents = append(s.GenerationEvents, evt)
-				// Keep only the last 100 events
-				if len(s.GenerationEvents) > 100 {
-					s.GenerationEvents = s.GenerationEvents[len(s.GenerationEvents)-100:]
-				}
+		s.applyGenerationEvent(msg.Payload)
+	case uiapi.MsgPipelineState:
+		s.applyPipelineState(msg.Payload)
+	}
+}
+
+// applyClusterState unmarshals and stores cluster state.
+func (s *SharedState) applyClusterState(payload interface{}) {
+	if raw, err := json.Marshal(payload); err == nil {
+		_ = json.Unmarshal(raw, &s.Cluster)
+	}
+}
+
+// applyLogLine unmarshals and appends a log line (max 500).
+func (s *SharedState) applyLogLine(payload interface{}) {
+	if raw, err := json.Marshal(payload); err == nil {
+		var line uiapi.LogLine
+		if err := json.Unmarshal(raw, &line); err == nil {
+			s.Logs = append(s.Logs, line)
+			if len(s.Logs) > 500 {
+				s.Logs = s.Logs[len(s.Logs)-500:]
 			}
 		}
-	case uiapi.MsgPipelineState:
-		if raw, err := json.Marshal(msg.Payload); err == nil {
-			var ps uiapi.PipelineState
-			if err := json.Unmarshal(raw, &ps); err == nil {
-				if s.PipelineStates == nil {
-					s.PipelineStates = make(map[string]uiapi.PipelineState)
-				}
-				s.PipelineStates[ps.PipelineID] = ps
+	}
+}
+
+// applyAggregateMetrics unmarshals and stores aggregate metrics.
+func (s *SharedState) applyAggregateMetrics(payload interface{}) {
+	if raw, err := json.Marshal(payload); err == nil {
+		_ = json.Unmarshal(raw, &s.AggMetrics)
+	}
+}
+
+// applyGenerationEvent unmarshals and appends a generation event (max 100).
+func (s *SharedState) applyGenerationEvent(payload interface{}) {
+	if raw, err := json.Marshal(payload); err == nil {
+		var evt uiapi.GenerationEvent
+		if err := json.Unmarshal(raw, &evt); err == nil {
+			s.GenerationEvents = append(s.GenerationEvents, evt)
+			if len(s.GenerationEvents) > 100 {
+				s.GenerationEvents = s.GenerationEvents[len(s.GenerationEvents)-100:]
 			}
+		}
+	}
+}
+
+// applyPipelineState unmarshals and stores pipeline state.
+func (s *SharedState) applyPipelineState(payload interface{}) {
+	if raw, err := json.Marshal(payload); err == nil {
+		var ps uiapi.PipelineState
+		if err := json.Unmarshal(raw, &ps); err == nil {
+			if s.PipelineStates == nil {
+				s.PipelineStates = make(map[string]uiapi.PipelineState)
+			}
+			s.PipelineStates[ps.PipelineID] = ps
 		}
 	}
 }
