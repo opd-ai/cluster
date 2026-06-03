@@ -131,7 +131,6 @@ jobs:
             "gcr.io/google_containers/pause:3.9"
             "nvcr.io/nvidia/k8s/dcgm-exporter:3.3.5-3.4.0-ubuntu22.04"
           )
-           
           # Extract all image references from cluster manifests
           while read -r img; do
             # Check if image is in whitelist
