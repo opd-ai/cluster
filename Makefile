@@ -29,7 +29,7 @@ PYTHON_DIR  := python
 INVENTORY   ?= cluster/inventory.yaml
 
 .PHONY: help bootstrap up down sync train serve console console-wasm rag \
-        status join drain deploy clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
+        status join drain deploy agent clean test lint lint-go lint-py lint-sh lint-yaml lint-md \
         docs build tidy restore-test changelog release upgrade
 
 # --------------------------------------------------------------------------
@@ -86,6 +86,9 @@ drain: ## Drain and remove a node: make drain HOST=<hostname>
 
 deploy: ## Deploy node(s) with auto-tuning: make deploy ROLES=chat or ROLES=chat,image-generation
 	$(GO) run $(GOFLAGS) ./cmd/node-deploy --roles $(ROLES)
+
+agent: ## Start node-agent: make agent ROLES=chat or ROLES=chat,image-generation ADDRESS=<ip>
+	$(GO) run $(GOFLAGS) ./cmd/node-agent --roles $(ROLES) --address $(ADDRESS)
 
 restore-test: ## Quarterly DR drill: verify latest backup restores cleanly in an ephemeral namespace
 	@TS="$$(date +%s)"; NS="restore-test-$$TS"; \

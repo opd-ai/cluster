@@ -13,13 +13,16 @@ import "time"
 type MessageType string
 
 const (
-	MsgClusterState    MessageType = "cluster_state"
-	MsgNodeMetrics     MessageType = "node_metrics"
-	MsgLogLine         MessageType = "log_line"
-	MsgJobProgress     MessageType = "job_progress"
-	MsgImagePreview    MessageType = "image_preview"
-	MsgTrainingMetrics MessageType = "training_metrics"
-	MsgError           MessageType = "error"
+	MsgClusterState      MessageType = "cluster_state"
+	MsgNodeMetrics       MessageType = "node_metrics"
+	MsgLogLine           MessageType = "log_line"
+	MsgJobProgress       MessageType = "job_progress"
+	MsgImagePreview      MessageType = "image_preview"
+	MsgTrainingMetrics   MessageType = "training_metrics"
+	MsgAggregateMetrics  MessageType = "aggregate_metrics"
+	MsgGenerationEvent   MessageType = "generation_event"
+	MsgPipelineState     MessageType = "pipeline_state"
+	MsgError             MessageType = "error"
 )
 
 // Message is the WebSocket envelope.
@@ -178,3 +181,64 @@ const (
 	RoleOperator Role = "operator"
 	RoleUser     Role = "user"
 )
+
+// -------------------------------------------------------------------------
+// Aggregate Metrics & Cross-Node Observability
+// -------------------------------------------------------------------------
+
+// AggregateMetrics provides cluster-wide rollup metrics from all nodes.
+type AggregateMetrics struct {
+	Timestamp           time.Time           `json:"timestamp"`
+	TotalCPUPct         float64             `json:"total_cpu_pct"`
+	TotalMemPct         float64             `json:"total_mem_pct"`
+	TotalVRAMUsedMB     int64               `json:"total_vram_used_mb"`
+	TotalVRAMAvailableMB int64              `json:"total_vram_available_mb"`
+	PerRoleMetrics      map[string]AggRoleMetrics `json:"per_role_metrics"`
+}
+
+// AggRoleMetrics aggregates metrics for a single role across all nodes.
+type AggRoleMetrics struct {
+	Role               string  `json:"role"`
+	NodesActive        int     `json:"nodes_active"`
+	TotalQueueDepth    int     `json:"total_queue_depth"`
+	AvgLatencyEMAms    float64 `json:"avg_latency_ema_ms"`
+	TotalVRAMUsedMB    int64   `json:"total_vram_used_mb"`
+	TotalVRAMBudgetMB  int64   `json:"total_vram_budget_mb"`
+}
+
+// GenerationEvent carries real-time events from image or video generation pipelines.
+type GenerationEvent struct {
+	JobID       string    `json:"job_id"`
+	NodeAddress string    `json:"node_address"`
+	Role        string    `json:"role"` // image-generation, video-generation, etc.
+	Progress    float64   `json:"progress"`
+	Status      string    `json:"status"` // pending, generating, completed, failed
+	OutputURL   string    `json:"output_url,omitempty"`
+	Error       string    `json:"error,omitempty"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
+// PipelineState tracks multi-stage pipeline execution across nodes.
+type PipelineState struct {
+	PipelineID  string                       `json:"pipeline_id"`
+	Status      string                       `json:"status"` // pending, running, completed, failed
+	Stages      []PipelineStageState         `json:"stages"`
+	StartedAt   time.Time                    `json:"started_at"`
+	UpdatedAt   time.Time                    `json:"updated_at"`
+	CompletedAt time.Time                    `json:"completed_at,omitempty"`
+}
+
+// PipelineStageState tracks a single stage in a pipeline.
+type PipelineStageState struct {
+	StageID       string    `json:"stage_id"`
+	Index         int       `json:"index"`
+	Status        string    `json:"status"` // pending, running, completed, failed
+	NodeAddress   string    `json:"node_address"`
+	Role          string    `json:"role"`
+	Progress      float64   `json:"progress"`
+	Input         any       `json:"input,omitempty"`
+	Output        any       `json:"output,omitempty"`
+	Error         string    `json:"error,omitempty"`
+	StartedAt     time.Time `json:"started_at,omitempty"`
+	CompletedAt   time.Time `json:"completed_at,omitempty"`
+}

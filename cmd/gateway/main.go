@@ -10,13 +10,16 @@
 //	GET  /healthz                  — liveness probe
 //	GET  /status                   — cluster status (JSON)
 //	GET  /metrics                  — Prometheus metrics
+//	POST /v1/pipelines             — multi-stage pipeline execution
+//	GET  /v1/pipelines/{id}        — pipeline status and results
 //
 // Routing:
 //   - Round-robin across backend nodes that report a model in /api/tags.
 //   - Sticky sessions per (api_key, model) to preserve KV-cache locality.
 //   - Falls back to a model pull on cache miss.
-//   - Auth: ****** keys; keys are loaded from GATEWAY_API_KEYS (colon-
-//     separated) or an optional key file (--keys-file).
+//   - Auto-discovery of node-agents via UDP multicast when -discovery=true.
+//   - Auth: API keys; keys are loaded from GATEWAY_API_KEYS (colon-separated)
+//     or an optional key file (--keys-file).
 //
 // Usage:
 //
@@ -24,12 +27,14 @@
 //
 // Flags:
 //
-//	-addr         listen address (default: :8080)
-//	-backends     comma-separated list of Ollama backend URLs
-//	-inventory    path to inventory YAML for dynamic backend discovery
-//	-keys-file    path to newline-delimited API keys file
+//	-addr            listen address (default: :8080)
+//	-backends        comma-separated list of Ollama backend URLs
+//	-inventory       path to inventory YAML for dynamic backend discovery
+//	-keys-file       path to newline-delimited API keys file
 //	-probe-interval  backend health probe interval in seconds (default: 15)
-//	-speculative  enable speculative decoding feature flag
+//	-speculative     enable speculative decoding feature flag
+//	-discovery       enable UDP multicast discovery for node-agents
+//	-lb-strategy     load balancing strategy (weighted-rr|least-queue|latency-ewma)
 package main
 
 import (
@@ -49,7 +54,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/opd-ai/cluster/internal/discovery"
 	"github.com/opd-ai/cluster/internal/inventory"
+	"github.com/opd-ai/cluster/internal/lb"
 	"github.com/opd-ai/cluster/internal/tracing"
 	"gopkg.in/yaml.v3"
 )
@@ -64,20 +71,22 @@ type Backend struct {
 
 // Gateway is the main gateway state.
 type Gateway struct {
-	backends     []*Backend
-	apiKeys      map[string]struct{}
-	sticky       map[string]int // (key+model) → backend index
-	loraAdapters map[string]LoRAAdapter
-	swarmURL     string
-	swarmHealthy bool
-	ragURL       string
-	quotaCfg     *quotaConfig
-	mu           sync.RWMutex
-	httpClient   *http.Client  // shared client for connection pooling
-	rrIdx        atomic.Uint64 // round-robin counter for pickBackend
-	speculative  bool
-	reqTotal     atomic.Int64 // total requests handled
-	reqErrors    atomic.Int64 // total gateway request failures
+	backends          []*Backend
+	apiKeys           map[string]struct{}
+	sticky            map[string]int // (key+model) → backend index
+	loraAdapters      map[string]LoRAAdapter
+	swarmURL          string
+	swarmHealthy      bool
+	ragURL            string
+	quotaCfg          *quotaConfig
+	mu                sync.RWMutex
+	httpClient        *http.Client  // shared client for connection pooling
+	rrIdx             atomic.Uint64 // round-robin counter for pickBackend
+	speculative       bool
+	reqTotal          atomic.Int64 // total requests handled
+	reqErrors         atomic.Int64 // total gateway request failures
+	pipelineIDCounter atomic.Int64
+	pipelineExecutor  *pipelineExecutor
 }
 
 // maxStickyEntries limits the sticky session map size to prevent unbounded growth.
@@ -98,6 +107,8 @@ func main() {
 	ragURL := flag.String("rag-url", "", "RAG service base URL (e.g. http://rag:8081)")
 	otelEndpoint := flag.String("otel-endpoint", "", "OTLP/HTTP collector endpoint (e.g. http://otel-collector:4318); empty disables tracing")
 	telemetry := flag.Bool("telemetry", false, "Send anonymous usage ping (opt-in; disabled by default)")
+	discoveryFlag := flag.Bool("discovery", false, "Enable UDP multicast discovery for node-agents")
+	lbStrategy := flag.String("lb-strategy", "weighted-rr", "Load balancing strategy: weighted-rr|least-queue|latency-ewma")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -124,6 +135,20 @@ func main() {
 			NSFWBlocklist:         defaultNSFWBlocklist,
 		},
 	}
+
+	// Initialize load balancing registry with the requested strategy.
+	log.Printf("Gateway starting with lb-strategy=%s", *lbStrategy)
+	var picker lb.Picker
+	switch *lbStrategy {
+	case "least-queue":
+		picker = lb.NewLeastQueue(nil)
+	case "latency-ewma":
+		picker = lb.NewLatencyEWMA(nil, 0.2)
+	default:
+		picker = lb.NewWeightedRoundRobin(nil)
+	}
+	lbRegistry := lb.NewBackendRegistry(picker)
+	gw.pipelineExecutor = NewPipelineExecutor(lbRegistry)
 
 	// Shared HTTP client with connection pooling (H8).
 	gw.httpClient = &http.Client{
@@ -159,6 +184,20 @@ func main() {
 	stopProbe := make(chan struct{})
 	go gw.probeLoop(time.Duration(*probeInterval)*time.Second, stopProbe)
 	defer close(stopProbe)
+
+	// Start discovery listener if enabled
+	if *discoveryFlag {
+		listener, err := discovery.NewListener(100)
+		if err != nil {
+			log.Printf("Warning: discovery listener failed: %v", err)
+		} else {
+			listener.Start()
+			defer listener.Stop()
+			stopDiscovery := make(chan struct{})
+			go gw.discoveryLoop(listener, stopDiscovery)
+			defer close(stopDiscovery)
+		}
+	}
 
 	// Start LoRA adapter watcher if manifest path is set.
 	if *loraManifest != "" {
@@ -202,6 +241,10 @@ func main() {
 	r.Post("/v1/videos/generations", gw.handleVideoGenerations)
 	r.Post("/v1/videos/edits", gw.handleVideoEdits)
 	r.Get("/v1/videos/jobs/{id}", gw.handleVideoJobStatus)
+
+	// Multi-stage pipeline API
+	r.Post("/v1/pipelines", gw.handlePostPipelines)
+	r.Get("/v1/pipelines/{id}", gw.handleGetPipelineStatus)
 
 	log.Printf("gateway listening on %s (backends: %d, speculative: %v)",
 		*addr, len(gw.backends), *speculative)
@@ -623,6 +666,45 @@ func (gw *Gateway) probeLoop(interval time.Duration, stop <-chan struct{}) {
 		select {
 		case <-ticker.C:
 			gw.probeAll()
+		case <-stop:
+			return
+		}
+	}
+}
+
+// discoveryLoop listens for UDP multicast beacons from node-agents and adds them as backends.
+func (gw *Gateway) discoveryLoop(listener *discovery.Listener, stop <-chan struct{}) {
+	for {
+		select {
+		case beacon, ok := <-listener.MessagesCh():
+			if !ok {
+				// Channel closed; listener has stopped.
+				return
+			}
+			// Find the Ollama (chat) port from the beacon's service bindings.
+			// Fall back to the standard Ollama port 11434 if not advertised.
+			ollamaPort := "11434"
+			for _, svc := range beacon.Services {
+				if svc.Role == "chat" {
+					ollamaPort = svc.Port
+					break
+				}
+			}
+			backendURL := fmt.Sprintf("http://%s:%s", beacon.Address, ollamaPort)
+			gw.mu.Lock()
+			// Check if backend already exists
+			exists := false
+			for _, b := range gw.backends {
+				if b.URL == backendURL {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				log.Printf("Discovery: adding backend %s from beacon", backendURL)
+				gw.backends = append(gw.backends, &Backend{URL: backendURL, Healthy: true})
+			}
+			gw.mu.Unlock()
 		case <-stop:
 			return
 		}
