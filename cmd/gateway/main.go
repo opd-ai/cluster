@@ -49,7 +49,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/opd-ai/cluster/internal/inventory"
 	"github.com/opd-ai/cluster/internal/tracing"
+	"gopkg.in/yaml.v3"
 )
 
 // Backend represents a single Ollama node.
@@ -719,18 +721,43 @@ func discoverBackends(inventoryPath string) []*Backend {
 		return nil
 	}
 
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return nil
+	}
+
+	nodesRaw, ok := doc["nodes"]
+	if !ok {
+		return nil
+	}
+
+	// Parse nodes using inventory.Node
+	nodeData, err := yaml.Marshal(map[string]interface{}{"nodes": nodesRaw})
+	if err != nil {
+		return nil
+	}
+
+	var nodesDoc struct {
+		Nodes []*inventory.Node `yaml:"nodes"`
+	}
+	if err := yaml.Unmarshal(nodeData, &nodesDoc); err != nil {
+		return nil
+	}
+
 	var backends []*Backend
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "address:") {
-			addr := strings.TrimSpace(strings.TrimPrefix(trimmed, "address:"))
-			if addr != "" {
-				backends = append(backends, &Backend{
-					URL:     "http://" + addr + ":11434",
-					Healthy: true,
-				})
+	for _, node := range nodesDoc.Nodes {
+		if node.Address != "" {
+			backend := &Backend{
+				URL:     "http://" + node.Address + ":11434",
+				Healthy: true,
 			}
+			// Add node roles to backend metadata if needed
+			if len(node.Roles) > 0 {
+				backend.Models = node.Roles
+			} else if node.Role != "" {
+				backend.Models = []string{node.Role}
+			}
+			backends = append(backends, backend)
 		}
 	}
 	return backends

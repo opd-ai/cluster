@@ -15,25 +15,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opd-ai/cluster/internal/inventory"
 	"github.com/opd-ai/cluster/internal/sshutil"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"gopkg.in/yaml.v3"
 )
-
-type Node struct {
-	Hostname    string            `yaml:"hostname" json:"hostname"`
-	SSHUser     string            `yaml:"ssh_user" json:"ssh_user"`
-	Address     string            `yaml:"address" json:"address"`
-	Arch        string            `yaml:"arch" json:"arch"`
-	OS          string            `yaml:"os" json:"os"`
-	Role        string            `yaml:"role" json:"role"`
-	Accelerator string            `yaml:"accelerator" json:"accelerator"`
-	VramGB      int               `yaml:"vram_gb" json:"vram_gb"`
-	RamGB       int               `yaml:"ram_gb" json:"ram_gb"`
-	DiskGB      int               `yaml:"disk_gb" json:"disk_gb"`
-	Labels      map[string]string `yaml:"labels" json:"labels"`
-}
 
 type HostInfo struct {
 	Hostname    string
@@ -95,8 +82,8 @@ func getHosts(hostsFile, hostList string) []string {
 	return hosts
 }
 
-func probeHosts(hosts []string, signer ssh.Signer, knownHostsPath string, timeout int, insecureSkipHostKeyCheck bool) []*Node {
-	var nodes []*Node
+func probeHosts(hosts []string, signer ssh.Signer, knownHostsPath string, timeout int, insecureSkipHostKeyCheck bool) []*inventory.Node {
+	var nodes []*inventory.Node
 	for _, hostStr := range hosts {
 		info, err := probeHost(hostStr, signer, knownHostsPath, timeout, insecureSkipHostKeyCheck)
 		if err != nil {
@@ -104,13 +91,14 @@ func probeHosts(hosts []string, signer ssh.Signer, knownHostsPath string, timeou
 			continue
 		}
 
-		node := &Node{
+		node := &inventory.Node{
 			Hostname:    info.Hostname,
 			SSHUser:     info.SSHUser,
 			Address:     info.Address,
 			Arch:        info.Arch,
 			OS:          info.OS,
 			Role:        "worker",
+			Roles:       []string{"worker"},
 			Accelerator: info.Accelerator,
 			VramGB:      info.VramGB,
 			RamGB:       info.RamGB,
@@ -122,7 +110,7 @@ func probeHosts(hosts []string, signer ssh.Signer, knownHostsPath string, timeou
 	return nodes
 }
 
-func outputResults(nodes []*Node, jsonOutput bool, outputFile string) {
+func outputResults(nodes []*inventory.Node, jsonOutput bool, outputFile string) {
 	if jsonOutput {
 		outputJSON(nodes, outputFile)
 	} else {
@@ -404,7 +392,7 @@ func getDiskGB(client *ssh.Client) int {
 	return 0
 }
 
-func outputYAML(nodes []*Node, outputPath string) {
+func outputYAML(nodes []*inventory.Node, outputPath string) {
 	doc := map[string]interface{}{"nodes": nodes}
 	data, err := yaml.Marshal(doc)
 	if err != nil {
@@ -421,7 +409,7 @@ func outputYAML(nodes []*Node, outputPath string) {
 	}
 }
 
-func outputJSON(nodes []*Node, outputPath string) {
+func outputJSON(nodes []*inventory.Node, outputPath string) {
 	data := map[string]interface{}{
 		"nodes": nodes,
 	}
