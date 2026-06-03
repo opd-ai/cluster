@@ -10,12 +10,11 @@
 //  1. Read raw content
 //  2. SHA-256 hash → skip if already ingested (incremental mode)
 //  3. Token-aware chunking (~512 tokens, 64-token overlap)
-//  4. Write raw file + chunks to MinIO rag/<collection>/<hash>/
-//  5. Embed each chunk via gateway /v1/embeddings
-//  6. Upsert vectors into Qdrant collection
+//  4. Embed each chunk via gateway /v1/embeddings
+//  5. Upsert vectors into Qdrant collection
 //
 // Collection is created automatically with cosine distance metric.
-// Snapshots can be triggered with --backup (exports to MinIO rag/snapshots/).
+// Snapshots can be triggered with --backup (creates Qdrant collection snapshot).
 package main
 
 import (
@@ -23,6 +22,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -263,10 +263,18 @@ func (ing *ingestor) ingestFile(ctx context.Context, filePath string) error {
 
 	var points []*qdrant.PointStruct
 	for i, vec := range vectors {
+		// Generate numeric point ID from hash and chunk index
+		hashBytes, _ := hex.DecodeString(hash)
+		var base uint64
+		if len(hashBytes) >= 8 {
+			base = binary.BigEndian.Uint64(hashBytes[:8])
+		}
+		pointID := base ^ uint64(i)
+
 		points = append(points, &qdrant.PointStruct{
 			Id: &qdrant.PointId{
-				PointIdOptions: &qdrant.PointId_Uuid{
-					Uuid: fmt.Sprintf("%s-%d", hash[:16], i),
+				PointIdOptions: &qdrant.PointId_Num{
+					Num: pointID,
 				},
 			},
 			Vectors: &qdrant.Vectors{
@@ -382,7 +390,7 @@ func main() {
 	urlFlag := flag.String("url", "", "HTTP URL(s) to ingest (colon-separated)")
 	chunkToks := flag.Int("chunk-tokens", defaultChunkTokens, "Chunk size in tokens")
 	overlapToks := flag.Int("overlap-tokens", defaultOverlapTokens, "Overlap tokens between chunks")
-	backup := flag.Bool("backup", false, "Trigger snapshot backup to MinIO after ingestion")
+	backup := flag.Bool("backup", false, "Trigger Qdrant collection snapshot after ingestion")
 	flag.Parse()
 
 	cfg := config{

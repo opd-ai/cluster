@@ -116,6 +116,8 @@ type videoGenerationRequest struct {
 	User           string `json:"user"`
 	// Image seed for img→video (base64 PNG or URL)
 	Image string `json:"image,omitempty"`
+	// Video for video→video edits (base64 or URL)
+	Video string `json:"video,omitempty"`
 }
 
 // videoEditRequest is the /v1/videos/edits body (video→video or img→video).
@@ -195,6 +197,7 @@ func (gw *Gateway) handleVideoEdits(w http.ResponseWriter, r *http.Request) {
 		Prompt: req.Prompt,
 		Model:  req.Model,
 		Image:  req.Image,
+		Video:  req.Video,
 	}
 	job := newVideoJob(genReq)
 	globalVideoJobs.add(job)
