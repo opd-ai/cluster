@@ -1,3 +1,4 @@
+//go:build darwin
 // +build darwin
 
 package serviceinstall
@@ -21,6 +22,10 @@ func WriteDarwinUnit(unit *SystemdUnit, dryRun bool) (string, error) {
 		return path, nil
 	}
 
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", fmt.Errorf("failed to create launchd directory for %s: %w", path, err)
+	}
+
 	if err := os.WriteFile(path, []byte(plistContent), 0o644); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", path, err)
 	}
@@ -41,11 +46,11 @@ func renderLaunchdTemplate(unit *SystemdUnit) string {
     <string>{{.Executable}}</string>
 {{range .Args}}    <string>{{.}}</string>
 {{end}}  </array>
-{{range $k, $v := .Environment}}  <key>EnvironmentVariables</key>
+{{if .Environment}}  <key>EnvironmentVariables</key>
   <dict>
-    <key>{{$k}}</key>
-    <string>{{$v}}</string>
-  </dict>
+{{range $k, $v := .Environment}}    <key>{{$k}}</key>
+   <string>{{$v}}</string>
+{{end}}  </dict>
 {{end}}  <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

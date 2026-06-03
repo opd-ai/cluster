@@ -162,7 +162,7 @@ func getNumCPUs() int {
 // runCmd executes a shell command and returns its output.
 func runCmd(cmd string) (string, error) {
 	var buf bytes.Buffer
-	c := exec.Command("sh", "-c", cmd)
+	c := exec.Command("sh", "-c", cmd) //nolint:gosec // commands are internal constant probes
 	c.Stdout = &buf
 	err := c.Run()
 	return buf.String(), err

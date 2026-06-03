@@ -9,7 +9,6 @@
 //
 //	-roles       comma-separated list of roles (e.g. "chat,image-generation")
 //	-dry-run     show what would be done without modifying the system
-//	-inventory   path to cluster/inventory.yaml (default: cluster/inventory.yaml)
 package main
 
 import (
@@ -26,7 +25,6 @@ import (
 func main() {
 	rolesFlag := flag.String("roles", "", "Comma-separated list of roles (e.g. 'chat,image-generation')")
 	dryRun := flag.Bool("dry-run", false, "Show what would be done without modifying the system")
-	_ = flag.String("inventory", "cluster/inventory.yaml", "Path to cluster/inventory.yaml")
 	flag.Parse()
 
 	if *rolesFlag == "" {
@@ -140,6 +138,9 @@ func main() {
 	fmt.Printf("\n=== Deployment Complete ===\n")
 	if *dryRun {
 		fmt.Println("(dry-run: no actual changes made)")
+	} else if runtime.GOOS == "darwin" {
+		fmt.Println("Run 'launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<unit>.plist' to load a service.")
+		fmt.Println("Run 'launchctl enable gui/$(id -u)/<label>' to enable it at login.")
 	} else {
 		fmt.Println("Run 'systemctl daemon-reload' to load new units.")
 		fmt.Println("Run 'systemctl enable --now <unit>' to start a service.")
@@ -149,19 +150,8 @@ func main() {
 // rolePortMap returns default port assignments for roles.
 func rolePortMap() map[string]int {
 	return map[string]int{
-		"chat":              11434,
+		"chat":             11434,
 		"image-generation": 7860,
-		"training":          8888,
+		"training":         8888,
 	}
-}
-
-// writeDarwinUnit is a placeholder; the real implementation is in serviceinstall/darwin.go
-// but requires build tags which we avoid here.
-func writeDarwinUnit(unit *serviceinstall.SystemdUnit, dryRun bool) (string, error) {
-	if dryRun {
-		fmt.Printf("[DRY RUN] Would write launchd plist for %s\n", unit.Name)
-		return fmt.Sprintf("~/Library/LaunchAgents/com.opd.%s.plist", unit.Name), nil
-	}
-	log.Fatalf("darwin service installation not yet implemented")
-	return "", nil
 }

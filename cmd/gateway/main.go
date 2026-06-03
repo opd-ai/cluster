@@ -751,12 +751,6 @@ func discoverBackends(inventoryPath string) []*Backend {
 				URL:     "http://" + node.Address + ":11434",
 				Healthy: true,
 			}
-			// Add node roles to backend metadata if needed
-			if len(node.Roles) > 0 {
-				backend.Models = node.Roles
-			} else if node.Role != "" {
-				backend.Models = []string{node.Role}
-			}
 			backends = append(backends, backend)
 		}
 	}

@@ -14,7 +14,7 @@ When deploying multiple roles (e.g., `chat` + `image-generation`) on a single ho
 - Hard-coded minimum VRAM thresholds: training ≥ 16 GB, chat ≥ 4 GB, image-generation ≥ 8 GB.
 - Proportional scaling when total available VRAM is insufficient.
 - Environment-variable-based configuration for role daemons (Ollama `--num-gpu`, training `--mode=lora`).
-- Cgroup v2 memory limits for training to prevent OOM kills.
+- No cgroup enforcement in Phase 1; advisory limits only.
 
 ## Rationale
 
