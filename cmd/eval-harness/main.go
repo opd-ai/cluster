@@ -32,6 +32,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -98,10 +99,11 @@ func main() {
 	}
 
 	client := &http.Client{Timeout: 2 * time.Minute}
+	ctx := context.Background()
 
 	// Evaluate namespace model.
 	nsHoldout := filepath.Join(*datasetsDir, *nsName, "holdout.jsonl")
-	nsSummary, err := evaluate(client, *gatewayURL, *apiKey, *nsModel, *nsName, "",
+	nsSummary, err := evaluate(ctx, client, *gatewayURL, *apiKey, *nsModel, *nsName, "",
 		nsHoldout, *maxExamples)
 	if err != nil {
 		log.Fatalf("evaluate namespace model: %v", err)
@@ -119,7 +121,7 @@ func main() {
 
 	// Evaluate repo model.
 	repoHoldout := filepath.Join(*datasetsDir, *nsName, "repos", *repoName, "holdout.jsonl")
-	repoSummary, err := evaluate(client, *gatewayURL, *apiKey, *repoModel, *nsName, *repoName,
+	repoSummary, err := evaluate(ctx, client, *gatewayURL, *apiKey, *repoModel, *nsName, *repoName,
 		repoHoldout, *maxExamples)
 	if err != nil {
 		log.Fatalf("evaluate repo model: %v", err)
@@ -141,7 +143,7 @@ func main() {
 }
 
 // evaluate runs inference for each holdout example and computes metrics.
-func evaluate(client *http.Client, gatewayURL, apiKey, model, ns, repo,
+func evaluate(ctx context.Context, client *http.Client, gatewayURL, apiKey, model, ns, repo,
 	holdoutPath string, maxExamples int) (*evalSummary, error) {
 	examples, err := loadHoldout(holdoutPath, maxExamples)
 	if err != nil {
@@ -164,7 +166,7 @@ func evaluate(client *http.Client, gatewayURL, apiKey, model, ns, repo,
 		prompt := ex.Text[:mid]
 		reference := strings.TrimSpace(ex.Text[mid:])
 
-		generated, err := generate(client, gatewayURL, apiKey, model, prompt)
+		generated, err := generate(ctx, client, gatewayURL, apiKey, model, prompt)
 		if err != nil {
 			log.Printf("generate error for %s: %v", ex.Source, err)
 			continue
@@ -202,14 +204,17 @@ func evaluate(client *http.Client, gatewayURL, apiKey, model, ns, repo,
 }
 
 // generate sends a completion request to the gateway and returns the text.
-func generate(client *http.Client, gatewayURL, apiKey, model, prompt string) (string, error) {
-	body, _ := json.Marshal(map[string]any{
+func generate(ctx context.Context, client *http.Client, gatewayURL, apiKey, model, prompt string) (string, error) {
+	body, err := json.Marshal(map[string]any{
 		"model":  model,
 		"prompt": prompt,
 		"stream": false,
 	})
+	if err != nil {
+		return "", fmt.Errorf("marshal request: %w", err)
+	}
 
-	req, err := http.NewRequest("POST", gatewayURL+"/v1/completions", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", gatewayURL+"/v1/completions", bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}

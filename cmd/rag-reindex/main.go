@@ -129,7 +129,7 @@ func main() {
 
 		case t := <-nightly.C:
 			utc := t.UTC()
-			today := utc.YearDay() + utc.Year()*366
+			today := int(utc.Unix() / 86400)
 			if utc.Hour() == *nightlyHour && today != lastNightlyDay {
 				lastNightlyDay = today
 				log.Println("nightly full re-ingest triggered")

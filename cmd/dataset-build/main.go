@@ -200,22 +200,40 @@ func walkRepo(repoDir, repoLabel string, hp Hyperparams, repoW, nsW *bufio.Write
 		text := string(data)
 		hash := contentHash(text)
 
-		rel, _ := filepath.Rel(repoDir, path)
+		rel, err := filepath.Rel(repoDir, path)
+		if err != nil {
+			return err
+		}
 		src := repoLabel + "/" + rel
 
 		ex := example{Text: text, Source: src}
-		line, _ := json.Marshal(ex)
+		line, err := json.Marshal(ex)
+		if err != nil {
+			return err
+		}
 
 		if _, seen := repoSeen[hash]; !seen {
 			repoSeen[hash] = struct{}{}
-			_, _ = repoW.Write(line)
-			_ = repoW.WriteByte('\n')
+			_, err = repoW.Write(line)
+			if err != nil {
+				return err
+			}
+			err = repoW.WriteByte('\n')
+			if err != nil {
+				return err
+			}
 			count++
 		}
 		if _, seen := nsSeen[hash]; !seen {
 			nsSeen[hash] = struct{}{}
-			_, _ = nsW.Write(line)
-			_ = nsW.WriteByte('\n')
+			_, err = nsW.Write(line)
+			if err != nil {
+				return err
+			}
+			err = nsW.WriteByte('\n')
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
