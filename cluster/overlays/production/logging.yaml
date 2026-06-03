@@ -79,7 +79,7 @@ spec:
     spec:
       containers:
         - name: loki
-          image: grafana/loki:2.9.10
+          image: grafana/loki@sha256:35b02acc67654ddc38273e519b4f26f3967a907b9db5489af300c21f37ee1ae7
           args:
             - -config.file=/etc/loki/loki.yaml
           ports:
@@ -203,7 +203,7 @@ spec:
       serviceAccountName: promtail
       containers:
         - name: promtail
-          image: grafana/promtail:2.9.10
+          image: grafana/promtail@sha256:63a2e57a5b1401109f77d36a49a637889d431280ed38f5f885eedcd3949e52cf
           args:
             - -config.file=/etc/promtail/promtail.yaml
           ports:
