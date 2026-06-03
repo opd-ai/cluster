@@ -18,7 +18,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -385,9 +384,9 @@ func main() {
 	gatewayURL := flag.String("gateway-url", "http://localhost:8080", "Gateway base URL")
 	qdrantAddr := flag.String("qdrant-addr", "localhost:6334", "Qdrant gRPC address")
 	apiKey := flag.String("api-key", os.Getenv("GATEWAY_API_KEY"), "Gateway API key")
-	dirFlag := flag.String("dir", "", "Directory to ingest (colon-separated)")
-	repoFlag := flag.String("repo", "", "Git repo URL(s) to clone+ingest (colon-separated)")
-	urlFlag := flag.String("url", "", "HTTP URL(s) to ingest (colon-separated)")
+	dirFlag := flag.String("dir", "", "Directory to ingest (comma-separated)")
+	repoFlag := flag.String("repo", "", "Git repo URL(s) to clone+ingest (comma-separated)")
+	urlFlag := flag.String("url", "", "HTTP URL(s) to ingest (comma-separated)")
 	chunkToks := flag.Int("chunk-tokens", defaultChunkTokens, "Chunk size in tokens")
 	overlapToks := flag.Int("overlap-tokens", defaultOverlapTokens, "Overlap tokens between chunks")
 	backup := flag.Bool("backup", false, "Trigger Qdrant collection snapshot after ingestion")
@@ -452,23 +451,12 @@ func main() {
 }
 
 func splitColon(s string) []string {
-	sc := bufio.NewScanner(strings.NewReader(s))
-	sc.Split(func(data []byte, atEOF bool) (int, []byte, error) {
-		for i, b := range data {
-			if b == ':' {
-				return i + 1, data[:i], nil
-			}
-		}
-		if atEOF && len(data) > 0 {
-			return len(data), data, nil
-		}
-		return 0, nil, nil
-	})
-	var parts []string
-	for sc.Scan() {
-		if t := strings.TrimSpace(sc.Text()); t != "" {
-			parts = append(parts, t)
+	parts := strings.Split(s, ",")
+	var result []string
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			result = append(result, t)
 		}
 	}
-	return parts
+	return result
 }

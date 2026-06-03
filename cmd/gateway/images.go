@@ -11,6 +11,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -93,7 +94,7 @@ func (gw *Gateway) handleImageGenerations(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL))
+	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL, gw.httpClient))
 }
 
 // handleImageEdits proxies POST /v1/images/edits to SwarmUI.
@@ -137,7 +138,7 @@ func (gw *Gateway) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL))
+	writeJSON(w, buildImageResponse(images, req.ResponseFormat, gw.swarmURL, gw.httpClient))
 }
 
 // callSwarm sends a request to the SwarmUI API and returns image paths/URLs.
@@ -178,11 +179,32 @@ func (gw *Gateway) callSwarm(path string, body map[string]any) ([]string, error)
 }
 
 // buildImageResponse converts SwarmUI image paths to an OpenAI-style response.
-func buildImageResponse(images []string, format, baseURL string) imageResponse {
+func buildImageResponse(images []string, format, baseURL string, client *http.Client) imageResponse {
 	var items []imageDataItem
 	for _, img := range images {
 		if format == "b64_json" {
-			items = append(items, imageDataItem{B64JSON: img})
+			// Fetch image and base64-encode it
+			fullURL := img
+			if len(img) > 0 && img[0] == '/' {
+				fullURL = baseURL + img
+			}
+			resp, err := client.Get(fullURL)
+			if err != nil {
+				log.Printf("fetch image for b64_json: %v", err)
+				continue // skip failed images
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				log.Printf("fetch image returned status %d", resp.StatusCode)
+				continue
+			}
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("read image body: %v", err)
+				continue
+			}
+			b64 := base64.StdEncoding.EncodeToString(data)
+			items = append(items, imageDataItem{B64JSON: b64})
 		} else {
 			// SwarmUI returns relative paths; prepend the base URL.
 			url := img

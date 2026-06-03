@@ -50,23 +50,56 @@ type videoJob struct {
 	GifURL    string    `json:"gif_url,omitempty"`
 	Error     string    `json:"error,omitempty"`
 
-	req videoGenerationRequest
+	APIKey string // track for concurrent job limiting
+	req    videoGenerationRequest
 }
 
 // videoJobStore is a simple in-memory job registry.
 type videoJobStore struct {
-	mu   sync.RWMutex
-	jobs map[string]*videoJob
+	mu               sync.RWMutex
+	jobs             map[string]*videoJob
+	concurrentByKey  map[string]int // track in-flight jobs per API key
+	maxConcurrentKey int            // max concurrent jobs per key
+	maxConcurrentAll int            // max concurrent jobs globally
+	concurrentAll    int            // current global count
 }
 
 var globalVideoJobs = &videoJobStore{
-	jobs: make(map[string]*videoJob),
+	jobs:             make(map[string]*videoJob),
+	concurrentByKey:  make(map[string]int),
+	maxConcurrentKey: 10,  // max 10 in-flight videos per API key
+	maxConcurrentAll: 100, // max 100 in-flight videos globally
+}
+
+func (s *videoJobStore) canAdd(j *videoJob) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.concurrentAll >= s.maxConcurrentAll {
+		return false
+	}
+	if s.concurrentByKey[j.APIKey] >= s.maxConcurrentKey {
+		return false
+	}
+	return true
 }
 
 func (s *videoJobStore) add(j *videoJob) {
 	s.mu.Lock()
 	s.jobs[j.ID] = j
+	s.concurrentAll++
+	s.concurrentByKey[j.APIKey]++
 	s.mu.Unlock()
+}
+
+func (s *videoJobStore) markTerminal(j *videoJob) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.concurrentAll > 0 {
+		s.concurrentAll--
+	}
+	if s.concurrentByKey[j.APIKey] > 0 {
+		s.concurrentByKey[j.APIKey]--
+	}
 }
 
 func (s *videoJobStore) get(id string) (*videoJob, bool) {
@@ -160,7 +193,11 @@ func (gw *Gateway) handleVideoGenerations(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	job := newVideoJob(req)
+	job := newVideoJob(req, key)
+	if !globalVideoJobs.canAdd(job) {
+		http.Error(w, `{"error":"too many concurrent video jobs"}`, http.StatusTooManyRequests)
+		return
+	}
 	globalVideoJobs.add(job)
 
 	go gw.runVideoJob(job)
@@ -199,7 +236,11 @@ func (gw *Gateway) handleVideoEdits(w http.ResponseWriter, r *http.Request) {
 		Image:  req.Image,
 		Video:  req.Video,
 	}
-	job := newVideoJob(genReq)
+	job := newVideoJob(genReq, key)
+	if !globalVideoJobs.canAdd(job) {
+		http.Error(w, `{"error":"too many concurrent video jobs"}`, http.StatusTooManyRequests)
+		return
+	}
 	globalVideoJobs.add(job)
 
 	go gw.runVideoJob(job)
@@ -226,7 +267,7 @@ func (gw *Gateway) handleVideoJobStatus(w http.ResponseWriter, r *http.Request) 
 // Job execution
 // -------------------------------------------------------------------------
 
-func newVideoJob(req videoGenerationRequest) *videoJob {
+func newVideoJob(req videoGenerationRequest, apiKey string) *videoJob {
 	now := time.Now().UTC()
 	var buf [8]byte
 	if _, err := rand.Read(buf[:]); err != nil {
@@ -236,6 +277,7 @@ func newVideoJob(req videoGenerationRequest) *videoJob {
 			Status:    jobPending,
 			CreatedAt: now,
 			UpdatedAt: now,
+			APIKey:    apiKey,
 			req:       req,
 		}
 	}
@@ -245,11 +287,17 @@ func newVideoJob(req videoGenerationRequest) *videoJob {
 		Status:    jobPending,
 		CreatedAt: now,
 		UpdatedAt: now,
+		APIKey:    apiKey,
 		req:       req,
 	}
 }
 
 func (gw *Gateway) runVideoJob(job *videoJob) {
+	defer func() {
+		// Decrement concurrent count when job completes or fails
+		globalVideoJobs.markTerminal(job)
+	}()
+
 	setJobStatus(job, jobRunning, "")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
