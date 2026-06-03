@@ -32,6 +32,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -269,6 +270,8 @@ func runConvert(cfg *pipelineConfig, ns NamespaceConfig) error {
 		return fmt.Errorf("CONVERT_SCRIPT not found in setup-llama-cpp.sh output")
 	}
 
+	var convErrs []error
+
 	// Convert namespace adapter.
 	nsAdapterDir := filepath.Join(cfg.Checkpoints, ns.Name, "namespace", "merged")
 	nsGGUF := filepath.Join(cfg.Checkpoints, ns.Name, "namespace", "model.gguf")
@@ -276,6 +279,7 @@ func runConvert(cfg *pipelineConfig, ns NamespaceConfig) error {
 		if _, err := os.Stat(nsGGUF); err != nil {
 			if err := runCmd(cfg, cfg.Python, convertScript, nsAdapterDir, "--outfile", nsGGUF); err != nil {
 				log.Printf("  convert namespace adapter: %v", err)
+				convErrs = append(convErrs, err)
 			}
 		}
 	}
@@ -288,9 +292,14 @@ func runConvert(cfg *pipelineConfig, ns NamespaceConfig) error {
 			if _, err := os.Stat(repoGGUF); err != nil {
 				if err := runCmd(cfg, cfg.Python, convertScript, repoMergedDir, "--outfile", repoGGUF); err != nil {
 					log.Printf("  convert repo %s: %v", repo.Label, err)
+					convErrs = append(convErrs, fmt.Errorf("repo %s: %w", repo.Label, err))
 				}
 			}
 		}
+	}
+
+	if len(convErrs) > 0 {
+		return fmt.Errorf("conversion errors: %w", errors.Join(convErrs...))
 	}
 	return nil
 }
