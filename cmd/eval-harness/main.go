@@ -36,6 +36,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -228,6 +229,12 @@ func generate(ctx context.Context, client *http.Client, gatewayURL, apiKey, mode
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	// Check for successful status code
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("generation failed: status %d: %s", resp.StatusCode, string(body))
+	}
 
 	var result struct {
 		Choices []struct {
