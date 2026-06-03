@@ -166,6 +166,9 @@ func main() {
 	mux.Post("/api/v1/pipeline/submit", handlers.handlePipelineSubmit)
 	mux.Get("/api/v1/pipeline/result/{jobID}", handlers.handlePipelineResult)
 
+	// Start job cleanup goroutine (remove terminal jobs older than 1 hour)
+	go handlers.cleanupOldJobs(1 * time.Hour)
+
 	srv := &http.Server{
 		Addr:              ":9977",
 		Handler:           mux,
@@ -381,6 +384,25 @@ func (h *apiHandlers) handlePipelineResult(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+// cleanupOldJobs periodically removes completed/failed jobs older than ttl
+func (h *apiHandlers) cleanupOldJobs(ttl time.Duration) {
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		h.jobsMu.Lock()
+		now := time.Now()
+		for jobID, job := range h.jobs {
+			// Remove terminal jobs (completed/failed) older than TTL
+			if (job.Status == "completed" || job.Status == "failed") &&
+				now.Sub(job.UpdatedAt) > ttl {
+				delete(h.jobs, jobID)
+			}
+		}
+		h.jobsMu.Unlock()
+	}
 }
 
 func buildServices(roles []string) []inventory.ServiceBinding {
