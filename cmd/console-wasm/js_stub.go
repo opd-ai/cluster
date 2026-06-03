@@ -1,7 +1,9 @@
-//go:build ignore
+//go:build !js || !wasm
 
 package main
 
-// jsGlobal is a no-op stub kept for reference only.
-// The package only targets js/wasm; js_wasm.go provides the real implementation.
+// jsGlobal is a no-op stub for non-js/wasm builds.
+// js_wasm.go provides the real implementation when targeting js/wasm.
 func jsGlobal(_ string, def string) string { return def }
+
+func main() {}
